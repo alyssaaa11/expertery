@@ -71,3 +71,9 @@ All paths below were checked to exist on 2026-10-28.
 cd /tmp && ~/projects/forge/.venv/bin/python -I ~/projects/forge/scripts/check_cadquery.py
 # expect: size mm: 20.0 20.0 20.0 and volume 7607.3 = expected
 ```
+
+## How this was built
+- The models doing the work are Meta's: Muse Glimmer 30B (open weights, the student, served with vLLM on Modal) and Muse Spark Open (open weights, the teacher, on Baseten).
+- Muse Code (Meta's coding agent) built the test program: experiments/first-test/runner.py and test_runner.py, and the later fixes from CHANGES_SPEC.md. From now on all project code is built by Muse Code from written specs.
+- Claude (Anthropic) was used as a planning assistant: it wrote the plans, specs, exam jobs and checks (experiments/first-test/jobs.py, checks.py, PLAN.md), the wiki, and coordinated; commits made with it carry a "Co-Authored-By: Claude" line.
+- Muse Code published this repository.
