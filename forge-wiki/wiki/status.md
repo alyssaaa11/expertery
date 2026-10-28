@@ -31,7 +31,7 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 | Modal | $1.65 (Glimmer test 1, dry run, main run) | `modal billing summary` 2026-10-28 ~18:45 |
 | Meta | ~$1.13 (three Muse Code sessions: build, fixes, publish ~$0.11) | run.usage events in `results/muse-*.jsonl` × list prices |
 | Baseten | ~$0.85 (estimate: dry + main + 2 probe calls) | runner token estimate; the dashboard showed $0.00, credit not visible |
-| **Total** | **≈ $5.4 of $30** (incl. company builds ~$1.40) | |
+| **Total** | **≈ $8.2 of $30** (Meta/Muse Code ≈ $5.7 incl. runner ~$2.75; Modal ~$1.7; Baseten ~$0.85) | |
 
 ## Quillon Orbital Works (verified 2026-10-28 ~22:45)
 - decision (user): fictional space company with a realistic private tool. Keel 2.1 in `company/` (built by Muse
@@ -39,9 +39,11 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
   mirror, FRM centre datum; order-free build. Company self-test 92/92. Offline dashboard opens in Chrome; request
   statuses are labelled sample data.
 - Held-out exam `experiments/keel-exam-v2/` (v1 exam in keel-exam/ is history): 30 jobs by Claude, referee 1e-6,
-  self-test 90/90, blind rebuild 30/30. Verifier: v1 NO-GO with 3 fixes (all applied), v2 re-check requested.
+  self-test 90/90, blind rebuild 30/30. Verifier: v1 NO-GO with 3 fixes (all applied); v2 exam GO; runner + sandbox GO for pilot AND main run at 74ae975
+  (~/agents/verifier/reports/forge-keel-v2-exam-2026-10-28.md). PLAN frozen by sha256 (9 files). Rule 1 = C pass@3 < 30% (user).
 - Next paid step (user yes needed after verifier GO): baseline B (Glimmer + manual) vs C (Spark Open + manual),
-  ~$1.80, rules in keel-exam-v2/PLAN.md (INVALID gate, STOP C<30, NO ROOM B≥80, GO C−B≥25 & B≤70, else GREY).
+  ~$3–4 (k=3), caps Modal 2.50 / Baseten 4.00; rules in keel-exam-v2/PLAN.md (INVALID gate, STOP C pass@3<30%, NO ROOM
+  B≥80%, GO C−B≥25 & B≤70%, else GREY). After the run: check no FAIL reason contains 'harness' or 'PermissionError'.
   The runner change is done by Muse Code from PLAN section 4b.
 
 ## Open questions
