@@ -5,6 +5,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
 
 ## findings
+- [quillon-keel-build-2026-10-28](wiki/findings/quillon-keel-build-2026-10-28.md): how the private-tool experiment was built: company, Keel v1→2.1, dashboard, exam method, tolerance 1e-6, sandbox, freeze by hash, verifier rounds, user plan rules
 - [keel-v2-baseline-2026-10-28](wiki/findings/keel-v2-baseline-2026-10-28.md): private tool Keel v2: Glimmer + manual 97.8%, Spark 100% → NO ROOM; a short complete manual is enough
 - [first-test-2026-10-28](wiki/findings/first-test-2026-10-28.md): the main experiment: how the exam was built; Spark Open 30/30, Glimmer+manual 20/30, Glimmer 16/30 → grey zone → user GO; 3 of 10 failures position-only; B2 proposed
 - [value-and-market-2026-10-28](wiki/findings/value-and-market-2026-10-28.md): why Forge instead of the big model, cost per job, who would use it, space-company example, honest downside, how to demo a background run
@@ -21,4 +22,4 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [forge-plan-2026-10-28](wiki/decisions/forge-plan-2026-10-28.md): history of Oct 28 decisions: $30 budget, CadQuery, Spark Open on Baseten, own folder/app, spend log
 
 ## lessons
-- [lessons](wiki/lessons/lessons.md): 21 lessons with how they were learned: cheap baseline first, referee self-test + overlap check, blind rebuild, verifier before paid runs, ordered decision rules, look at how a model fails, modal app stop -y, Muse Code costs, one project per context
+- [lessons](wiki/lessons/lessons.md): 34 lessons with how they were learned: cheap baseline first, referee self-test + overlap check, blind rebuild, verifier before paid runs, ordered decision rules, look at how a model fails, modal app stop -y, Muse Code costs, one project per context

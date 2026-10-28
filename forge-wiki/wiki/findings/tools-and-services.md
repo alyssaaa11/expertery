@@ -6,11 +6,14 @@
 **Sources**: commands and outputs in the Forge session of 2026-10-28 (noted inline); `~/projects/forge/deploy/
 modal_glimmer.py`; `experiments/first-test/run_live.sh`; verifier report `~/agents/verifier/reports/forge-2026-10-28.md`.
 
-**Last updated**: 2026-10-28
+**Last updated**: 2026-10-28 (evening additions marked Oct 28 eve)
 
 ---
 
 ## Modal (Glimmer on a GPU)
+- verified (Oct 28 eve, results/keel-v2-main.log): cold start 4 min 16 s with the weights already in the volume;
+  90 Glimmer answers (plus 90 Spark) in 523 s with 16 parallel; `modal billing summary` metered $2.22 total so far,
+  billed $0.00 (credits).
 - verified: CLI 1.6.3 installed with `uv tool install modal`; workspace **my-workspace**; login in `~/.modal.toml`.
 - verified: Forge deploy = `~/projects/forge/deploy/modal_glimmer.py`: app + secret **forge-glimmer** (VLLM_API_KEY,
   also envsave `FORGE_GLIMMER_VLLM_API_KEY`, regenerated each live run), volumes `forge-hf-cache` / `forge-vllm-cache`,
@@ -29,6 +32,8 @@ modal_glimmer.py`; `experiments/first-test/run_live.sh`; verifier report `~/agen
 - verified: Glimmer speed ~25 tokens/s per answer (dry run), about 60 jobs in 13 min with 16 parallel.
 
 ## Baseten (Spark Open, the teacher)
+- verified (Oct 28 eve, results/keel-v2-main): with the ~3.9k-token Keel prompt, one Spark Open call ≈ $0.011 and
+  5–10 s (90 calls ≈ $0.97 by the runner's token estimate; prompt caching shows up as cached_tokens 3,712).
 - verified: `https://inference.baseten.co/v1`, model **`meta-models/muse-spark-open-1026`**, key envsave
   `BASETEN_API_KEY` (opaque ref in the `baseten-muse-spark` skill). The hackathon key works only with this model.
 - verified (verifier): price $1.25/M in, $4.25/M out (cache reads $0.15/M).
@@ -39,6 +44,9 @@ modal_glimmer.py`; `experiments/first-test/run_live.sh`; verifier report `~/agen
   Baseten docs say credits are applied to invoices before the card. Still to confirm after usage shows up.
 
 ## Meta API and Muse Code
+- verified (Oct 28 eve): 7 more Muse Code sessions for the company, Keel and the runner ≈ $4.2 in total (see
+  [[lessons]] on session cost). It follows specs well, reports deviations honestly, and respected "never open the
+  exam files" in library work.
 - verified: Meta key envsave `META_HERDSHOT_API_KEY` (opaque es_b6ZrOh9_…; the name is from the earlier project, same
   hackathon account). Meta credit $150 with the user's limit $90; spent $24.49 in HerdShot + ~$1.02 in Forge.
 - verified: **Muse Code** (`muse` 1.4.14) has **no free allowance** (`muse usage` → no_allowance), so every run costs

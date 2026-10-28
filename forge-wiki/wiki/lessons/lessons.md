@@ -81,3 +81,26 @@
   hole called before its boss left the boss undrilled, while the manual says holes go "all the way down"; 7 jobs
   would FAIL manual-faithful answers. Fix: Keel 2.1 applies cuts after all walls/bosses. Check: build the same part
   in two call orders and require 0.0% mismatch, unless the manual documents the order (mirror, pattern).
+- **Run the cheapest baseline before building a factory** (Oct 28). How learned: the Keel v2 baseline ($1.5) showed
+  Glimmer + a short complete manual already at 97.8% (NO ROOM), which saved the ~$12 factory. Check: before any
+  teacher run or training, measure small model + manual vs teacher on the held-out exam with frozen rules.
+- **A sandbox for untrusted answers on macOS: sandbox-exec + env -i + ulimit -t + an RSS watchdog** (Oct 28). How
+  learned: test scripts inside the profile (socket, reads of exam files and ~/.zshrc, sibling writes, env keys);
+  `resource.setrlimit` RLIMIT_AS/DATA/RSS all fail on macOS. The verifier then found answer-key copies readable in
+  /private/tmp. Check: `experiments/keel-exam-v2/test_runner.py` sandbox tests; profile in [[quillon-keel-build-2026-10-28]].
+- **Freeze by hash, and re-freeze after every approved change** (Oct 28). How learned: Keel changed twice in one
+  evening; the runner refuses when a sha256 in PLAN §7 differs. Check: `runner.py --print-hashes`, then
+  `runner.freeze_check()` must pass before a paid run.
+- **A spec changed after a build does not reach the built code: diff the code against the final plan** (Oct 28). How
+  learned: the runner was built from the spec before the verifier's cap notes; reading `pairs = [...]` and the cap
+  loop found 4 gaps (job-major order, $3 cap, Modal cap stopping both arms, no complete-sample scoring).
+- **Always give the verifier the exact commit hash** (Oct 28). How learned: it re-checked 9fdb42a (no sandbox fix)
+  while the fix sat in 74ae975, and reported NO-GO for a problem already fixed.
+- **Grep results case-sensitively and read the context before raising an alarm** (Oct 28). How learned: 30 records
+  "mentioned harness" — all were the mount name HARNESS-P2; the case-sensitive grep for harness errors and
+  PermissionError found 0.
+- **Check `date` before writing times into notes** (Oct 28). How learned: I wrote "2026-10-29 ~00:20" at 22:45 on
+  Oct 28 into status and PLAN and had to correct them. Check: run `date` when stamping.
+- **Muse Code cost grows with session length, mostly cached re-reads** (Oct 28). How learned: run.usage of 7 sessions:
+  small fix ~$0.17–0.33, library build ~$0.40–0.80, the 1,400-line runner (65 calls, 7.4M cached tokens) ~$1.7.
+  Check: cap `--max-model-steps`, keep specs precise, split big jobs.
