@@ -1,5 +1,9 @@
 # Factory plan (next stage, from Oct 29)
 
+**Update 2026-10-28 22:00**: B2 was cancelled by the user; the proposed direction is now a **private tool (AcmeCAD)**. The
+day-by-day plan for that is in the section "Day-by-day plan (AcmeCAD, proposed)" below and replaces the stage table's
+B2 row and dates. Waiting for the user's yes.
+
 **Summary**: What gets built after the GO decision (user, 2026-10-28 ~19:00), in which order, with which rules and
 money. Status: **plan, not started**. Waiting for the user's answer on the B2 cheap-fix test first.
 
@@ -36,3 +40,15 @@ money. Status: **plan, not started**. Waiting for the user's answer on the B2 ch
 - The B2 hint may close much of the gap, which raises the bar.
 - One training run only (budget): run a tiny training smoke test first.
 - The time cap: ~7 days to the deadline.
+
+## Day-by-day plan (AcmeCAD, proposed 2026-10-28 22:00; waiting for the user's yes)
+| Day | Work | Gate before moving on | Cost |
+|---|---|---|---|
+| Wed Oct 29 | AcmeCAD spec → Muse Code builds the library + company manual; new 30-job held-out exam in company terms (self-test, blind rebuild); training-recipe research; verifier audit | exam self-test 30/30 + verifier GO | ~$0.5 |
+| Thu Oct 30 | practice-job generator (Muse Code) + overlap check against the exam; **teacher pilot** (20 jobs); if OK, full teacher run (~300 jobs), keep only correct answers | teacher pass rate ≥ 30% on the pilot, else stop/rethink | ~$8 |
+| Fri Oct 31 | training smoke test (tiny, save/reload) → one LoRA run on Glimmer → serve with the adapter | smoke test passes before the full run | ~$3–4 |
+| Sat Nov 1 | **final exam**: trained Glimmer vs Glimmer + manual vs Spark Open on the 30 held-out AcmeCAD jobs; verifier check; honest result page | frozen exam plan + verifier GO | ~$1.5 |
+| Sun Nov 2 | replay viewer + demo pieces (Muse Code); buffer half day for one training retry if needed | — | ~$0.5 (+$4 retry) |
+| Mon Nov 3 | 3-minute video (HyperFrames), README / write-up, push by Muse Code | — | $0 |
+| Tue Nov 4 | final checks, make the repo shareable for judges, **submit by 18:00 CET** (hard deadline 9:00 PM ET) | — | $0 |
+- Total ≈ $14 (+$4 if a retry is needed) on top of ≈ $4.0 spent → ≈ $18–22 of $30.
