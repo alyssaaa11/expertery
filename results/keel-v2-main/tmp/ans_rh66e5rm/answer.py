@@ -1,0 +1,13 @@
+import keel
+p = keel.part("CLP-5106", material="TI6AL4V")
+p.stock(80, 40, 6)
+p.wall("west", 25)
+p.wall_hole("west", "KF-M3", at=(10, 12))
+p.wall_hole("west", "KF-M3", at=(30, 12))
+p.slot(at=(25, 8), to=(25, 32), width=5, depth="thru")
+p.slot(at=(40, 8), to=(40, 32), width=5, depth="thru")
+p.slot(at=(55, 8), to=(55, 32), width=5, depth="thru")
+p.hole("KF-M4", at=(70, 10))
+p.hole("KF-M4", at=(70, 30))
+p.fillet()
+solid = p.finish()

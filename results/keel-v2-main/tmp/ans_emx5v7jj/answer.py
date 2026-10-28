@@ -1,0 +1,10 @@
+import keel
+p = keel.part("BRK-4607", material="AL6061")
+p.stock(70, 60, 5)
+p.wall("west", 40)
+p.wall("south", 40)
+p.hole("KF-M4", at=(30, 30))
+p.hole("KF-M4", at=(55, 45))
+p.wall_hole("west", "KF-M5", at=(20, 25))
+p.wall_hole("south", "KF-M5", at=(50, 10))
+solid = p.finish()

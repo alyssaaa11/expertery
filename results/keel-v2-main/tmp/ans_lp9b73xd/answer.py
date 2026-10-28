@@ -1,0 +1,10 @@
+import keel
+p = keel.part("PLT-4806", material="AL6061")
+p.stock(100, 60, 4)
+p.hole("KF-M4-CS", at=(10, 10))
+p.hole("KF-M4-CS", at=(25, 10))
+p.mirror("ew")
+p.mirror("ns")
+p.mount("HARNESS-P2", origin=(42.5, 30), finish="plain")
+p.fillet(edges="vertical", r=3)
+solid = p.finish()
