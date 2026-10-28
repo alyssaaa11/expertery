@@ -1,0 +1,11 @@
+key saved
+secret updated
+deploy start 18:21:34
+
+View Deployment: 
+https://modal.com/apps/my-workspace/main/deployed/forge-glimmer
+waiting for Glimmer 18:21:37
+ready 18:28:43 (try 6)
+runner exit 0
+done 18:41:45
+app stopped 18:41:46

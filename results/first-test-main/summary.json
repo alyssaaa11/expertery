@@ -1,0 +1,307 @@
+{
+ "arms": {
+  "A": {
+   "n": 30,
+   "PASS": 16,
+   "FAIL": 14,
+   "INVALID": 0,
+   "pass_rate": 0.5333333333333333,
+   "invalid_rate": 0.0
+  },
+  "B": {
+   "n": 30,
+   "PASS": 20,
+   "FAIL": 10,
+   "INVALID": 0,
+   "pass_rate": 0.6666666666666666,
+   "invalid_rate": 0.0
+  },
+  "C": {
+   "n": 30,
+   "PASS": 30,
+   "FAIL": 0,
+   "INVALID": 0,
+   "pass_rate": 1.0,
+   "invalid_rate": 0.0
+  }
+ },
+ "levels": {
+  "hard": {
+   "A": {
+    "n": 15,
+    "PASS": 6,
+    "FAIL": 9,
+    "INVALID": 0,
+    "pass_rate": 0.4,
+    "invalid_rate": 0.0
+   },
+   "B": {
+    "n": 15,
+    "PASS": 9,
+    "FAIL": 6,
+    "INVALID": 0,
+    "pass_rate": 0.6,
+    "invalid_rate": 0.0
+   },
+   "C": {
+    "n": 15,
+    "PASS": 15,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0
+   }
+  },
+  "medium": {
+   "A": {
+    "n": 15,
+    "PASS": 10,
+    "FAIL": 5,
+    "INVALID": 0,
+    "pass_rate": 0.6666666666666666,
+    "invalid_rate": 0.0
+   },
+   "B": {
+    "n": 15,
+    "PASS": 11,
+    "FAIL": 4,
+    "INVALID": 0,
+    "pass_rate": 0.7333333333333333,
+    "invalid_rate": 0.0
+   },
+   "C": {
+    "n": 15,
+    "PASS": 15,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0
+   }
+  }
+ },
+ "by_level": {
+  "hard": {
+   "A": {
+    "n": 15,
+    "PASS": 6,
+    "FAIL": 9,
+    "INVALID": 0,
+    "pass_rate": 0.4,
+    "invalid_rate": 0.0
+   },
+   "B": {
+    "n": 15,
+    "PASS": 9,
+    "FAIL": 6,
+    "INVALID": 0,
+    "pass_rate": 0.6,
+    "invalid_rate": 0.0
+   },
+   "C": {
+    "n": 15,
+    "PASS": 15,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0
+   }
+  },
+  "medium": {
+   "A": {
+    "n": 15,
+    "PASS": 10,
+    "FAIL": 5,
+    "INVALID": 0,
+    "pass_rate": 0.6666666666666666,
+    "invalid_rate": 0.0
+   },
+   "B": {
+    "n": 15,
+    "PASS": 11,
+    "FAIL": 4,
+    "INVALID": 0,
+    "pass_rate": 0.7333333333333333,
+    "invalid_rate": 0.0
+   },
+   "C": {
+    "n": 15,
+    "PASS": 15,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0
+   }
+  }
+ },
+ "n_calls": 90,
+ "skipped": 0,
+ "budget": 5.0,
+ "budget_stopped": false,
+ "budget_c": 3.0,
+ "budget_c_stopped": false,
+ "elapsed_seconds": 779.972,
+ "gpu_start": 1793208094.0,
+ "gpu_elapsed_seconds": 1211.314,
+ "costs": {
+  "A": 0.4206,
+  "B": 0.4206,
+  "C": 0.7785,
+  "gpu_total": 0.8412,
+  "total": 1.6197,
+  "note": "Arms A+B share one A100-80GB at $2.50/h over the run wall-clock, counted once (split evenly for display). Arm C is input $1.25/M + output $4.25/M tokens from usage."
+ },
+ "decision": "grey zone",
+ "run_valid": true,
+ "table": {
+  "M1": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "M2": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "M3": {
+   "A": "PASS",
+   "B": "FAIL",
+   "C": "PASS"
+  },
+  "M4": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "M5": {
+   "A": "PASS",
+   "B": "FAIL",
+   "C": "PASS"
+  },
+  "M6": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "M7": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "M8": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "M9": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "M10": {
+   "A": "FAIL",
+   "B": "FAIL",
+   "C": "PASS"
+  },
+  "M11": {
+   "A": "FAIL",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "M12": {
+   "A": "FAIL",
+   "B": "FAIL",
+   "C": "PASS"
+  },
+  "M13": {
+   "A": "FAIL",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "M14": {
+   "A": "FAIL",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "M15": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "H1": {
+   "A": "FAIL",
+   "B": "FAIL",
+   "C": "PASS"
+  },
+  "H2": {
+   "A": "FAIL",
+   "B": "FAIL",
+   "C": "PASS"
+  },
+  "H3": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "H4": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "H5": {
+   "A": "FAIL",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "H6": {
+   "A": "PASS",
+   "B": "FAIL",
+   "C": "PASS"
+  },
+  "H7": {
+   "A": "FAIL",
+   "B": "FAIL",
+   "C": "PASS"
+  },
+  "H8": {
+   "A": "FAIL",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "H9": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "H10": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "H11": {
+   "A": "FAIL",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "H12": {
+   "A": "PASS",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "H13": {
+   "A": "FAIL",
+   "B": "FAIL",
+   "C": "PASS"
+  },
+  "H14": {
+   "A": "FAIL",
+   "B": "PASS",
+   "C": "PASS"
+  },
+  "H15": {
+   "A": "FAIL",
+   "B": "FAIL",
+   "C": "PASS"
+  }
+ }
+}

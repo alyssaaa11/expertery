@@ -10,6 +10,8 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 
 - [glimmer-test-1-2026-10-28](wiki/findings/glimmer-test-1-2026-10-28.md): Glimmer on Modal works; cube ✅, L-bracket ❌ (wall off the base, caught by bounding box); cost $0.57 of $30
 
+- [first-test-2026-10-28](wiki/findings/first-test-2026-10-28.md): 30 jobs: Spark Open 30/30, Glimmer+manual 20/30, Glimmer 16/30 → grey zone; gap 33 pts, McNemar p=0.002; cost ≈ $1.4
+
 ## decisions
 - [forge-plan-2026-10-28](wiki/decisions/forge-plan-2026-10-28.md): $30 budget, CadQuery, project folder, checklist, schedule, GO rules
 

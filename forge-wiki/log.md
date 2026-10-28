@@ -18,3 +18,5 @@
 ## [2026-10-28 17:25] update | forge-plan (Muse Code built runner, ~$0.51; e2e 33/33)
 
 ## [2026-10-28 17:55] update | forge-plan (dry run OK, spend ≈ $1.56) + lesson (modal app stop -y)
+
+## [2026-10-28 18:50] create | first-test-2026-10-28 (main run results; decision = grey zone, waiting for the user)
