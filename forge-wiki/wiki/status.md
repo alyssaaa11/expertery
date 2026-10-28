@@ -3,7 +3,7 @@
 **Summary**: The one page to read first in a new session. Goal, what is proven, what is open, and the next step. Each
 claim links to the page that holds its evidence. Update this page at the end of every work session.
 
-**Last updated**: 2026-10-28 ~21:00
+**Last updated**: 2026-10-28 ~22:30
 
 ---
 
@@ -34,8 +34,7 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 | **Total** | **≈ $3.6 of $30** | |
 
 ## Open questions
-0. **B2 was cancelled by the user** (2026-10-28 21:50, "dont") during the Glimmer cold start: no answers produced, ~1 min of GPU. Plan frozen at experiments/b2-hint/ (kept as history). The user's new direction: change the experiment to a **non-public tool** and start the factory. Proposal: Muse Code builds a made-up company tool "AcmeCAD" (own API names, company conventions, company manual) + a new held-out exam; the factory's teacher run doubles as the teacher-capability test. Waiting for the user's yes.
-1. **B2 cheap-fix test** (Glimmer + manual + coordinate hint, ~$0.70): run it before the factory? Waiting for the user.
+0. decision (user, 2026-10-28 ~22:30): the private tool belongs to a **fictional space company, Quillon Orbital Works** (satellite structural parts; name checked by web search, no real company found). Its private tool is **Keel** (compiles to CadQuery, so the same referee works). The user also wants an **internal company dashboard** like a real company. Draft spec: `company/SPEC.md`, waiting for the user's review, then one Muse Code build (~$0.50–0.80, needs approval). B2 was cancelled by the user earlier (21:50) and is kept as history in experiments/b2-hint/.
 2. **Training recipe** for Glimmer LoRA (tool, settings, memory on one GPU): not researched yet.
 3. **Practice-job generator:** new part families that don't overlap the 30 held-out exam jobs.
 4. Baseten billing: confirm the Spark Open usage is covered by the $100 credit, not the card on file.
@@ -43,7 +42,7 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 6. Which companies would pay (market not validated; use the user's two problem frameworks after the hackathon).
 
 ## Next step
-User decides on B2. Then the factory ([[factory-plan-2026-10-29]]): recipe research (free) → generator spec → Muse Code
+User reviews `company/SPEC.md` → Muse Code builds Keel + manual + dashboard → held-out exam. Then the factory ([[factory-plan-2026-10-29]]): recipe research (free) → generator spec → Muse Code
 builds → teacher run → one training run → final exam on the same 30 held-out jobs.
 
 ## Where things are

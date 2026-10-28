@@ -41,7 +41,9 @@ money. Status: **plan, not started**. Waiting for the user's answer on the B2 ch
 - One training run only (budget): run a tiny training smoke test first.
 - The time cap: ~7 days to the deadline.
 
-## Day-by-day plan (AcmeCAD, proposed 2026-10-28 22:00; waiting for the user's yes)
+**Update 2026-10-28 22:30**: "AcmeCAD" is now **Keel**, the private tool of the fictional space company **Quillon Orbital Works**, plus an internal dashboard (user). Spec: `company/SPEC.md`.
+
+## Day-by-day plan (AcmeCAD → Keel, proposed 2026-10-28 22:00; waiting for the user's yes)
 | Day | Work | Gate before moving on | Cost |
 |---|---|---|---|
 | Wed Oct 29 | AcmeCAD spec → Muse Code builds the library + company manual; new 30-job held-out exam in company terms (self-test, blind rebuild); training-recipe research; verifier audit | exam self-test 30/30 + verifier GO | ~$0.5 |
