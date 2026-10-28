@@ -2,8 +2,8 @@
 
 Supersedes `experiments/keel-exam/` (v1 exam, kept as history: the user asked for a more realistic tool, 2026-10-28).
 
-Status: **FROZEN** 2026-10-28 ~23:50 (hashes in section 7; verifier exam GO; blind rebuild 30/30; runner tests 62/62;
-rule 1 on C pass@3 per the user).
+Status: **FROZEN** 2026-10-29 ~00:05 (hashes in section 7; verifier exam GO; blind rebuild 30/30; runner tests 63/63;
+rule 1 on C pass@3 per the user; sandbox denies temp-folder reads).
 The paid pilot and main run need the user's yes.
 
 ## 1. Question
@@ -63,7 +63,8 @@ sample 1 (informational). INVALID answers count as not PASS in the score and are
 Each answer runs in its own new scratch directory under the job temp folder, as
 `env -i HOME=<scratch> PATH=/usr/bin:/bin sandbox-exec -f sandbox.sb /bin/sh -c 'ulimit -t 120; <venv python> run_one.py'`:
 - `sandbox.sb` (verifier note 2, tested profile in `sandbox.reference.sb`): `(allow default) (deny network*)`;
-  `(deny file-read* (subpath "/Users/alyssa"))` then allow reads only of the venv, the uv Python install
+  `(deny file-read* (subpath "/Users/alyssa"))` and the system temp folders (/private/tmp, /private/var/folders,
+  /tmp, /var/folders: verifier found answer-key copies there; Claude task logs live there too), then allow reads only of the venv, the uv Python install
   (`~/.local/share/uv/python`, the venv's base interpreter lives there behind a symlink), `company/` and the answer's
   own scratch dir, plus `run_one.py` itself (the child must read it; found by Muse Code); `(allow file-read-metadata)`;
   `(deny file-write*)` then allow writes only to the answer's own
@@ -110,13 +111,13 @@ sandbox result, measurement and verdict to `results/keel-v2-<run>/calls.jsonl`.
 Before the run, the sha256 of these files is written here and committed; the runner recomputes them at start and
 refuses to run if any differs: `jobs.py`, `expected.json`, `referee.py`, `runner.py`, `sandbox.sb`, `run_one.py`
 (this folder), `../first-test/checks.py`, `../../company/keel/__init__.py`, `../../company/manual.md`.
-Hashes (re-frozen 2026-10-28 ~23:50 with `runner.py --print-hashes`, after the rule-1 change):
+Hashes (re-frozen 2026-10-29 ~00:05 after the rule-1 change and the temp-folder sandbox fix):
 ```text
 fc6dfd1a44f0596fdb3a2bb43e672805b7a86490380a2e9df73768de93b58863  jobs.py
 aa5eef7077e7f7bb8375132749eb612efe2a47a2fefa0d9693762e9289bbc981  expected.json
 c340a5c3eced99ee1faad123df1ad89cf8385d7ffe0553fc57fad7fca5e33a2f  referee.py
 f38613aa9156750debfb4d902a2a7ca6463ecae4f6404a0a395a50dba0fcb39a  runner.py
-0d150bfbaea5a27c3128444c8220e99c460fb80503b6418c11dfe12c6a377396  sandbox.sb
+8d1e3d5f5b9edcd9dbd6c2a200d2c6d98eb545ef0247351cca35b0ef01bc45f6  sandbox.sb
 51376492dfd791a39d19c42a7e2a2ac681e36697b80a09c33781f9cabca05524  run_one.py
 3fc69f4baa0649d20210dc03e3a3143fa6f0bc28f15619d311e4f29c94e51c2a  ../first-test/checks.py
 0c1d41e9b5289f94339f86e9b38d5b8f2618960ac4b22f643c4edcf04942dc18  ../../company/keel/__init__.py

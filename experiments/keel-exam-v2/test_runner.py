@@ -279,6 +279,29 @@ def test_sandbox_blocks_read_of_repo_file(tmp_path):
     assert "PermissionError" in sb["result"]["error"]
 
 
+def test_sandbox_blocks_system_tmp_but_reference_passes(tmp_path):
+    # Answer-key copies exist in system temp folders: the sandbox must
+    # deny both reading a file under /private/tmp and listing it, while
+    # a correct reference program still builds its BREP and PASSes.
+    import tempfile
+    fd, probe = tempfile.mkstemp(
+        prefix="keel-probe-", suffix=".txt", dir="/private/tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write("probe")
+        sb = _sandbox(f"open({probe!r}).read()\n", tmp_path)
+        assert sb["result"] is not None and not sb["result"]["ok"]
+        assert "PermissionError" in sb["result"]["error"]
+        sb = _sandbox("import os\nos.listdir('/private/tmp')\n", tmp_path)
+        assert sb["result"] is not None and not sb["result"]["ok"]
+        assert "PermissionError" in sb["result"]["error"]
+    finally:
+        if os.path.exists(probe):
+            os.unlink(probe)
+    sent, _, _ = _e2e(tmp_path, "M1", None)
+    assert sent[0]["outcome"] == "PASS", sent[0]
+
+
 def test_sandbox_has_no_key_or_token_env(tmp_path):
     code = (
         "import os\n"

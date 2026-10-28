@@ -2,7 +2,7 @@
 ;; `sandbox.reference.sb`). `(allow default)`, no network, reads under
 ;; /Users/alyssa denied except the venv, the uv Python install, `company/`,
 ;; the answer's own scratch dir and this lineage's `run_one.py` (passed with
-;; -D and `(param ...)`), writes only to the scratch dir and /dev/null.
+;; -D and `(param ...)`), writes only to the scratch dir and /dev/null. Reads under /private/tmp, /private/var/folders, /tmp, /var/folders denied (answer-key copies in system temp).
 ;; NOTE vs the reference: one extra read allow for `run_one.py` itself.
 ;; Without it the PLAN 4c command cannot run at all: the child is denied
 ;; reading run_one.py from the repo (verified: Errno 1 on open). The scratch
@@ -12,6 +12,7 @@
 (allow default)
 (deny network*)
 (deny file-read* (subpath "/Users/alyssa"))
+(deny file-read* (subpath "/private/tmp") (subpath "/private/var/folders") (subpath "/tmp") (subpath "/var/folders"))
 (allow file-read* (subpath (param "VENV")) (subpath (param "PYHOME")) (subpath (param "COMPANY")) (subpath (param "SCRATCH")))
 (allow file-read* (literal (param "RUNONE")))
 (allow file-read-metadata)
