@@ -61,6 +61,11 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
   a B-search arm (Glimmer + manual + 5 most similar designs), Spark context check, blind check of the hidden rules,
   and the B2 CadQuery hint test in parallel as the fallback check. Plan: [[option-a-plan-2026-10-29]].
 - Tonight: no builds, no Muse Code, no paid calls. Tomorrow: every paid step waits for the user's yes.
+- Proposed free night tasks (2026-10-28 23:40), **waiting for the user's pick**: (1) Spark Open context limit from
+  Baseten docs/model page (reading only); (2) training-recipe research for a Glimmer LoRA on one GPU (memory, tool,
+  serving the adapter with vLLM, cost); (3) verifier pre-review of [[option-a-plan-2026-10-29]]; (4) draft the hidden
+  standards + 30 exam requests (writing only); (5) sandbox spec for the B2 CadQuery runner. Recommended: 1 + 2 + 3.
+- New session? Start with: "Forge: read ~/projects/forge/forge-wiki/wiki/status.md and continue".
 
 ## Where things are
 - GitHub: **https://github.com/alyssaaa11/expertery** (PRIVATE), created and pushed by **Muse Code** on 2026-10-28 21:01 (commit d23b21a, 22 commits). verified: `gh repo view` → PRIVATE; fresh clone + `gitleaks --all` → no leaks; only envsave reference labels (es_…) appear, not key values. Rule (user): publishing and all code are done with Muse Code; README has an honest "How this was built" section. Later wiki commits must be pushed by Muse Code too.
