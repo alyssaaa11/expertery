@@ -1,0 +1,1 @@
+Place the part exactly at the coordinates given in the job. CadQuery centres boxes, cylinders and many 2D shapes on the workplane origin by default, so check where each shape ends up and move it so that every face is exactly where the job says.
