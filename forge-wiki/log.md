@@ -12,3 +12,5 @@
 ## [2026-10-28 16:55] update | forge-diagrams (diagram 7 final plan) + forge-questions (Spark Open vs 1.3)
 
 ## [2026-10-28 17:45] update | lessons (overlap check, blind rebuild); first test prep: 33 jobs, self-test 33/33, blind 33/33, manual.md, RUNNER_SPEC.md
+
+## [2026-10-28 18:00] update | forge-plan (Baseten $100 credit per user; card on file; check after dry run)

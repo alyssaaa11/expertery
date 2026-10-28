@@ -15,6 +15,7 @@ today's status), and the Oct 28 → Nov 4 schedule with one stop-or-go test on O
 ---
 
 ## Goal
+- Baseten money (2026-10-28 ~18:00): the user says the hackathon gave **$100 Baseten credit**. verified (user screenshot): Billing and usage shows $0.00 spend since Oct 27, no visible balance, and **a Visa card on file**. verified: the hackathon key can't read billing (`/v1/billing/usage_summary` → 403). Baseten docs: credits are applied to each invoice before the card is charged. Rule: check Model APIs spend on that page after the dry run, before the 30 real jobs.
 - decision (user, 2026-10-28 ~14:40): first test = **15 medium + 15 hard jobs** (no easy ones); **Spark runs as Spark Open on Baseten credits**, not Meta credits. Plan: `~/projects/forge/experiments/first-test/PLAN.md` (draft, waiting for approval).
 - verified 14:10: **spent so far $0.57 of $30** (Glimmer test 1, `modal billing summary`). See [[glimmer-test-1-2026-10-28]].
 - decision (user, 14:00): Forge never shares HerdShot's app, secret, storage or wiki. Its own: `deploy/modal_glimmer.py` (app + secret `forge-glimmer`, envsave `FORGE_GLIMMER_VLLM_API_KEY`, volumes `forge-hf-cache`/`forge-vllm-cache`), wiki `~/projects/forge/forge-wiki`.
