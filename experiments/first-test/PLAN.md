@@ -27,7 +27,7 @@ Glimmer gets the manual**?
 |---|---|---|
 | A | Glimmer 30B on Modal (`forge-glimmer`) | no |
 | B | Glimmer 30B on Modal | yes |
-| C | Muse Spark (Meta API) | yes |
+| C | Muse **Spark Open** on Baseten (`meta-models/muse-spark-open-1026`, envsave `BASETEN_API_KEY`) | yes |
 - The same 30 jobs and the same instructions for all. The "manual" is one fixed file, `manual.md` (CadQuery's own
   docs: quick start, Workplane API, selectors; at most ~5,000 tokens, so Glimmer's 16k window still fits 8k of thinking).
 - Settings: temperature 0.6 for both models, max output 8,000 tokens, one attempt per job (pass@1).
@@ -80,11 +80,10 @@ Scores are on all 30 jobs. Arms are compared job by job (same jobs for both), wh
 | Item | Estimate | Hard stop |
 |---|---|---|
 | Glimmer arms A + B: 60 calls + 6 dry-run calls, up to 16 in parallel, ~25 min A100 incl. a one-time ~60 GB download into `forge-hf-cache` | ~$1.00–1.50 | the app stops itself after the run; max 1 GPU |
-| Spark arm C: 30 + 3 calls (~6k tokens in, ~4k out each) | ~$1.00–1.50 standard tier | stop if Spark spend passes $3 |
+| Spark Open arm C on **Baseten credits** (user, 2026-10-28): 30 + 3 calls (~6k tokens in, ~4k out each, same price as Spark) | ~$1.00–1.50 | stop if Baseten spend passes $3 |
 | **Total** | **~$1.50–2.50** | **abort at $5** |
 - Spent so far: $0.57 of $30.
-- Open: standard or the 10× cheaper contributor tier for Spark (Meta may train on the prompts; they contain only
-  made-up parts). Standard is affordable here.
+- decision (user, 2026-10-28): Spark runs as **Spark Open on Baseten**, paid from the $100 Baseten credit (~$0.02 spent before). Meta credits are not used. Both models are now open weights, which also fits the "Best Build on Meta Open Weights" bonus. Every Baseten call is logged in this run's cost file, because HerdShot's limiter is not used.
 
 ## 9. Who builds what
 - Jobs, references, wrong versions, checks: written before the run and checked by CadQuery (free). This is the exam,
