@@ -99,3 +99,85 @@ Sections:
 ## 7. Not in this step
 The 30-job held-out exam (written separately, frozen and blind-rebuilt as before), the practice generator, the
 teacher run, training. Budget for this build: one Muse Code session, ~$0.50–0.80 Meta credit, user approval first.
+
+---
+
+# Keel v2: realistic company tool (SPEC addendum, 2026-10-28 ~23:30, user: "do it more realistic")
+
+Why: v1 is close to plain CAD; a small model with the manual may already do well, leaving Forge nothing to improve.
+Real internal tools carry company knowledge: named standards, rules that depend on material and part class, family-
+specific drawing conventions, and traps in the order of operations. v2 adds these. Everything stays exactly
+checkable (each program still compiles to exactly one CadQuery solid) and fully documented in the manual: nothing
+is secret from a careful reader, but a lot must be remembered and combined.
+All v1 calls keep working unchanged. Version 2.0.0.
+
+## V2.1 Materials (changes the shape through the standards)
+`keel.part(number, material="AL6061", cls="GSE")`. Material now matters:
+| Material | Standard wall | Standard fillet | Minimum wall (KeelError if thinner) |
+|---|---|---|---|
+| AL6061 | 2.5 | 1.0 | 1.5 |
+| TI6AL4V | 3.0 | 1.5 | 2.0 |
+| SS316 | 2.0 | 0.5 | 1.2 |
+Unknown material → KeelError listing the three codes.
+
+## V2.2 Part class
+`cls="GSE"` (ground support equipment, default) or `cls="FLIGHT"` (flies on the satellite). FLIGHT rules:
+1. `finish()` applies the material's standard fillet to the stock's vertical edges automatically if `fillet()` was
+   not called (an explicit `fillet(r=...)` wins).
+2. Every fastener hole on the base must be counterbored (`-CB`) or countersunk (`-CS`); a plain code raises
+   `KeelError: flight parts need -CB or -CS fasteners (KF-M4 at (x, y))`. Wall holes (V2.4) are exempt.
+
+## V2.3 Countersinks
+Suffix `-CS`: 90° countersink from the local top (same "local top" rule as counterbores). Table KF gains a column:
+| Code | Countersink Ø at the top |
+|---|---|
+| KF-M2 | 4.3 |
+| KF-M3 | 6.3 |
+| KF-M4 | 8.4 |
+| KF-M5 | 10.4 |
+| KF-M6 | 12.4 |
+Geometry: a cone from the countersink Ø at the local top narrowing at 45° (half-angle) down to the clearance Ø, then
+the through hole.
+
+## V2.4 Holes in walls
+`p.wall_hole(edge, code, at=(u, z))`: a plain KF clearance hole drilled horizontally through the wall on `edge`,
+perpendicular to the wall, all the way through its thickness. `u` = distance along the wall: from the **west end**
+for north and south walls, from the **south end** for east and west walls. `z` = height of the hole centre **above
+the stock top**. KeelError if there is no wall on that edge, if the code has -CB/-CS, or if the hole does not fit
+inside the wall (hole edge closer than 0 to the wall's top or ends).
+
+## V2.5 Company standard mounts
+`p.mount(name, origin=(x, y), finish="plain")`, `finish` = "plain", "CB" or "CS" (applied to every hole of the
+mount; FLIGHT rule 2 applies). Hole offsets are from `origin`:
+| Name | Fastener | Holes (offsets from origin) |
+|---|---|---|
+| PETREL-MOUNT-A | KF-M4 | (0,0), (40,0), (0,30), (40,30); origin = the south-west hole |
+| PETREL-MOUNT-B | KF-M5 | (0,0), (60,0), (0,40), (60,40); origin = the south-west hole |
+| STAR-TRACKER-3 | KF-M3 | 3 holes on a circle of diameter 30 around the origin, at 90°, 210° and 330° (0° = east, counter-clockwise) |
+| HARNESS-P2 | KF-M2 | (0,0), (15,0); origin = the west hole |
+`mount()` counts as one feature for `pattern()` (the whole mount is repeated) and for `mirror()`.
+
+## V2.6 Mirror
+`p.mirror(axis)`: `axis="ew"` copies every hole, boss, pocket, slot and mount recorded so far to the mirror position
+about the stock's centre line x = L/2; `axis="ns"` about y = W/2. Originals stay. Walls and wall holes are not
+mirrored. After a mirror, `pattern()` raises KeelError (nothing to repeat).
+
+## V2.7 Reading design requests (manual section; a drawing convention, not code)
+- BRK, PLT, STD and CLP requests give positions from the datum corner (as in v1).
+- **FRM requests are dimensioned from the frame centre** (x east, y north, can be negative), because frames are
+  symmetric. Keel always uses the corner datum, so convert: x = L/2 + x_request, y = W/2 + y_request.
+- "Flight part" in a request means `cls="FLIGHT"`. A material named in a request (e.g. "titanium" = TI6AL4V,
+  "stainless" = SS316, "aluminium" = AL6061) must be passed as `material=`.
+
+## V2.8 Build changes (for Muse Code)
+- Library v2.0.0 in `company/keel/` (keep v1 behaviour for v1 calls; KeelError messages company-style).
+- Manual v2 in `company/manual.md`: add sections for V2.1–V2.7 with one example each, plus 2 new worked examples
+  that combine several rules. Target ≤ 6,000 tokens. It must contain no exam job (exam part numbers are in the
+  BRK-2xxx…5xxx range and must not be used in the manual or examples; use 0xxx–1xxx numbers).
+- Examples: keep the 8; add 4 v2 examples (a FLIGHT titanium bracket with a wall hole, a frame dimensioned from the
+  centre with a mirror, a plate with PETREL-MOUNT-A countersunk, a stainless part with STAR-TRACKER-3).
+- `company/selftest.py`: extend to every new rule (each error case, each mount, the auto fillet, the countersink
+  cone, wall_hole positions, mirror). Use the Keel-exam referee tolerance (0.01%: import
+  `experiments/keel-exam/referee.py`) for the wrong-variant checks.
+- Dashboard: Keel v2.0.0; new cards/tables for Materials, Part classes, Standard mounts; Gauge card says overlap
+  0.01%; label request statuses as "sample data" until real results exist.
