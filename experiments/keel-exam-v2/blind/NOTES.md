@@ -11,7 +11,6 @@ All 30 programs written and run without Keel errors (H2 and H15 first failed on 
 
 ## Per job
 - M1: "Two KF-M4 holes with centres at..." no ambiguity beyond: plain holes (GSE) assumed since not flight. Wall "30 high" taken as height above stock top (manual definition).
-- M2: "countersunk PETREL-MOUNT-A with its south-west hole at (20, 15)" read as origin=(20,15), finish="CS".
 - M4, M9, M13, H2, H6, H9, H13: FRM centre-origin conversions made per section 6 (x = L/2 + xr). M4 pocket "lower-left corner at (-30,-15)" -> (20,15). M9 slot centre line (-20,0)..(20,0) -> (20,40)..(60,40).
 - M5: "the second 9 mm north of the first" -> origin (10,17); "west hole" = origin per manual. Fine.
 - M6: "6 mm in from each corner (6 mm from both adjacent edges)" clear; pattern 2x2 with pitch 58/38 derived.
@@ -34,3 +33,5 @@ All 30 programs written and run without Keel errors (H2 and H15 first failed on 
 - H13: "2 columns and 2 rows ... column pitch 80, row pitch 50" -> pattern(2,2,80,50), pocket seed at (10,10). "Three KF-M5 holes at (0,-45),(0,0),(0,45)" are FRM centre coords -> (80,5),(80,50),(80,95), pattern(1,3,0,45). Plain holes assumed since not flight. Easy trap: (0,-45) is 45 from centre, hole lands 5 from edge.
 - H14: "Two KF-M5 holes through the east wall ... from its south end" east wall u convention applied. Boss hole "counterbored from the top of the boss" matches the local-top rule.
 - H15: "Four HARNESS-P2 mounts in a row along the north side": "north side" is only descriptive, positions given. Mount ordering after mirror forced explicit calls (pattern after mirror error). Slot "10 wide" x 60-90 near the mounts: no conflict.
+- M2 (REPLACED request, manual v2.1.0): "A counterbored PETREL-MOUNT-A with its south-west hole at (25, 20). One KF-M6 hole with its centre at (75, 55). Standard fillet." Mount -> origin=(25,20), finish="CB". "One KF-M6 hole" has no CB/CS wording and the part is not flight, so I used a plain KF-M6 (not counterbored, unlike the mount). Stainless fillet 0.5 via fillet(). Mount holes at x 25/65, y 20/50; the KF-M6 hole (75,55) is near the (65,50) mount hole (distance ~11.2) with a CB dia 8 and a clearance dia 6.6: no overlap, no ambiguity found. Mild: "Standard fillet" means material standard (0.5), taken from the table.
+- Manual v2.1.0 re-read: new line "Cuts ... are always applied after all walls and bosses, whatever the order you call them in." This resolves call-order concerns for walls vs holes (e.g. wall_hole/hole before wall); my other programs added walls in various orders and are unaffected. No other change noticed; mirror/pattern text unchanged.

@@ -3,7 +3,7 @@
   "request": "BRK-2310 angle bracket, titanium. Stock 60 x 40 x 5. A standard wall on the west edge, 30 high. Two KF-M4 holes with centres at (25, 10) and (25, 30)."
  },
  "M2": {
-  "request": "PLT-2412 mounting plate, aluminium. Stock 80 x 60 x 4. A countersunk PETREL-MOUNT-A with its south-west hole at (20, 15). Standard fillet."
+  "request": "PLT-2412 mounting plate, stainless. Stock 90 x 70 x 5. A counterbored PETREL-MOUNT-A with its south-west hole at (25, 20). One KF-M6 hole with its centre at (75, 55). Standard fillet."
  },
  "M3": {
   "request": "STD-2507 standoff, titanium, flight part. Foot 30 x 30 x 4 with a boss of diameter 12, 14 high, centred on the foot. A countersunk KF-M4 hole through the centre of the boss, countersunk from the top of the boss."

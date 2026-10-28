@@ -1,9 +1,9 @@
-# Keel v2 baseline test: PLAN (draft, not frozen)
+# Keel v2 baseline test: PLAN (frozen)
 
 Supersedes `experiments/keel-exam/` (v1 exam, kept as history: the user asked for a more realistic tool, 2026-10-28).
 
-Status: **draft** (2026-10-28 ~22:40, verifier fixes applied). Becomes frozen (read-only) only after: blind rebuild 30/30, verifier GO, the
-user's yes. Nothing paid runs before that.
+Status: **FROZEN** 2026-10-28 ~23:30 (hashes in section 7; verifier exam GO; blind rebuild 30/30; runner tests 53/53).
+The paid pilot and main run need the user's yes.
 
 ## 1. Question
 On a private tool no model has seen (Keel 2.0, of the fictional Quillon Orbital Works), with only the company manual:
@@ -26,6 +26,7 @@ Same prompt for both, same sampling as the first test (temperature 1.0, top_p 0.
   0.01% let a missing standard fillet PASS on large parts (0.006–0.009%). The runner must import `referee.py`.
 - Keel 2.1 (verifier fix): cuts are applied after all walls and bosses whatever the call order, and no cut removes
   material above its local top. Exam references must be unchanged by this (checked by re-running the self-test).
+- M2 replaced (verifier note 3: it was a near-copy of example PLT-1042); self-test and blind re-run.
 - Self-test 90/90 (30 references pass, 60 wrong versions fail; smallest wrong-version mismatch 0.0133%, alternative correct programs 0.00000000%). Blind rebuild 30/30 (fresh helper, manual v2 + texts only; it hit and solved the mirror/pattern trap in H2, H15; notes in blind/NOTES.md, no text changes needed).
 
 ## 4. Decision rules (ordered, first match wins; all in percent of answers, compared in whole points)
@@ -53,16 +54,21 @@ sample 1 (informational). INVALID answers count as not PASS in the score and are
 ## 4c. Sandbox for model answers (answers are untrusted Python run on this Mac)
 Each answer runs in its own new scratch directory under the job temp folder, as
 `env -i HOME=<scratch> PATH=/usr/bin:/bin sandbox-exec -f sandbox.sb /bin/sh -c 'ulimit -t 120; <venv python> run_one.py'`:
-- `sandbox.sb`: `(allow default) (deny network*) (deny file-write*)`, then allow writes only to the scratch dir,
-  /dev/null and the system temp folders (/private/var/folders, /private/tmp).
+- `sandbox.sb` (verifier note 2, tested profile in `sandbox.reference.sb`): `(allow default) (deny network*)`;
+  `(deny file-read* (subpath "/Users/alyssa"))` then allow reads only of the venv, the uv Python install
+  (`~/.local/share/uv/python`, the venv's base interpreter lives there behind a symlink), `company/` and the answer's
+  own scratch dir, plus `run_one.py` itself (the child must read it; found by Muse Code); `(allow file-read-metadata)`;
+  `(deny file-write*)` then allow writes only to the answer's own
+  scratch dir and /dev/null. Paths are passed with `-D NAME=<path>` and `(param "NAME")`.
 - Clean environment (`env -i`): no API keys or other secrets. `company/` is put on sys.path by `run_one.py`.
 - CPU: `ulimit -t 120` plus a 120 s wall-clock timeout (kill the process group). Memory: macOS ignores RLIMIT_AS/
   DATA (tested: setrlimit fails), so the runner polls the child's RSS every 0.5 s and kills it above 4 GB → FAIL
   ("memory").
 - The child writes the finished solid as a BREP/STEP file into the scratch dir; the referee runs in the runner
   process on that file (the referee never runs untrusted code). The solid is kept for the replay viewer.
-- verified 2026-10-28 22:40: in this sandbox Keel builds a part, a socket connect fails (PermissionError), a write
-  outside the scratch dir fails, a write inside works, and the environment has no *KEY*/*TOKEN* variables.
+- verified 2026-10-28 ~23:00 with `sandbox.reference.sb`: Keel builds a part and writes solid.brep; reading
+  expected.json and ~/.zshrc fails, writing into a sibling scratch dir fails, a socket connect fails (all
+  PermissionError); the environment has no *KEY*/*TOKEN* variables.
 
 ## 4d. Pilot (before the full run)
 3 jobs (M1, M7, H9), arm C only (Spark Open on Baseten), k = 1. It checks: the prompt and answer format, code
@@ -71,13 +77,19 @@ in the sandbox without INVALID or harness errors (whether the parts PASS does no
 separately and never count. If the pilot fails: fix the harness (not the exam), rerun the pilot.
 
 ## 5. Cost (estimate) and hard caps
-Runner by Muse Code ~$0.40; pilot ~$0.08; Modal ~$1.0–1.5 (cold start ~7 min + 90 answers); Baseten ~$2.0–2.4 (90
-answers) → **~$3.5–4.4**. Spent before this test ≈ $5.4 of $30.
+Runner by Muse Code ~$0.40 (+ ~$0.20 for the follow-up sandbox/cap changes); pilot ~$0.08; Modal ~$1.0–1.5 (cold
+start ~7 min + 90 answers); Baseten ~$2.0–2.4 (90 answers) → **~$3.7–4.6**. Spent before this test ≈ $5.4 of $30.
 Hard caps (the runner checks them before every new call and stops sending new calls at the cap; calls in flight
 finish and are logged):
 - Modal: `--budget 2.50` USD, estimated as wall-clock since deploy start × $2.50/h (includes the cold start), and
   a 60-minute wall-clock limit for the Glimmer arm.
-- Baseten: `--budget-c 3.00` USD, computed from each response's usage tokens × $1.25/M in, $4.25/M out.
+- Baseten: `--budget-c 4.00` USD, computed from each response's usage tokens × $1.25/M in, $4.25/M out (full input
+  price, so the estimate is on the high side; 4.00 leaves room above the ~$2.0–2.4 expected).
+- Order: calls are sent sample-major (all 30 jobs of sample 1, then sample 2, then sample 3; jobs in a fixed order
+  inside a sample), so a cap hit leaves complete samples.
+- If a cap stops an arm early (verifier note 1): answers never sent are NOT RUN (not FAIL, not INVALID). The arm's
+  score then uses only its complete samples (all 30 jobs answered); an incomplete last sample is reported but not
+  scored. If either arm has no complete sample, the run is INCOMPLETE and no decision is made.
 Stop check after the run: `modal app stop forge-glimmer -y`, then `modal app list` must show it stopped; record
 `modal billing summary`; record the Baseten spend from the token log.
 
@@ -90,6 +102,15 @@ sandbox result, measurement and verdict to `results/keel-v2-<run>/calls.jsonl`.
 Before the run, the sha256 of these files is written here and committed; the runner recomputes them at start and
 refuses to run if any differs: `jobs.py`, `expected.json`, `referee.py`, `runner.py`, `sandbox.sb`, `run_one.py`
 (this folder), `../first-test/checks.py`, `../../company/keel/__init__.py`, `../../company/manual.md`.
-Hashes (filled in at freeze time with `runner.py --print-hashes`; empty = not frozen, the runner refuses):
+Hashes (frozen 2026-10-28 ~23:30 with `runner.py --print-hashes`):
 ```text
+fc6dfd1a44f0596fdb3a2bb43e672805b7a86490380a2e9df73768de93b58863  jobs.py
+aa5eef7077e7f7bb8375132749eb612efe2a47a2fefa0d9693762e9289bbc981  expected.json
+c340a5c3eced99ee1faad123df1ad89cf8385d7ffe0553fc57fad7fca5e33a2f  referee.py
+1033717647c38c8c11f2e6c4996a4f74376a8fc2b47b09e72822c7da55213e18  runner.py
+0d150bfbaea5a27c3128444c8220e99c460fb80503b6418c11dfe12c6a377396  sandbox.sb
+51376492dfd791a39d19c42a7e2a2ac681e36697b80a09c33781f9cabca05524  run_one.py
+3fc69f4baa0649d20210dc03e3a3143fa6f0bc28f15619d311e4f29c94e51c2a  ../first-test/checks.py
+0c1d41e9b5289f94339f86e9b38d5b8f2618960ac4b22f643c4edcf04942dc18  ../../company/keel/__init__.py
+583b71bcbaae8d2bd6786aee425b0284ba8f6d9cc8689cf853ab05be1baf25ee  ../../company/manual.md
 ```

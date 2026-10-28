@@ -18,11 +18,11 @@ JOBS = {
             'p = keel.part("BRK-2310", material="TI6AL4V")\np.stock(60, 40, 5)\np.wall("west", 30)\n'
             'p.hole("KF-M4", at=(25, 10))\np.pattern(1, 2, 0, 20)\n',
             [[('material="TI6AL4V"', 'material="AL6061"')], [("p.pattern(1, 2, 0, 20)", "p.pattern(1, 2, 0, 18)")]]),
-    "M2": J("PLT-2412 mounting plate, aluminium. Stock 80 x 60 x 4. A countersunk PETREL-MOUNT-A with its south-west "
-            "hole at (20, 15). Standard fillet.",
-            'p = keel.part("PLT-2412", material="AL6061")\np.stock(80, 60, 4)\n'
-            'p.mount("PETREL-MOUNT-A", origin=(20, 15), finish="CS")\np.fillet()\n',
-            [[('finish="CS"', 'finish="CB"')], [("origin=(20, 15)", "origin=(15, 20)")]]),
+    "M2": J("PLT-2412 mounting plate, stainless. Stock 90 x 70 x 5. A counterbored PETREL-MOUNT-A with its south-west "
+            "hole at (25, 20). One KF-M6 hole with its centre at (75, 55). Standard fillet.",
+            'p = keel.part("PLT-2412", material="SS316")\np.stock(90, 70, 5)\n'
+            'p.mount("PETREL-MOUNT-A", origin=(25, 20), finish="CB")\np.hole("KF-M6", at=(75, 55))\np.fillet()\n',
+            [[('finish="CB"', 'finish="CS"')], [('material="SS316"', 'material="AL6061"')]]),
     "M3": J("STD-2507 standoff, titanium, flight part. Foot 30 x 30 x 4 with a boss of diameter 12, 14 high, centred "
             "on the foot. A countersunk KF-M4 hole through the centre of the boss, countersunk from the top of the "
             "boss.",
