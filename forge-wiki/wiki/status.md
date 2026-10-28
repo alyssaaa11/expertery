@@ -29,9 +29,9 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 | Credit | Spent on Forge | Source |
 |---|---|---|
 | Modal | $1.65 (Glimmer test 1, dry run, main run) | `modal billing summary` 2026-10-28 ~18:45 |
-| Meta | ~$1.02 (two Muse Code sessions) | run.usage events in `results/muse-*.jsonl` × list prices |
+| Meta | ~$1.13 (three Muse Code sessions: build, fixes, publish ~$0.11) | run.usage events in `results/muse-*.jsonl` × list prices |
 | Baseten | ~$0.85 (estimate: dry + main + 2 probe calls) | runner token estimate; the dashboard showed $0.00, credit not visible |
-| **Total** | **≈ $3.5 of $30** | |
+| **Total** | **≈ $3.6 of $30** | |
 
 ## Open questions
 1. **B2 cheap-fix test** (Glimmer + manual + coordinate hint, ~$0.70): run it before the factory? Waiting for the user.
@@ -46,6 +46,7 @@ User decides on B2. Then the factory ([[factory-plan-2026-10-29]]): recipe resea
 builds → teacher run → one training run → final exam on the same 30 held-out jobs.
 
 ## Where things are
+- GitHub: **https://github.com/alyssaaa11/expertery** (PRIVATE), created and pushed by **Muse Code** on 2026-10-28 21:01 (commit d23b21a, 22 commits). verified: `gh repo view` → PRIVATE; fresh clone + `gitleaks --all` → no leaks; only envsave reference labels (es_…) appear, not key values. Rule (user): publishing and all code are done with Muse Code; README has an honest "How this was built" section. Later wiki commits must be pushed by Muse Code too.
 - Project: `~/projects/forge` (README routes everything). First test: `experiments/first-test/` (PLAN.md frozen, jobs,
   checks, runner, run_live.sh). Results: `results/`. Diagrams: `docs/diagrams/`.
 - This wiki: decisions [[forge-plan-2026-10-28]], [[factory-plan-2026-10-29]]; facts [[tools-and-services]]; value

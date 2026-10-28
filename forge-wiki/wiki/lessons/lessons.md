@@ -62,5 +62,6 @@
 - **Use a fresh hivey session address when messaging agents in other sessions** (Oct 28). How learned: `hivey msg send
   verifier/master` failed ("no swarm named verifier") until `hivey --session default msg send verifier/master …`. Check:
   `hivey --session <s> swarm directory`.
+- **Hackathon rules page says nothing on other AI assistants** (Oct 28). How learned: WebFetch of cerebralvalley.ai/e/meta-ai-developer-hackathon: "Official Rules will be published before the Hackathon begins"; it suggests Muse Code for coding. Decision (user): publish and build code with Muse Code, and state honestly in the README that Claude helped plan. Check the official rules again before submitting.
 - **Archify reruns: use a new `--out-dir`** (Oct 28): a second `finalize` into the same folder failed with
   `viewer/evidence-path-conflict`. Check: rerun with `--out-dir <folder>/review-N`; never delete old evidence.
