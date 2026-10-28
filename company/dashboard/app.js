@@ -54,7 +54,37 @@
     tr.appendChild(el("td", null, row.code));
     tr.appendChild(el("td", null, row.hole));
     tr.appendChild(el("td", null, row.counterbore));
+    tr.appendChild(el("td", null, row.countersink));
     kfBody.appendChild(tr);
+  });
+
+  var matBody = document.querySelector("#materials-table tbody");
+  tools.materials.forEach(function (row) {
+    var tr = el("tr");
+    tr.appendChild(el("td", null, row.code));
+    tr.appendChild(el("td", null, row.name));
+    tr.appendChild(el("td", null, row.wall));
+    tr.appendChild(el("td", null, row.fillet));
+    tr.appendChild(el("td", null, row.min_wall));
+    matBody.appendChild(tr);
+  });
+
+  var clsBody = document.querySelector("#classes-table tbody");
+  tools.classes.forEach(function (row) {
+    var tr = el("tr");
+    tr.appendChild(el("td", null, row.cls));
+    tr.appendChild(el("td", null, row.blurb));
+    clsBody.appendChild(tr);
+  });
+
+  var mntBody = document.querySelector("#mounts-table tbody");
+  tools.mounts.forEach(function (row) {
+    var tr = el("tr");
+    tr.appendChild(el("td", null, row.name));
+    tr.appendChild(el("td", null, row.fastener));
+    tr.appendChild(el("td", null, row.holes));
+    tr.appendChild(el("td", null, row.origin));
+    mntBody.appendChild(tr);
   });
 
   var rules = document.getElementById("rules-list");
@@ -87,7 +117,7 @@
     tr.appendChild(el("td", null, r.title));
     tr.appendChild(el("td", null, r.request));
     var td = el("td");
-    var cls = r.status === "Gauge PASS" ? "pass" : (r.status === "open" ? "open" : "draft");
+    var cls = r.status.indexOf("Gauge PASS") === 0 ? "pass" : (r.status.indexOf("open") === 0 ? "open" : "draft");
     td.appendChild(el("span", "pill " + cls, r.status));
     tr.appendChild(td);
     reqBody.appendChild(tr);

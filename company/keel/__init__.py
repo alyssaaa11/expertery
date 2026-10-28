@@ -1,4 +1,4 @@
-"""Keel: Quillon Orbital Works' private part-description tool.
+"""Keel: Quillon Orbital Works' private part-description tool (v2.0.0).
 
 Units are millimetres. Datum = the part's lower-left-bottom corner (0, 0, 0).
 +X = east, +Y = north, +Z = up. Nothing is centred unless the call says so.
@@ -8,13 +8,21 @@ import math
 
 import cadquery as cq
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
-STANDARD_WALL = 2.5
-STANDARD_FILLET = 1.0
+# Company material standards: material -> (standard wall, standard fillet, minimum wall).
+MATERIALS = {
+    "AL6061": (2.5, 1.0, 1.5),
+    "TI6AL4V": (3.0, 1.5, 2.0),
+    "SS316": (2.0, 0.5, 1.2),
+}
+
+STANDARD_WALL = 2.5    # AL6061 standard (kept for compatibility; per-part value may differ)
+STANDARD_FILLET = 1.0  # AL6061 standard (kept for compatibility; per-part value may differ)
 
 # Company fastener table KF: code -> (clearance dia, (counterbore dia, depth)).
-# "-CB" suffix = counterbored from the top face.
+# "-CB" suffix = counterbored from the local top face (see _local_top).
+# "-CS" suffix = 90-degree countersink from the local top face (v2).
 KF = {
     "KF-M2": (2.4, (4.4, 2.0)),
     "KF-M3": (3.4, (6.5, 3.0)),
@@ -22,6 +30,55 @@ KF = {
     "KF-M5": (5.5, (10.0, 5.0)),
     "KF-M6": (6.6, (11.0, 6.0)),
 }
+
+# Countersink diameter at the local top face, per base code (v2).
+KF_CS = {
+    "KF-M2": 4.3,
+    "KF-M3": 6.3,
+    "KF-M4": 8.4,
+    "KF-M5": 10.4,
+    "KF-M6": 12.4,
+}
+
+# Company standard mounts (v2): name -> (base fastener code, offsets from origin).
+_MOUNT_RECT = {
+    "PETREL-MOUNT-A": ("KF-M4", [(0, 0), (40, 0), (0, 30), (40, 30)]),
+    "PETREL-MOUNT-B": ("KF-M5", [(0, 0), (60, 0), (0, 40), (60, 40)]),
+    "HARNESS-P2": ("KF-M2", [(0, 0), (15, 0)]),
+}
+_MOUNT_NAMES = ("PETREL-MOUNT-A", "PETREL-MOUNT-B", "STAR-TRACKER-3", "HARNESS-P2")
+
+
+def _star_tracker_offsets():
+    """3 holes on a circle of diameter 30 about the origin, at 90/210/330 deg."""
+    pts = []
+    for deg in (90, 210, 330):
+        a = math.radians(deg)
+        pts.append((15 * math.cos(a), 15 * math.sin(a)))
+    return pts
+
+
+def _mount_holes(name, origin):
+    """Expand a mount to [(base_code, (x, y)), ...] hole positions."""
+    ox, oy = origin
+    if name in _MOUNT_RECT:
+        code, offs = _MOUNT_RECT[name]
+        return [(code, (ox + dx, oy + dy)) for dx, dy in offs]
+    if name == "STAR-TRACKER-3":
+        return [("KF-M3", (ox + dx, oy + dy)) for dx, dy in _star_tracker_offsets()]
+    raise KeelError(
+        f"keel: unknown mount {name!r}; mounts are "
+        "PETREL-MOUNT-A, PETREL-MOUNT-B, STAR-TRACKER-3, HARNESS-P2"
+    )
+
+
+def _split_code(code):
+    """Split a hole code into (base, suffix) where suffix is '', '-CB' or '-CS'."""
+    for suffix in ("-CB", "-CS"):
+        if code.endswith(suffix):
+            return code[: -len(suffix)], suffix
+    return code, ""
+
 
 _EDGES = ("north", "south", "east", "west")
 
@@ -36,17 +93,34 @@ def _positive(value, what):
     return float(value)
 
 
+def _fmt_xy(x, y):
+    return f"({x:g}, {y:g})"
+
+
 class part:  # noqa: N801 - company style uses lowercase, like the manual
     """A part under construction. End every program with ``solid = p.finish()``."""
 
-    def __init__(self, number, material="AL6061"):
+    def __init__(self, number, material="AL6061", cls="GSE"):
+        if material not in MATERIALS:
+            raise KeelError(
+                f"keel: unknown material {material!r}; materials are AL6061, TI6AL4V, SS316 "
+                "(aluminium = AL6061, titanium = TI6AL4V, stainless = SS316)"
+            )
+        if cls not in ("GSE", "FLIGHT"):
+            raise KeelError(
+                f"keel: unknown part class {cls!r}; cls is 'GSE' or 'FLIGHT' "
+                "('flight part' in a request means cls=\"FLIGHT\")"
+            )
         self.number = number
-        self.material = material  # metadata only; never changes the shape
+        self.material = material
+        self.cls = cls
+        self._std_wall, self._std_fillet, self._min_wall = MATERIALS[material]
         self._stock = None
         self._ops = []          # recorded feature calls, in order
         self._fillet_r = None
         self._finished = False
         self._seed = None       # last recorded feature (for pattern)
+        self._mirrored = False  # pattern() is forbidden after mirror()
 
     # -- builders ---------------------------------------------------------
     def _guard_open(self, call):
@@ -88,6 +162,22 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
                 "datum is the lower-left-bottom corner (0, 0, 0)"
             )
 
+    def _check_fastener(self, code):
+        base, _suffix = _split_code(code)
+        if base not in KF:
+            raise KeelError(
+                f"keel: unknown fastener code {code!r}; "
+                "holes use company codes KF-M2, KF-M3, KF-M4, KF-M5, KF-M6 "
+                "(add -CB for a counterbore or -CS for a countersink, e.g. KF-M4-CB)"
+            )
+        return base
+
+    def _flight_hole_error(self, code, x, y):
+        return KeelError(
+            f"keel: flight parts need -CB or -CS fasteners ({code} at {_fmt_xy(x, y)}); "
+            "every base hole on a FLIGHT part must be counterbored or countersunk"
+        )
+
     def wall(self, edge, h, t=None):
         """Wall on the top face along a named edge, flush with it, full edge length."""
         self._guard_open("wall()")
@@ -98,10 +188,15 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
                 "'north', 'south', 'east' or 'west'"
             )
         h = _positive(h, "wall height")
-        t = STANDARD_WALL if t is None else _positive(t, "wall thickness")
+        t = self._std_wall if t is None else _positive(t, "wall thickness")
         L, W, _ = self._stock
         if t > min(L, W):
             raise KeelError(f"keel: wall thickness {t:g} does not fit the {L:g} x {W:g} stock")
+        if t < self._min_wall:
+            raise KeelError(
+                f"keel: wall thickness {t:g} is thinner than the {self.material} "
+                f"minimum wall {self._min_wall:g}; use {self._min_wall:g} or thicker"
+            )
         op = ("wall", {"edge": edge, "h": h, "t": t})
         self._ops.append(op)
         self._seed = op
@@ -121,18 +216,15 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
         return self
 
     def hole(self, code, at):
-        """Through hole (all the way down) using table KF; '-CB' adds the counterbore."""
+        """Through hole (all the way down) using table KF; '-CB'/'-CS' from the local top."""
         self._guard_open("hole()")
         self._need_stock("hole()")
-        base = code[:-3] if code.endswith("-CB") else code
-        if base not in KF:
-            raise KeelError(
-                f"keel: unknown fastener code {code!r}; "
-                "holes use company codes KF-M2, KF-M3, KF-M4, KF-M5, KF-M6 "
-                "(add -CB for a counterbore, e.g. KF-M4-CB)"
-            )
+        self._check_fastener(code)
+        _base, suffix = _split_code(code)
         (x, y) = at
         self._check_xy(x, y, f"hole({code})")
+        if self.cls == "FLIGHT" and suffix == "":
+            raise self._flight_hole_error(code, x, y)
         op = ("hole", {"code": code, "at": (float(x), float(y))})
         self._ops.append(op)
         self._seed = op
@@ -195,9 +287,16 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
         (x + i*dx, y + j*dy) for i in 0..nx-1, j in 0..ny-1.
         A leading string label (e.g. pattern("hole", 2, 2, ...)) is accepted
         and ignored, for compatibility with the SPEC draft form.
+        A mount() seed repeats the whole mount. pattern() after mirror()
+        raises KeelError: there is nothing left to repeat.
         """
         self._guard_open("pattern()")
         self._need_stock("pattern()")
+        if self._mirrored:
+            raise KeelError(
+                "keel: pattern() after mirror(); there is nothing to repeat "
+                "(mirror already copied every feature at once)"
+            )
         if args and isinstance(args[0], str):
             args = args[1:]
         if len(args) != 4:
@@ -208,10 +307,10 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
         nx, ny, dx, dy = args
         if self._seed is None:
             raise KeelError("keel: pattern() with no previous feature; call a feature first")
-        if self._seed[0] in ("wall",):
+        if self._seed[0] in ("wall", "wall_hole"):
             raise KeelError(
                 f"keel: pattern() cannot repeat {self._seed[0]}(); "
-                "only boss, hole, pocket and slot can be patterned"
+                "only boss, hole, pocket, slot and mount can be patterned"
             )
         for name, value in (("nx", nx), ("ny", ny)):
             if not isinstance(value, int) or isinstance(value, bool) or value < 1:
@@ -243,12 +342,17 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
                     moved["to"] = (x2 + i * dx, y2 + j * dy)
                     self._check_xy(*moved["at"], "pattern() copy of slot() start")
                     self._check_xy(*moved["to"], "pattern() copy of slot() end")
+                elif kind == "mount":
+                    ox, oy = params["origin"]
+                    moved["origin"] = (ox + i * dx, oy + j * dy)
+                    for _code, (hx, hy) in _mount_holes(params["name"], moved["origin"]):
+                        self._check_xy(hx, hy, "pattern() copy of mount() hole")
                 self._ops.append((kind, moved))
         self._seed = None  # a pattern ends the chain; the next pattern needs a fresh feature
         return self
 
     def fillet(self, edges="vertical", r=None):
-        """Round the stock's 4 vertical outer edges; r defaults to the standard 1.0."""
+        """Round the stock's 4 vertical outer edges; r defaults to the material standard."""
         self._guard_open("fillet()")
         self._need_stock("fillet()")
         if edges != "vertical":
@@ -256,10 +360,144 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
                 f"keel: unknown fillet edges {edges!r}; Keel only rounds 'vertical' "
                 "(the stock's 4 vertical outer edges)"
             )
-        r = STANDARD_FILLET if r is None else _positive(r, "fillet radius")
+        r = self._std_fillet if r is None else _positive(r, "fillet radius")
         if r >= min(self._stock[0], self._stock[1]) / 2:
             raise KeelError(f"keel: fillet radius {r:g} does not fit the stock footprint")
         self._fillet_r = r
+        return self
+
+    def wall_hole(self, edge, code, at):
+        """Plain KF clearance hole drilled horizontally through the wall on `edge`.
+
+        `u` = distance along the wall (from the west end for north/south walls,
+        from the south end for east/west walls); `z` = hole-centre height above
+        the stock top. Add the wall before its wall holes.
+        """
+        self._guard_open("wall_hole()")
+        self._need_stock("wall_hole()")
+        if edge not in _EDGES:
+            raise KeelError(
+                f"keel: unknown edge {edge!r}; edges are named "
+                "'north', 'south', 'east' or 'west'"
+            )
+        self._check_fastener(code)
+        _base, suffix = _split_code(code)
+        if suffix:
+            raise KeelError(
+                f"keel: wall_hole() takes a plain KF code without -CB/-CS, got {code!r}; "
+                "walls are too thin for counterbores or countersinks"
+            )
+        (u, z) = at
+        for name, value in (("u", u), ("z", z)):
+            if not isinstance(value, (int, float)):
+                raise KeelError(
+                    f"keel: wall_hole() {name} must be a number of millimetres, got {value!r}"
+                )
+        self._check_wall_hole_fit(edge, code, float(u), float(z))
+        op = ("wall_hole", {"edge": edge, "code": code, "at": (float(u), float(z))})
+        self._ops.append(op)
+        self._seed = op
+        return self
+
+    def _walls_on(self, edge):
+        return [p for kind, p in self._ops if kind == "wall" and p["edge"] == edge]
+
+    def _check_wall_hole_fit(self, edge, code, u, z):
+        walls = self._walls_on(edge)
+        if not walls:
+            raise KeelError(
+                f"keel: wall_hole() on the {edge!r} edge with no wall; "
+                f"add p.wall({edge!r}, ...) first"
+            )
+        clr, _cb = KF[_split_code(code)[0]]
+        r = clr / 2
+        h = max(w["h"] for w in walls)
+        L, W, _ = self._stock
+        length = L if edge in ("north", "south") else W
+        if u - r < 0 or u + r > length or z - r < 0 or z + r > h:
+            raise KeelError(
+                f"keel: wall_hole() {code} at (u={u:g}, z={z:g}) does not fit "
+                f"the {edge} wall ({length:g} long, {h:g} high, hole dia {clr:g}); "
+                "the hole edge must stay inside the wall face"
+            )
+
+    def mount(self, name, origin, finish="plain"):
+        """Company standard mount: a fixed group of base holes at `origin`.
+
+        `finish` = "plain", "CB" or "CS", applied to every hole of the mount.
+        Counts as one feature for pattern() and mirror(). On FLIGHT parts a
+        "plain" mount raises KeelError, like a plain hole().
+        """
+        self._guard_open("mount()")
+        self._need_stock("mount()")
+        if finish not in ("plain", "CB", "CS"):
+            raise KeelError(
+                f"keel: unknown mount finish {finish!r}; finish is 'plain', 'CB' or 'CS'"
+            )
+        holes = _mount_holes(name, origin)  # also rejects unknown mount names
+        (ox, oy) = origin
+        for code, (hx, hy) in holes:
+            eff = code if finish == "plain" else f"{code}-{finish}"
+            self._check_xy(hx, hy, f"mount({name}) hole {eff}")
+            if self.cls == "FLIGHT" and finish == "plain":
+                raise self._flight_hole_error(code, hx, hy)
+        op = {"name": name, "origin": (float(ox), float(oy)), "finish": finish}
+        op = ("mount", op)
+        self._ops.append(op)
+        self._seed = op
+        return self
+
+    def mirror(self, axis):
+        """Copy every hole, boss, pocket, slot and mount recorded so far.
+
+        axis="ew" mirrors about the stock centre line x = L/2; axis="ns"
+        about y = W/2. Originals stay; walls and wall holes are not mirrored.
+        After a mirror, pattern() raises KeelError.
+        """
+        self._guard_open("mirror()")
+        self._need_stock("mirror()")
+        if axis not in ("ew", "ns"):
+            raise KeelError(
+                f"keel: unknown mirror axis {axis!r}; axis is 'ew' (about x = L/2) "
+                "or 'ns' (about y = W/2)"
+            )
+        L, W, _ = self._stock
+        copies = []
+        for kind, p in list(self._ops):
+            if kind == "hole":
+                x, y = p["at"]
+                at = (L - x, y) if axis == "ew" else (x, W - y)
+                copies.append(("hole", {"code": p["code"], "at": at}))
+            elif kind == "boss":
+                x, y = p["at"]
+                at = (L - x, y) if axis == "ew" else (x, W - y)
+                copies.append(("boss", {"at": at, "dia": p["dia"], "h": p["h"]}))
+            elif kind == "pocket":
+                x, y = p["at"]
+                if axis == "ew":
+                    at = (L - x - p["L"], y)
+                else:
+                    at = (x, W - y - p["W"])
+                copies.append(("pocket", {"at": at, "L": p["L"], "W": p["W"],
+                                          "depth": p["depth"]}))
+            elif kind == "slot":
+                (x1, y1), (x2, y2) = p["at"], p["to"]
+                if axis == "ew":
+                    at, to = (L - x1, y1), (L - x2, y2)
+                else:
+                    at, to = (x1, W - y1), (x2, W - y2)
+                copies.append(("slot", {"at": at, "to": to, "width": p["width"],
+                                        "depth": p["depth"]}))
+            elif kind == "mount":
+                # Mirror the whole mount hole by hole; the mirrored set is what
+                # a physical mirror of the drilled holes produces.
+                for code, (hx, hy) in _mount_holes(p["name"], p["origin"]):
+                    eff = code if p["finish"] == "plain" else f"{code}-{p['finish']}"
+                    at = (L - hx, hy) if axis == "ew" else (hx, W - hy)
+                    copies.append(("hole", {"code": eff, "at": at}))
+        self._ops.extend(copies)
+        self._mirrored = True
+        self._seed = None
         return self
 
     # -- build ------------------------------------------------------------
@@ -273,6 +511,27 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
         if edge == "east":
             return (L - t, 0, T, t, W, h)
         return (0, 0, T, t, W, h)  # west
+
+    def _wall_hole_cutter(self, op):
+        """Horizontal cylinder through the tallest/thickest wall on the edge."""
+        L, W, T = self._stock
+        edge, code, (u, z) = op["edge"], op["code"], op["at"]
+        clr, _cb = KF[_split_code(code)[0]]
+        r = clr / 2
+        walls = self._walls_on(edge)
+        t = max(w["t"] for w in walls)
+        cz = T + z
+        if edge == "north":
+            return cq.Solid.makeCylinder(r, t + 2.0, cq.Vector(u, W - t - 1.0, cz),
+                                         cq.Vector(0, 1, 0))
+        if edge == "south":
+            return cq.Solid.makeCylinder(r, t + 2.0, cq.Vector(u, -1.0, cz),
+                                         cq.Vector(0, 1, 0))
+        if edge == "east":
+            return cq.Solid.makeCylinder(r, t + 2.0, cq.Vector(L - t - 1.0, u, cz),
+                                         cq.Vector(1, 0, 0))
+        return cq.Solid.makeCylinder(r, t + 2.0, cq.Vector(-1.0, u, cz),
+                                     cq.Vector(1, 0, 0))  # west
 
     def _local_top(self, x, y, additives):
         """Highest added material covering point (x, y): walls are strips, bosses discs."""
@@ -295,6 +554,24 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
                     top = max(top, self._stock[2] + p["h"])
         return top
 
+    def _cut_base_hole(self, solid, code, x, y, additives):
+        """Cut one base hole (through + counterbore/countersink from the local top)."""
+        base, suffix = _split_code(code)
+        clr, (cbd, cbdpth) = KF[base]
+        top = self._local_top(x, y, additives)
+        cut = cq.Solid.makeCylinder(clr / 2, top + 2.0, cq.Vector(x, y, -1.0))
+        solid = solid.cut(cut)
+        if suffix == "-CB":
+            cb = cq.Solid.makeCylinder(cbd / 2, cbdpth + 1.0, cq.Vector(x, y, top - cbdpth))
+            solid = solid.cut(cb)
+        elif suffix == "-CS":
+            csd = KF_CS[base]
+            cone_h = (csd - clr) / 2.0  # 45-degree half-angle down to the clearance dia
+            cone = cq.Solid.makeCone(clr / 2, csd / 2, cone_h,
+                                     cq.Vector(x, y, top - cone_h), cq.Vector(0, 0, 1))
+            solid = solid.cut(cone)
+        return solid
+
     def _build(self):
         L, W, T = self._stock
         solid = cq.Solid.makeBox(L, W, T, pnt=cq.Vector(0, 0, 0))
@@ -316,14 +593,13 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
                 solid = solid.fuse(cyl)
                 additives.append((kind, p))
             elif kind == "hole":
-                clr, (cbd, cbdpth) = KF[p["code"][:-3] if p["code"].endswith("-CB") else p["code"]]
-                x, y = p["at"]
-                top = self._local_top(x, y, additives)
-                cut = cq.Solid.makeCylinder(clr / 2, top + 2.0, cq.Vector(x, y, -1.0))
-                solid = solid.cut(cut)
-                if p["code"].endswith("-CB"):
-                    cb = cq.Solid.makeCylinder(cbd / 2, cbdpth + 1.0, cq.Vector(x, y, top - cbdpth))
-                    solid = solid.cut(cb)
+                solid = self._cut_base_hole(solid, p["code"], *p["at"], additives)
+            elif kind == "mount":
+                for code, (hx, hy) in _mount_holes(p["name"], p["origin"]):
+                    eff = code if p["finish"] == "plain" else f"{code}-{p['finish']}"
+                    solid = self._cut_base_hole(solid, eff, hx, hy, additives)
+            elif kind == "wall_hole":
+                solid = solid.cut(self._wall_hole_cutter(p))
             elif kind == "pocket":
                 x, y = p["at"]
                 cx, cy = x + p["L"] / 2, y + p["W"] / 2
@@ -359,11 +635,26 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
                 solid = solid.cut(cutter)
         return solid.clean()
 
+    def _check_flight_fasteners(self):
+        """FLIGHT rule 2: every base hole (holes and mounts) is -CB or -CS."""
+        for kind, p in self._ops:
+            if kind == "hole":
+                _base, suffix = _split_code(p["code"])
+                if suffix == "":
+                    raise self._flight_hole_error(p["code"], *p["at"])
+            elif kind == "mount" and p["finish"] == "plain":
+                code, (hx, hy) = _mount_holes(p["name"], p["origin"])[0]
+                raise self._flight_hole_error(code, hx, hy)
+
     def finish(self):
         """Return the part as exactly one CadQuery solid. Must be the last call."""
         self._guard_open("finish()")
         if self._stock is None:
             raise KeelError("keel: finish() with no stock(); every part starts with p.stock(L, W, T)")
+        if self.cls == "FLIGHT":
+            if self._fillet_r is None:
+                self._fillet_r = self._std_fillet  # auto fillet in the material standard
+            self._check_flight_fasteners()
         solid = self._build()
         solids = solid.Solids()
         if len(solids) != 1:

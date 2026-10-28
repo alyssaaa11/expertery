@@ -22,7 +22,7 @@ Same prompt for both, same sampling as the first test (temperature 1.0, top_p 0.
 - Referee: `referee.py` = first-test `checks.py` unchanged, overlap tolerance 0.01% instead of 0.2%. Reason
   (verified 2026-10-28): correct answers written differently match exactly (0.00000000% on H1, H2); the smallest
   real error (missing 1 mm fillet, M2) is 0.0193%, which 0.2% let pass.
-- Self-test 90/90 (30 references pass, 60 wrong versions fail). Blind rebuild: pending.
+- Self-test 90/90 (30 references pass, 60 wrong versions fail). Blind rebuild 30/30 (independent helper, manual + texts only; H4 re-done after a text fix; notes in blind/NOTES.md).
 
 ## 4. Decision rules (ordered, first match wins, whole points)
 1. C < 30 → **STOP**: the teacher cannot use an unseen tool from its manual; rethink (e.g. a richer manual).

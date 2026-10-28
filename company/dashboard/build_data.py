@@ -77,13 +77,68 @@ def main():
                 "size": f"{bb[3] - bb[0]:g} x {bb[4] - bb[1]:g} x {bb[5] - bb[2]:g} mm",
                 "volume": f"{m['volume']:g} mm^3",
                 "request": req["request"],
-                "status": req["status"],
+                "status": req["status"] + " (sample data)",
             }
         )
 
     kf = [
-        {"code": code, "hole": str(d[0]), "counterbore": f"{d[1][0]} x {d[1][1]}"}
+        {
+            "code": code,
+            "hole": str(d[0]),
+            "counterbore": f"{d[1][0]} x {d[1][1]}",
+            "countersink": str(keel.KF_CS[code]),
+        }
         for code, d in keel.KF.items()
+    ]
+
+    material_names = {"AL6061": "aluminium", "TI6AL4V": "titanium", "SS316": "stainless"}
+    materials = [
+        {
+            "code": code,
+            "name": material_names[code],
+            "wall": str(std[0]),
+            "fillet": str(std[1]),
+            "min_wall": str(std[2]),
+        }
+        for code, std in keel.MATERIALS.items()
+    ]
+
+    classes = [
+        {"cls": "GSE", "blurb": "Ground support equipment (default). No extra rules."},
+        {
+            "cls": "FLIGHT",
+            "blurb": (
+                "Flies on the satellite. finish() applies the material's standard "
+                "fillet automatically; every base hole must be -CB or -CS."
+            ),
+        },
+    ]
+
+    mounts = [
+        {
+            "name": "PETREL-MOUNT-A",
+            "fastener": "KF-M4",
+            "holes": "(0,0), (40,0), (0,30), (40,30)",
+            "origin": "south-west hole",
+        },
+        {
+            "name": "PETREL-MOUNT-B",
+            "fastener": "KF-M5",
+            "holes": "(0,0), (60,0), (0,40), (60,40)",
+            "origin": "south-west hole",
+        },
+        {
+            "name": "STAR-TRACKER-3",
+            "fastener": "KF-M3",
+            "holes": "3 holes on a dia-30 circle at 90, 210, 330 deg",
+            "origin": "circle centre",
+        },
+        {
+            "name": "HARNESS-P2",
+            "fastener": "KF-M2",
+            "holes": "(0,0), (15,0)",
+            "origin": "west hole",
+        },
     ]
 
     scoreboard = None
@@ -125,15 +180,19 @@ def main():
             },
             "kf": kf,
             "rules": [
-                "Units are millimetres; datum is the lower-left-bottom corner.",
+                "Units are millimetres; datum is the lower-left-bottom corner (FRM requests use the frame centre).",
                 "Holes use KF codes, never raw diameters.",
-                "Standard wall 2.5 mm; standard fillet 1.0 mm.",
+                "Standards depend on material: AL6061 wall 2.5 / fillet 1.0, TI6AL4V 3.0 / 1.5, SS316 2.0 / 0.5.",
+                "FLIGHT parts: auto standard fillet; every base hole -CB or -CS.",
             ],
+            "materials": materials,
+            "classes": classes,
+            "mounts": mounts,
             "gauge": {
                 "name": "Gauge",
                 "blurb": (
                     "The automatic checking station: bounding box, volume, area, "
-                    "centre of mass and overlap mismatch within 0.2%."
+                    "centre of mass and overlap mismatch within 0.01%."
                 ),
                 "status": "live",
             },
@@ -145,7 +204,12 @@ def main():
         },
         "parts": parts,
         "requests": [
-            {"id": r["id"], "title": r["title"], "request": r["request"], "status": r["status"]}
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "request": r["request"],
+                "status": r["status"] + " (sample data)",
+            }
             for r in requests
         ],
         "assistant_panel": {
