@@ -31,12 +31,45 @@ then the Glimmer test on Modal.
 CadQuery (Python CAD, exports STEP for factories). Backup: OpenSCAD.
 
 ## Where the rest lives
-- Knowledge (wiki): `~/swarms/herdshot/herdshot-wiki/`. Start at `wiki/findings/forge-design-2026-10-28.md`, then
-  `wiki/decisions/forge-plan-2026-10-28.md` and `wiki/findings/forge-questions-2026-10-28.md`.
-- Glimmer on Modal (serving script): `~/projects/herdshot/deploy/modal_glimmer.py` (app `herdshot-glimmer`, Modal
-  secret `herdshot-glimmer`).
-- Research: `~/Research/2026-10-28-hackathon-final-validation/merged.md`.
-- Agents that write specs: `~/swarms/herdshot/`.
+All paths below were checked to exist on 2026-10-28.
+
+### Hackathon rules
+- Rubric, prizes, problem statement, deadlines, user decisions: `~/.hivey/agent/hiveyAgent-wiki/wiki/user/meta-hackathon-2026.md`
+- Hackathon overview (all projects, models, money, lessons): `~/Obsidian-wikis/master/wiki/knowledge/meta-hackathon-herdshot-2026.md`
+
+### Forge knowledge (wiki: `~/swarms/herdshot/herdshot-wiki/`)
+- Design (start here): `wiki/findings/forge-design-2026-10-28.md`
+- Plan, checklist, schedule, day-1 GO rules: `wiki/decisions/forge-plan-2026-10-28.md`
+- Q&A (privacy, why CadQuery, why test Glimmer, cost, selling): `wiki/findings/forge-questions-2026-10-28.md`
+- Why Forge was picked (two research reports merged, prior art, the risk paper 2607.08938): `wiki/findings/final-pick-research-2026-10-28.md`
+- All diagrams with explanations: `wiki/findings/forge-diagrams.md`
+- Lessons from all experiments (e.g. thinking eats max_tokens; run the cheap baseline first): `wiki/lessons/lessons.md`
+
+### Models, keys and money
+- Muse Spark API (endpoint, prices, contributor tier, quirks): `wiki/findings/meta-model-api.md`
+- Models and tools (Muse family, Glimmer, Spark Open on Baseten, Muse Code CLI): `wiki/findings/models-and-tools-2026-10-27.md`
+- Money decisions and spend so far: `wiki/decisions/money-2026-10-27.md`
+- Cost limiter (shared ledger, Modal warm-idle charging): `wiki/findings/cost-limiter.md`; caps in `~/projects/herdshot/caps.toml`
+- Keys (envsave names only): `META_HERDSHOT_API_KEY` (Muse Spark), `BASETEN_API_KEY` (Spark Open), `HERDSHOT_GLIMMER_VLLM_API_KEY` (Glimmer server password; also the Modal secret `herdshot-glimmer`)
+- Modal: workspace `my-workspace`, CLI logged in, spending limit set by the user
+
+### Code we reuse
+- Glimmer on Modal (vLLM serving): `~/projects/herdshot/deploy/modal_glimmer.py`, backend `~/projects/herdshot/herdshot/backends/modal.py`
+- Modal LoRA fine-tune example to base the training spec on: https://modal.com/docs/examples/unsloth_finetune
+
+### Research and origin
+- Merged research report (scores, sources, day-1 gate): `~/Research/2026-10-28-hackathon-final-validation/merged.md`
+- Where the idea came from (superintel software-only search): `~/agents/superintel/reports/hackathon-software-ideas_2026-10-28.md`
+
+### Agents
+- The swarm that writes specs: `~/swarms/herdshot/` (its briefs still say Claude agents write code; update them before building)
+
+## Not researched yet (gaps)
+- **SAM 3.1:** how to install and run it locally on this Mac, and what it adds beyond CadQuery's exact measurements.
+  Needed before the result checker is designed.
+- **Glimmer LoRA recipe:** the exact training settings and memory (Meta's post-training guide, Unsloth support for
+  Glimmer). Needed for the Part B spec.
+- **Muse Code headless use (`muse exec`):** flags, and whether it bills the Meta credit. Needed before the first build.
 
 ## Check the setup
 ```bash
