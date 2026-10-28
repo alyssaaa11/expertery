@@ -43,3 +43,9 @@ no re-runs).
   is impossible against a 100% teacher. The pitch would become "a small offline model that nearly matches the big one".
 - Options for the user: GO (accept the grey zone because the gap is large and significant); GO focused on hard jobs
   (note: choosing a subset after seeing the data is post-hoc); or STOP and keep ~$26 for another project.
+
+## Decision (user, 2026-10-28 ~19:00): **GO, build the factory**
+- From the grey zone, the user decided GO after looking at how Glimmer + manual fails: 6 of its 10 failures are badly
+  wrong parts (≥ 67% mismatch, 5 of them ≥ 100%), it is unstable (on M3, M5 and H6 it passed without the manual and
+  failed with it), and 67% (60% on hard jobs) is not usable for a company. Spark Open's 30/30 shows the jobs are solvable.
+- Rule kept: the 30 exam jobs are now the **held-out final exam**. They must never appear in training data.
