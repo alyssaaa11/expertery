@@ -15,6 +15,7 @@ today's status), and the Oct 28 → Nov 4 schedule with one stop-or-go test on O
 ---
 
 ## Goal
+- decision (user, 2026-10-28 ~14:40): first test = **15 medium + 15 hard jobs** (no easy ones); **Spark runs as Spark Open on Baseten credits**, not Meta credits. Plan: `~/projects/forge/experiments/first-test/PLAN.md` (draft, waiting for approval).
 - verified 14:10: **spent so far $0.57 of $30** (Glimmer test 1, `modal billing summary`). See [[glimmer-test-1-2026-10-28]].
 - decision (user, 14:00): Forge never shares HerdShot's app, secret, storage or wiki. Its own: `deploy/modal_glimmer.py` (app + secret `forge-glimmer`, envsave `FORGE_GLIMMER_VLLM_API_KEY`, volumes `forge-hf-cache`/`forge-vllm-cache`), wiki `~/projects/forge/forge-wiki`.
 - **decision (user, 2026-10-28 ~13:50): the budget for the whole Forge project is $30 maximum** (all paid spend: Modal + Meta). Why (user): if Forge fails, the rest of the credits must stay free for another project. So spend in stages and stop early: first test ≤ ~$9; nothing more is spent unless it says GO. This replaces the $85–105 estimate in [[forge-questions-2026-10-28]]. Proposed fit (hypothesis): Spark on the contributor tier ~$3–5; Modal smoke test ~$3, day-1 Glimmer arms ~$4, one QLoRA run ~$6–8, scoreboard + demo in one session ~$4; buffer ~$6–10. Cuts: 40 day-1 jobs, ~600 practice tries, one training run, no retry. Modal spending limit should be ≤ $25.

@@ -40,3 +40,9 @@ Interactive: `forge-wiki/wiki/assets/diagrams/forge-factory.html`. Answers the u
 private?" (2026-10-28). Each company runs its own copy, with the same free Glimmer plus its own add-on file. Only
 practice jobs with fake data go to Muse Spark. The zero-cloud option is Spark Open as the teacher (hypothesis: not
 tested).
+
+## 7. Final plan (current; replaces 5 for dates and money)
+![[assets/diagrams/forge-final-plan.png]]
+Interactive: `forge-wiki/wiki/assets/diagrams/forge-final-plan.html`. It shows the $30 cap and the stages: free prep →
+first test (~$2, 30 jobs, 3 contestants) → STOP (~$27 left) or GO → Spark Open teaches (Baseten) → one LoRA run
+(Modal) → scoreboard → video + submit on Nov 4. Diagram 5 is out of date (60 jobs, OpenSCAD, $12 training).

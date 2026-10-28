@@ -79,3 +79,16 @@ customer pays for its own computing. The selling part is not validated.
   returned 1764 (app ap-G9TskTFwCQyH89cXwLcc4U); secret then `herdshot-glimmer`; since 14:10 Forge uses its own secret `forge-glimmer` (envsave
   `FORGE_GLIMMER_VLLM_API_KEY`); Glimmer weights not gated (HF API `gated: False`). The user confirmed credits and
   a spending limit.
+
+## 6. "Is Spark Open as smart as Muse Spark 1.3?" (2026-10-28 ~16:50)
+- verified (PyTorch blog https://pytorch.org/blog/muse-spark-open/ and the Hugging Face model card): Spark Open shares
+  the **same base model** as Muse Spark 1.3, with extra safety post-training because it runs without Meta's
+  guardrails. 816B total / 42B active, 1M context, released Oct 15 2026. The licence requires "Built with Muse Spark
+  Open" in products.
+- hypothesis (one secondary source, MindStudio): Artificial Analysis Intelligence Index, Spark 1.3 = 48 vs Spark Open
+  = 39, i.e. the open version is somewhat weaker. Artificial Analysis's own pages don't list Spark Open, and their
+  scores were rescaled between articles, so the gap is not confirmed.
+- What it means: the first test measures Spark Open on our own jobs, and the "C ≥ 30%" rule checks whether it is good
+  enough to teach. Fallback if too weak: Muse Spark 1.3 on Meta credits (~$1.50), with the user's OK.
+- Correction: the full Spark Open is ~537 GB even in NVFP4, so a company running the teacher itself needs several big
+  GPUs. The small student (Glimmer) is the part any company can run cheaply.
