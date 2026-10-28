@@ -2,7 +2,7 @@
 
 Supersedes `experiments/keel-exam/` (v1 exam, kept as history: the user asked for a more realistic tool, 2026-10-28).
 
-Status: **FROZEN** 2026-10-29 ~00:05 (hashes in section 7; verifier exam GO; blind rebuild 30/30; runner tests 63/63;
+Status: **FROZEN** 2026-10-28 ~23:05 (hashes in section 7; verifier exam GO; blind rebuild 30/30; runner tests 63/63;
 rule 1 on C pass@3 per the user; sandbox denies temp-folder reads).
 The paid pilot and main run need the user's yes.
 
@@ -111,7 +111,7 @@ sandbox result, measurement and verdict to `results/keel-v2-<run>/calls.jsonl`.
 Before the run, the sha256 of these files is written here and committed; the runner recomputes them at start and
 refuses to run if any differs: `jobs.py`, `expected.json`, `referee.py`, `runner.py`, `sandbox.sb`, `run_one.py`
 (this folder), `../first-test/checks.py`, `../../company/keel/__init__.py`, `../../company/manual.md`.
-Hashes (re-frozen 2026-10-29 ~00:05 after the rule-1 change and the temp-folder sandbox fix):
+Hashes (re-frozen 2026-10-28 ~23:05 after the rule-1 change and the temp-folder sandbox fix):
 ```text
 fc6dfd1a44f0596fdb3a2bb43e672805b7a86490380a2e9df73768de93b58863  jobs.py
 aa5eef7077e7f7bb8375132749eb612efe2a47a2fefa0d9693762e9289bbc981  expected.json
