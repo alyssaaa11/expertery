@@ -33,3 +33,4 @@
 
 ## [2026-10-28 22:00] update | factory-plan (day-by-day plan for the AcmeCAD direction, proposed)
 - 2026-10-28 22:30 decision: fictional space company Quillon Orbital Works, private tool Keel, company dashboard; draft spec company/SPEC.md (user review pending)
+- 2026-10-28 22:20 verified: Muse Code built company/ (Keel, manual, 8 examples, dashboard); SELFTEST 35/35 re-run by Claude; 21 calls, ~$0.40 Meta; dashboard opened in Chrome. Note: request statuses (AI draft / Gauge PASS) are sample data until the assistant really runs.
