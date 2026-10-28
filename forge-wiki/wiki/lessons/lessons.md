@@ -65,3 +65,11 @@
 - **Hackathon rules page says nothing on other AI assistants** (Oct 28). How learned: WebFetch of cerebralvalley.ai/e/meta-ai-developer-hackathon: "Official Rules will be published before the Hackathon begins"; it suggests Muse Code for coding. Decision (user): publish and build code with Muse Code, and state honestly in the README that Claude helped plan. Check the official rules again before submitting.
 - **Archify reruns: use a new `--out-dir`** (Oct 28): a second `finalize` into the same folder failed with
   `viewer/evidence-path-conflict`. Check: rerun with `--out-dir <folder>/review-N`; never delete old evidence.
+- **Set the referee tolerance from measured noise vs smallest real error, per exam** (Oct 28). How learned: the Keel
+  exam self-test failed 4/90 because missing or wrong fillets (0.019–0.18% overlap mismatch) passed the first test's
+  0.2% tolerance; rebuilding H1 and H2 in a different order gave exactly 0.00000000% (Keel always builds identical
+  geometry). Check: `experiments/keel-exam/selftest.py` (now 90/90 with 0.01%) and a script that prints `mismatch()`
+  for wrong versions and for alternative correct programs; pick a tolerance well between the two.
+- **Muse Code builds a whole small product fast and cheap from a precise spec** (Oct 28). How learned: company/SPEC.md
+  → one `muse exec` session, 21 calls, ~$0.40, Keel + manual + 8 examples + offline dashboard, self-test 35/35
+  re-run by Claude. Tell it platform traps up front (Chrome blocks fetch() on file://, so ship data as a script).

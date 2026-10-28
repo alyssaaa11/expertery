@@ -1,0 +1,10 @@
+import keel
+p = keel.part("CLP-5001")
+p.stock(70,40,5)
+p.slot(at=(20,10),to=(20,30),width=4)
+p.pattern(3,1,15,0)
+p.wall("south",15)
+p.wall("north",15)
+p.hole("KF-M4",at=(8,20))
+p.pattern(2,1,54,0)
+solid = p.finish()
