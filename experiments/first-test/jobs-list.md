@@ -1,22 +1,11 @@
-# First test: draft list of the 40 jobs (titles + key sizes)
+# First test: draft list of the 30 jobs (15 medium + 15 hard) (titles + key sizes)
 
 Status: DRAFT for the user's review. After approval, each job gets full wording with every coordinate, a reference
 solution, 2 wrong versions and a check, and passes the blind rebuild (PLAN.md section 4). Sizes are in mm. All parts
 are made-up, generic engineering parts, not anyone's real designs.
 
-## Easy (10): one shape with simple features (sanity check)
-| # | Part | Key sizes |
-|---|---|---|
-| E1 | Mounting plate with 4 corner holes | 60×40×5, Ø4 holes 5 from each corner |
-| E2 | Washer | outer Ø20, inner Ø8, 2 thick |
-| E3 | Rounded block | 30×20×10, vertical edges filleted R3 |
-| E4 | Cylinder with bore | Ø30 × 15, Ø10 through hole |
-| E5 | Hex nut blank | 13 across flats, 6 thick, Ø6.5 hole |
-| E6 | Rectangular tube | outer 30×20, wall 2, length 50 |
-| E7 | Disk with bolt circle | Ø50 × 4, six Ø5 holes on a Ø40 circle |
-| E8 | Chamfered cube | 25 cube, 2 chamfer on all edges |
-| E9 | Plate with a slot | 50×20×4, obround slot 20×6 centred |
-| E10 | Cone frustum | base Ø30, top Ø15, height 20 |
+## Easy: dropped (user, 2026-10-28)
+One cube already passed. E1 (mounting plate) is used only in the dry run, as a plumbing check.
 
 ## Medium (15): 2–3 features placed relative to each other
 | # | Part | Key sizes |
