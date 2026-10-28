@@ -3,7 +3,7 @@
 **Summary**: The one page to read first in a new session. Goal, what is proven, what is open, and the next step. Each
 claim links to the page that holds its evidence. Update this page at the end of every work session.
 
-**Last updated**: 2026-10-28 ~22:45
+**Last updated**: 2026-10-28 ~23:45
 
 ---
 
@@ -31,7 +31,7 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 | Modal | $1.65 (Glimmer test 1, dry run, main run) | `modal billing summary` 2026-10-28 ~18:45 |
 | Meta | ~$1.13 (three Muse Code sessions: build, fixes, publish ~$0.11) | run.usage events in `results/muse-*.jsonl` × list prices |
 | Baseten | ~$0.85 (estimate: dry + main + 2 probe calls) | runner token estimate; the dashboard showed $0.00, credit not visible |
-| **Total** | **≈ $8.2 of $30** (Meta/Muse Code ≈ $5.7 incl. runner ~$2.75; Modal ~$1.7; Baseten ~$0.85) | |
+| **Total** | **≈ $9.8 of $30** (Meta/Muse Code ≈ $5.7; Modal $2.22 metered, covered by credits; Baseten ≈ $1.85) | |
 
 ## Quillon Orbital Works (verified 2026-10-28 ~22:45)
 - decision (user): fictional space company with a realistic private tool. Keel 2.1 in `company/` (built by Muse
@@ -54,9 +54,13 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 5. SAM 3.1: what it would add beyond CadQuery's exact measurement (it may be decoration; not researched).
 6. Which companies would pay (market not validated; use the user's two problem frameworks after the hackathon).
 
-## Next step
-User reviews `company/SPEC.md` → Muse Code builds Keel + manual + dashboard → held-out exam. Then the factory ([[factory-plan-2026-10-29]]): recipe research (free) → generator spec → Muse Code
-builds → teacher run → one training run → final exam on the same 30 held-out jobs.
+## Next step (Oct 29)
+- verified (2026-10-28 23:30): Keel v2 baseline = **NO ROOM**: Glimmer + manual 97.8%, Spark Open 100%
+  ([[keel-v2-baseline-2026-10-28]]). A short complete manual is enough for a 30B model; "private" alone makes no gap.
+- decision (user, ~23:40): **Option A tomorrow** = hidden company standards that live only in ~300 past designs, with
+  a B-search arm (Glimmer + manual + 5 most similar designs), Spark context check, blind check of the hidden rules,
+  and the B2 CadQuery hint test in parallel as the fallback check. Plan: [[option-a-plan-2026-10-29]].
+- Tonight: no builds, no Muse Code, no paid calls. Tomorrow: every paid step waits for the user's yes.
 
 ## Where things are
 - GitHub: **https://github.com/alyssaaa11/expertery** (PRIVATE), created and pushed by **Muse Code** on 2026-10-28 21:01 (commit d23b21a, 22 commits). verified: `gh repo view` → PRIVATE; fresh clone + `gitleaks --all` → no leaks; only envsave reference labels (es_…) appear, not key values. Rule (user): publishing and all code are done with Muse Code; README has an honest "How this was built" section. Later wiki commits must be pushed by Muse Code too.

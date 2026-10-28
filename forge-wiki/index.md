@@ -5,6 +5,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
 
 ## findings
+- [keel-v2-baseline-2026-10-28](wiki/findings/keel-v2-baseline-2026-10-28.md): private tool Keel v2: Glimmer + manual 97.8%, Spark 100% → NO ROOM; a short complete manual is enough
 - [first-test-2026-10-28](wiki/findings/first-test-2026-10-28.md): the main experiment: how the exam was built; Spark Open 30/30, Glimmer+manual 20/30, Glimmer 16/30 → grey zone → user GO; 3 of 10 failures position-only; B2 proposed
 - [value-and-market-2026-10-28](wiki/findings/value-and-market-2026-10-28.md): why Forge instead of the big model, cost per job, who would use it, space-company example, honest downside, how to demo a background run
 - [tools-and-services](wiki/findings/tools-and-services.md): checked facts: Modal, Baseten, Meta API + Muse Code, CadQuery, Glimmer, Spark Open
@@ -15,6 +16,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [final-pick-research-2026-10-28](wiki/findings/final-pick-research-2026-10-28.md): why Forge was picked: claude.ai 90 + GPT-6 92 merged, prior art, risk paper 2607.08938
 
 ## decisions
+- [option-a-plan-2026-10-29](wiki/decisions/option-a-plan-2026-10-29.md): plan for Oct 29: hidden standards in ~300 past designs, arms B / B-search / C, Spark context check, blind rule check, B2 CadQuery test in parallel
 - [factory-plan-2026-10-29](wiki/decisions/factory-plan-2026-10-29.md): next stage: B2 → recipe research → generator → teacher run → training → final exam; rules; ~$13–16
 - [forge-plan-2026-10-28](wiki/decisions/forge-plan-2026-10-28.md): history of Oct 28 decisions: $30 budget, CadQuery, Spark Open on Baseten, own folder/app, spend log
 
