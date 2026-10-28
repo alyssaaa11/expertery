@@ -1,6 +1,6 @@
 # B2: does one hint sentence close the gap? (plan, written before any run)
 
-Status: DRAFT, 2026-10-28. User asked for "another experiment so we can build the factory". Frozen once the verifier says
+Status: FROZEN 2026-10-28 after verifier GO (2cea384) + the best-of clarification; user asked for the run. User asked for "another experiment so we can build the factory". Frozen once the verifier says
 GO. No changes during the run.
 
 ## Question
@@ -11,7 +11,7 @@ cheapest fix before building), and it sets the bar the trained Glimmer must beat
 ## Arms (Glimmer only; same session, same GPU)
 | Arm | Prompt |
 |---|---|
-| B′ (B-repeat) | exactly arm B of the first test: system message + manual + job |
+| B′ (B-repeat; `BR` in the code) | exactly arm B of the first test: system message + manual + job |
 | B2 | the same, plus the hint below appended to the system message |
 - Same 30 jobs (15 medium + 15 hard), same manual.md, same settings (max_tokens 16,000, temperature 1.0, top_p 0.95,
   top_k 64), one try per job, fresh conversation. Arm C is not re-run: Spark Open scored 30/30 in the first test.
@@ -29,11 +29,14 @@ or a wrong shape.
 
 ## Decision rules (first match wins; C = 100% from the first test)
 1. INVALID > 5% in either arm → run not valid (report it; no re-run without a new approval).
-2. B2 ≥ 80% → **the hint closes most of the gap: do not build the factory on plain CadQuery.** Next: discuss the
+Let **best = max(B′, B2)** (revised before freezing after the verifier's B2 check: either cheap version reaching the bar
+means training on plain CadQuery is not needed; luck alone can give B2 24/30 in 8–16% of runs).
+2. best ≥ 80% → **a cheap prompt closes most of the gap: do not build the factory on plain CadQuery.** Next: discuss the
    "private company tool" version (AcmeCAD) or STOP.
-3. B2 ≤ 75% → **build the factory on CadQuery.** The bar for the trained Glimmer = max(B′, B2, first-test B).
-4. 76–79% → grey zone: decide with the user from the data.
-- Also reported (not a gate): B2 − B′ on the same 30 jobs (paired), and how many position-only failures remain in B2.
+3. best ≤ 75% → **build the factory on CadQuery.** The bar for the trained Glimmer = max(B′, B2, first-test B).
+4. best 76–79% (i.e. 23/30) → grey zone: decide with the user from the data.
+- Attribution: say "the hint helped" only if B2 beats B′ on the paired jobs (jobs where only one passed); otherwise the
+  difference may be luck. Also reported: position-only failures remaining in each arm.
 
 ## Budget
 Modal only: one deploy (weights already cached), 60 Glimmer calls, ~20 min of A100 → **~$0.60–0.90**. Abort at $3
