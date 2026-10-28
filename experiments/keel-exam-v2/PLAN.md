@@ -2,7 +2,7 @@
 
 Supersedes `experiments/keel-exam/` (v1 exam, kept as history: the user asked for a more realistic tool, 2026-10-28).
 
-Status: **draft** (2026-10-29 ~00:10, verifier fixes applied). Becomes frozen (read-only) only after: blind rebuild 30/30, verifier GO, the
+Status: **draft** (2026-10-28 ~22:40, verifier fixes applied). Becomes frozen (read-only) only after: blind rebuild 30/30, verifier GO, the
 user's yes. Nothing paid runs before that.
 
 ## 1. Question
@@ -10,7 +10,7 @@ On a private tool no model has seen (Keel 2.0, of the fictional Quillon Orbital 
 1. Can the teacher (Spark Open) do the work? If not, it cannot teach, and the factory stops here cheaply.
 2. Is the small model (Glimmer) clearly worse? If Glimmer + manual is already good, training has nothing to add.
 
-## 2. Arms (30 held-out exam jobs each, one answer per job, no retries)
+## 2. Arms (30 held-out exam jobs, k = 3 independent samples per job per arm = 90 answers per arm, no retries)
 | Arm | Model | Gets |
 |---|---|---|
 | B | Muse Glimmer 30B on Modal (A100-80GB, vLLM, as in the first test) | Keel manual + request |
@@ -28,16 +28,18 @@ Same prompt for both, same sampling as the first test (temperature 1.0, top_p 0.
   material above its local top. Exam references must be unchanged by this (checked by re-running the self-test).
 - Self-test 90/90 (30 references pass, 60 wrong versions fail; smallest wrong-version mismatch 0.0133%, alternative correct programs 0.00000000%). Blind rebuild 30/30 (fresh helper, manual v2 + texts only; it hit and solved the mirror/pattern trap in H2, H15; notes in blind/NOTES.md, no text changes needed).
 
-## 4. Decision rules (ordered, first match wins, whole points)
-0. INVALID > 5% in either arm (more than 1 of 30 answers cut off, empty, or a network/HTTP failure after one retry)
-   → **RUN INVALID**: fix the cause, rerun that arm; no decision from this run.
-1. C < 30 → **STOP**: the teacher cannot use an unseen tool from its manual; rethink (e.g. a richer manual).
-2. B ≥ 80 → **NO ROOM**: Glimmer + manual is already good; training cannot show much; rethink the tool.
-3. C − B ≥ 25 and B ≤ 70 → **GO**: build the factory (practice generator → teacher run → training). Bar 25, the
-   same as the first test.
+## 4. Decision rules (ordered, first match wins; all in percent of answers, compared in whole points)
+Score of an arm = mean pass rate over its 90 answers (= mean over the 30 jobs of passes/3), in percent.
+0. INVALID > 5% of answers in either arm (more than 4 of 90: cut off, empty, or network/HTTP failure after one
+   retry) → **RUN INVALID**: fix the cause, rerun that arm; no decision from this run.
+1. C < 30% → **STOP**: the teacher cannot use an unseen tool from its manual; rethink (e.g. a richer manual).
+2. B ≥ 80% → **NO ROOM**: Glimmer + manual is already good; training cannot show much; rethink the tool.
+3. C − B ≥ 25 points and B ≤ 70% → **GO**: build the factory (practice generator → teacher run → training). Bar 25,
+   the same as the first test.
 4. Otherwise → **GREY**: report to the user, who decides.
-Paired McNemar test on B vs C reported alongside (not part of the rule). Scores = PASS / 30 (INVALID counts as not
-PASS in the score, and is reported separately).
+Reported alongside (not part of the rule): pass@1 of each sample separately (samples 1, 2, 3 per arm); a paired
+bootstrap 95% CI of C − B over the 30 jobs (10,000 resamples of jobs, seed 0, per-job score = passes/3); McNemar on
+sample 1 (informational). INVALID answers count as not PASS in the score and are listed separately.
 
 ## 4b. Prompt and answer format (fixed)
 - Messages: system = "You write programs for Keel, Quillon Orbital Works' private part-description tool. Units are
@@ -48,10 +50,46 @@ PASS in the score, and is reported separately).
   `company/` on the path and a 120 s timeout; the part is the variable `solid`. FAIL = it raises (incl. KeelError),
   `solid` is missing, or the referee fails it. INVALID = cut off by the token limit, empty reply, or network failure.
 
-## 5. Cost (estimate) and safety
-Modal ~$0.70 (cold start ~7 min + ~15 min), Baseten ~$0.80, runner change by Muse Code ~$0.30 → **~$1.80**.
-Spent so far ≈ $5.2 of $30 (incl. Keel v2 build ~$0.80). Budget caps in the runner as before (`--budget`), app stopped with `-y` and checked.
+## 4c. Sandbox for model answers (answers are untrusted Python run on this Mac)
+Each answer runs in its own new scratch directory under the job temp folder, as
+`env -i HOME=<scratch> PATH=/usr/bin:/bin sandbox-exec -f sandbox.sb /bin/sh -c 'ulimit -t 120; <venv python> run_one.py'`:
+- `sandbox.sb`: `(allow default) (deny network*) (deny file-write*)`, then allow writes only to the scratch dir,
+  /dev/null and the system temp folders (/private/var/folders, /private/tmp).
+- Clean environment (`env -i`): no API keys or other secrets. `company/` is put on sys.path by `run_one.py`.
+- CPU: `ulimit -t 120` plus a 120 s wall-clock timeout (kill the process group). Memory: macOS ignores RLIMIT_AS/
+  DATA (tested: setrlimit fails), so the runner polls the child's RSS every 0.5 s and kills it above 4 GB → FAIL
+  ("memory").
+- The child writes the finished solid as a BREP/STEP file into the scratch dir; the referee runs in the runner
+  process on that file (the referee never runs untrusted code). The solid is kept for the replay viewer.
+- verified 2026-10-28 22:40: in this sandbox Keel builds a part, a socket connect fails (PermissionError), a write
+  outside the scratch dir fails, a write inside works, and the environment has no *KEY*/*TOKEN* variables.
 
-## 6. What changes in the runner (Muse Code, from a spec)
-Prompt with the Keel manual; answers are Keel programs; build with `keel` and judge with `referee.py` against
-`expected.json`; arms B and C only. Everything else (logging, caps, report) as in the first test.
+## 4d. Pilot (before the full run)
+3 jobs (M1, M7, H9), arm C only (Spark Open on Baseten), k = 1. It checks: the prompt and answer format, code
+extraction, the sandbox, the solid hand-off and the referee. The pilot passes if all 3 answers are extracted and run
+in the sandbox without INVALID or harness errors (whether the parts PASS does not matter). Pilot answers are logged
+separately and never count. If the pilot fails: fix the harness (not the exam), rerun the pilot.
+
+## 5. Cost (estimate) and hard caps
+Runner by Muse Code ~$0.40; pilot ~$0.08; Modal ~$1.0–1.5 (cold start ~7 min + 90 answers); Baseten ~$2.0–2.4 (90
+answers) → **~$3.5–4.4**. Spent before this test ≈ $5.4 of $30.
+Hard caps (the runner checks them before every new call and stops sending new calls at the cap; calls in flight
+finish and are logged):
+- Modal: `--budget 2.50` USD, estimated as wall-clock since deploy start × $2.50/h (includes the cold start), and
+  a 60-minute wall-clock limit for the Glimmer arm.
+- Baseten: `--budget-c 3.00` USD, computed from each response's usage tokens × $1.25/M in, $4.25/M out.
+Stop check after the run: `modal app stop forge-glimmer -y`, then `modal app list` must show it stopped; record
+`modal billing summary`; record the Baseten spend from the token log.
+
+## 6. Runner (built by Muse Code from RUNNER_SPEC.md; first-test runner.py is reused as the base, not changed)
+`experiments/keel-exam-v2/runner.py`: arms B and C, k = 3, the prompt and answer format of 4b, the sandbox of 4c, the
+pilot of 4d, the caps of 5, the scoring and report of 4, the freeze check of 7. Logs every prompt, answer, code,
+sandbox result, measurement and verdict to `results/keel-v2-<run>/calls.jsonl`.
+
+## 7. Freeze by hash
+Before the run, the sha256 of these files is written here and committed; the runner recomputes them at start and
+refuses to run if any differs: `jobs.py`, `expected.json`, `referee.py`, `runner.py`, `sandbox.sb`, `run_one.py`
+(this folder), `../first-test/checks.py`, `../../company/keel/__init__.py`, `../../company/manual.md`.
+Hashes (filled in at freeze time with `runner.py --print-hashes`; empty = not frozen, the runner refuses):
+```text
+```

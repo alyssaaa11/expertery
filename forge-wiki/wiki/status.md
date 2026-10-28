@@ -3,7 +3,7 @@
 **Summary**: The one page to read first in a new session. Goal, what is proven, what is open, and the next step. Each
 claim links to the page that holds its evidence. Update this page at the end of every work session.
 
-**Last updated**: 2026-10-29 ~00:20
+**Last updated**: 2026-10-28 ~22:45
 
 ---
 
@@ -33,7 +33,7 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 | Baseten | ~$0.85 (estimate: dry + main + 2 probe calls) | runner token estimate; the dashboard showed $0.00, credit not visible |
 | **Total** | **≈ $5.4 of $30** (incl. company builds ~$1.40) | |
 
-## Quillon Orbital Works (verified 2026-10-29 ~00:20)
+## Quillon Orbital Works (verified 2026-10-28 ~22:45)
 - decision (user): fictional space company with a realistic private tool. Keel 2.1 in `company/` (built by Muse
   Code: v1 ~$0.40, v2 ~$0.80, fixes ~$0.20): materials, flight class, countersinks, wall holes, company mounts,
   mirror, FRM centre datum; order-free build. Company self-test 92/92. Offline dashboard opens in Chrome; request
