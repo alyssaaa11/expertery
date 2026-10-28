@@ -28,3 +28,5 @@
 ## [2026-10-28 21:00] create/update | status (START HERE), tools-and-services, value-and-market, factory-plan; lessons +8; superseded cost estimate and old schedule marked; first-test 'how the exam was built'; index rewritten (user: "put it in the wiki so nothing is forgotten")
 
 ## [2026-10-28 21:05] update | status (GitHub repo meta-hackathon, private, published by Muse Code, no leaks) + lesson (rules page)
+
+## [2026-10-28 21:55] update | status (B2 cancelled by the user; private-tool AcmeCAD direction proposed)

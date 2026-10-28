@@ -34,6 +34,7 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 | **Total** | **≈ $3.6 of $30** | |
 
 ## Open questions
+0. **B2 was cancelled by the user** (2026-10-28 21:50, "dont") during the Glimmer cold start: no answers produced, ~1 min of GPU. Plan frozen at experiments/b2-hint/ (kept as history). The user's new direction: change the experiment to a **non-public tool** and start the factory. Proposal: Muse Code builds a made-up company tool "AcmeCAD" (own API names, company conventions, company manual) + a new held-out exam; the factory's teacher run doubles as the teacher-capability test. Waiting for the user's yes.
 1. **B2 cheap-fix test** (Glimmer + manual + coordinate hint, ~$0.70): run it before the factory? Waiting for the user.
 2. **Training recipe** for Glimmer LoRA (tool, settings, memory on one GPU): not researched yet.
 3. **Practice-job generator:** new part families that don't overlap the 30 held-out exam jobs.
