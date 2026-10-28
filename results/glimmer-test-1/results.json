@@ -1,0 +1,75 @@
+[
+  {
+    "id": "hello",
+    "seconds": 459.5,
+    "usage": {
+      "prompt_tokens": 63,
+      "total_tokens": 298,
+      "completion_tokens": 235,
+      "prompt_tokens_details": null
+    },
+    "finish": "stop",
+    "answer": "Hello!",
+    "reasoning_chars": 1007
+  },
+  {
+    "id": "cube",
+    "seconds": 47.8,
+    "usage": {
+      "prompt_tokens": 111,
+      "total_tokens": 1422,
+      "completion_tokens": 1311,
+      "prompt_tokens_details": null
+    },
+    "finish": "stop",
+    "answer": "```python\nimport cadquery as cq\n\nresult = cq.Workplane(\"XY\").box(20, 20, 20).cut(\n    cq.Workplane(\"XY\").circle(2.5).extrude(20, both=True)\n)\n```",
+    "reasoning_chars": 4248,
+    "measured": {
+      "bbox": [
+        20.0,
+        20.0,
+        20.0
+      ],
+      "volume": 7607.3
+    },
+    "expected": {
+      "bbox": [
+        20,
+        20,
+        20
+      ],
+      "volume": 7607.3
+    },
+    "passed": true
+  },
+  {
+    "id": "bracket",
+    "seconds": 142.6,
+    "usage": {
+      "prompt_tokens": 171,
+      "total_tokens": 4016,
+      "completion_tokens": 3845,
+      "prompt_tokens_details": null
+    },
+    "finish": "stop",
+    "answer": "```python\nimport cadquery as cq\n\nbase = cq.Workplane(\"XY\").box(40, 20, 3)\nbase = (\n    base.faces(\">Z\")\n    .workplane()\n    .pushPoints([(-15, 0), (15, 0)])\n    .hole(5)\n)\n\nwall = (\n    cq.Workplane(\"XY\")\n    .rect(40, 3)\n    .extrude(17)\n    .translate((0, 11.5, 1.5))\n)\n\nresult = base.union(wall)\n```",
+    "reasoning_chars": 13338,
+    "measured": {
+      "bbox": [
+        40.0,
+        23.0,
+        20.0
+      ],
+      "volume": 4322.2
+    },
+    "expected": {
+      "bbox": [
+        40,
+        20,
+        20
+      ],
+      "volume": 4322.2
+    },
+    "passed": false
+  }
+]
