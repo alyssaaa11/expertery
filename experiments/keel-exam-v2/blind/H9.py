@@ -1,0 +1,10 @@
+import keel
+p = keel.part("FRM-5003", material="AL6061")
+p.stock(120, 80, 6)
+p.wall("north", 18)
+p.wall("south", 18)
+p.wall_hole("north", "KF-M4", at=(30, 10))
+p.slot(at=(10, 20), to=(10, 60), width=6, depth=2)
+p.mirror("ew")
+p.mount("STAR-TRACKER-3", origin=(60, 40), finish="CS")
+solid = p.finish()
