@@ -38,5 +38,6 @@
 - **A blind rebuild finds unclear wording before it costs money** (Oct 28). How learned: a fresh agent built all 33
   parts from the text alone; all matched, but it flagged 5 wordings (curved vs flat notch, slot length end-to-end vs
   centre-to-centre), which were clarified. Check: score `blind/*.py` with `checks.score`.
+- **`modal app stop` asks for confirmation and silently does nothing in a script** (Oct 28). How learned: after the dry run, `modal app list` still showed forge-glimmer deployed with 1 container; rerunning by hand printed "no interactive terminal detected". Fix: `modal app stop <app> -y`, print a warning if it fails, and check `modal app list` after every live run.
 - **Archify reruns: use a new `--out-dir`** (Oct 28): a second `finalize` into the same folder failed with
   `viewer/evidence-path-conflict`. Check: rerun with `--out-dir <folder>/review-N`; never delete old evidence.

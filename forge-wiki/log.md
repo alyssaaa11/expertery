@@ -16,3 +16,5 @@
 ## [2026-10-28 18:00] update | forge-plan (Baseten $100 credit per user; card on file; check after dry run)
 
 ## [2026-10-28 17:25] update | forge-plan (Muse Code built runner, ~$0.51; e2e 33/33)
+
+## [2026-10-28 17:55] update | forge-plan (dry run OK, spend ≈ $1.56) + lesson (modal app stop -y)
