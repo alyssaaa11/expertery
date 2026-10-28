@@ -1,6 +1,6 @@
 # First test: is Forge needed? (plan, written before any run)
 
-Status: **DRAFT, waiting for the user's approval.** Nothing in this file runs until the user says go. After approval
+Status: **approved by the user (2026-10-28 ~17:20).** Free prep done: self-test 33/33, blind rebuild 33/33. Nothing in this file runs until the user says go. After approval
 the plan is frozen: no prompt, job, check or rule changes during the run. A change means a new, separately approved
 run.
 
@@ -41,8 +41,9 @@ Glimmer gets the manual**?
 2. **Blind rebuild:** a fresh, independent reader (a new agent that never saw the reference) builds each part from the
    text only. If its part doesn't match the reference, the text is unclear and gets rewritten. This stops my wording
    from causing failures.
-3. **Check self-test:** each job's check (bounding box, volume ±1%, centre of mass ±0.5 mm, one solid, hole count) must
-   pass the reference and fail both wrong versions. A check that fails this is fixed before the run.
+3. **Check self-test:** each job's check (one valid solid, bounding box ±0.1 mm, volume and area ±1%, centre of mass ±0.3 mm,
+   and **overlap mismatch ≤ 0.2%**: the volume in the answer XOR the reference) must pass the reference and fail both
+   wrong versions. Result 2026-10-28: 33/33 after adding the overlap check (without it, 17 wrong parts passed). A check that fails this is fixed before the run.
 4. **Dry run on 3 jobs** (1 easy, 1 medium, 1 hard, not among the 30) on all arms, to test the plumbing only. It is excluded from the results.
 
 ## 5. Exact words sent to the models

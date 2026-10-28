@@ -31,5 +31,12 @@
   image build ("unable to determine the version of Python", ~$0, no GPU started), and Modal's docs say images need
   `python` + `pip` on PATH. Fix: `setup_dockerfile_commands=['RUN ln -sf "$(command -v python3)" /usr/local/bin/python ...']`;
   the second deploy succeeded in 168 s. Check: `modal deploy` prints "App deployed".
+- **Size, volume, area and centre of mass can all miss a moved feature** (Oct 28). How learned: the check self-test
+  let 17 of 33 wrong parts pass (holes moved symmetrically keep all four numbers). Fix: compare the answer with the
+  reference by overlap (volume of answer XOR reference ≤ 0.2%). B-rep booleans are exact, so correct answers score
+  ~0.0%. Check: `experiments/first-test/selftest.py` prints `BAD: none`.
+- **A blind rebuild finds unclear wording before it costs money** (Oct 28). How learned: a fresh agent built all 33
+  parts from the text alone; all matched, but it flagged 5 wordings (curved vs flat notch, slot length end-to-end vs
+  centre-to-centre), which were clarified. Check: score `blind/*.py` with `checks.score`.
 - **Archify reruns: use a new `--out-dir`** (Oct 28): a second `finalize` into the same folder failed with
   `viewer/evidence-path-conflict`. Check: rerun with `--out-dir <folder>/review-N`; never delete old evidence.
