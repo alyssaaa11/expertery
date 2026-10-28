@@ -3,7 +3,7 @@
 **Summary**: The one page to read first in a new session. Goal, what is proven, what is open, and the next step. Each
 claim links to the page that holds its evidence. Update this page at the end of every work session.
 
-**Last updated**: 2026-10-28 ~23:10
+**Last updated**: 2026-10-29 ~00:20
 
 ---
 
@@ -31,14 +31,18 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 | Modal | $1.65 (Glimmer test 1, dry run, main run) | `modal billing summary` 2026-10-28 ~18:45 |
 | Meta | ~$1.13 (three Muse Code sessions: build, fixes, publish ~$0.11) | run.usage events in `results/muse-*.jsonl` × list prices |
 | Baseten | ~$0.85 (estimate: dry + main + 2 probe calls) | runner token estimate; the dashboard showed $0.00, credit not visible |
-| **Total** | **≈ $4.4 of $30** (incl. B2 cold start + company build ~$0.40) | |
+| **Total** | **≈ $5.4 of $30** (incl. company builds ~$1.40) | |
 
-## Quillon Orbital Works (verified 2026-10-28 ~23:00)
-- Built by Muse Code (~$0.40): `company/` = Keel library, manual, 8 examples, offline dashboard (opened in Chrome).
-  Self-test 35/35 (re-run by Claude). Request statuses in the dashboard are sample data until the assistant runs.
-- Held-out Keel exam written by Claude: `experiments/keel-exam/` (30 jobs, referee 0.01%, self-test 90/90). Blind
-  rebuild running. Draft plan for the paid baseline test (B = Glimmer + manual, C = Spark Open + manual, ~$1.80):
-  `experiments/keel-exam/PLAN.md`, not frozen yet (needs blind rebuild, verifier GO, user yes).
+## Quillon Orbital Works (verified 2026-10-29 ~00:20)
+- decision (user): fictional space company with a realistic private tool. Keel 2.1 in `company/` (built by Muse
+  Code: v1 ~$0.40, v2 ~$0.80, fixes ~$0.20): materials, flight class, countersinks, wall holes, company mounts,
+  mirror, FRM centre datum; order-free build. Company self-test 92/92. Offline dashboard opens in Chrome; request
+  statuses are labelled sample data.
+- Held-out exam `experiments/keel-exam-v2/` (v1 exam in keel-exam/ is history): 30 jobs by Claude, referee 1e-6,
+  self-test 90/90, blind rebuild 30/30. Verifier: v1 NO-GO with 3 fixes (all applied), v2 re-check requested.
+- Next paid step (user yes needed after verifier GO): baseline B (Glimmer + manual) vs C (Spark Open + manual),
+  ~$1.80, rules in keel-exam-v2/PLAN.md (INVALID gate, STOP C<30, NO ROOM B≥80, GO C−B≥25 & B≤70, else GREY).
+  The runner change is done by Muse Code from PLAN section 4b.
 
 ## Open questions
 0. decision (user, 2026-10-28 ~22:30): the private tool belongs to a **fictional space company, Quillon Orbital Works** (satellite structural parts; name checked by web search, no real company found). Its private tool is **Keel** (compiles to CadQuery, so the same referee works). The user also wants an **internal company dashboard** like a real company. Draft spec: `company/SPEC.md`, waiting for the user's review, then one Muse Code build (~$0.50–0.80, needs approval). B2 was cancelled by the user earlier (21:50) and is kept as history in experiments/b2-hint/.

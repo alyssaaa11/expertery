@@ -73,3 +73,11 @@
 - **Muse Code builds a whole small product fast and cheap from a precise spec** (Oct 28). How learned: company/SPEC.md
   → one `muse exec` session, 21 calls, ~$0.40, Keel + manual + 8 examples + offline dashboard, self-test 35/35
   re-run by Claude. Tell it platform traps up front (Chrome blocks fetch() on file://, so ship data as a script).
+- **A tolerance tuned on one small part fails on big parts; tune it on the noise floor** (Oct 28). How learned: the
+  verifier showed 0.01% let a missing fillet pass on large plates (0.006–0.009%), while correct reorderings and a STEP
+  round trip match to ~2e-14. Check: compute `mismatch()` for alternative correct programs (noise) and for the
+  smallest wrong versions on the LARGEST parts; set the tolerance between (now 1e-6).
+- **A "trap" that contradicts the manual is unfair, not realistic** (Oct 28). How learned: verifier probes showed a
+  hole called before its boss left the boss undrilled, while the manual says holes go "all the way down"; 7 jobs
+  would FAIL manual-faithful answers. Fix: Keel 2.1 applies cuts after all walls/bosses. Check: build the same part
+  in two call orders and require 0.0% mismatch, unless the manual documents the order (mirror, pattern).
