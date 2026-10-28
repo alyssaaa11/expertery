@@ -22,3 +22,5 @@
 ## [2026-10-28 18:50] create | first-test-2026-10-28 (main run results; decision = grey zone, waiting for the user)
 
 ## [2026-10-28 19:00] decision | first-test → GO (user, from grey zone)
+
+## [2026-10-28 20:30] update | first-test (3 of B's failures are position-only; B2 cheap-fix arm proposed)

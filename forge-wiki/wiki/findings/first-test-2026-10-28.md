@@ -49,3 +49,13 @@ no re-runs).
   wrong parts (≥ 67% mismatch, 5 of them ≥ 100%), it is unstable (on M3, M5 and H6 it passed without the manual and
   failed with it), and 67% (60% on hard jobs) is not usable for a company. Spark Open's 30/30 shows the jobs are solvable.
 - Rule kept: the 30 exam jobs are now the **held-out final exam**. They must never appear in training data.
+
+## Deeper look (2026-10-28 ~20:30, after the user noticed H15 "looks correct")
+- verified (each FAIL answer rebuilt from calls.jsonl, shifted so its bounding box lines up with the reference, then
+  `checks.mismatch` ≤ 0.2%): **3 of B's 10 failures are position-only** (M10, H6, H15: right shape, wrong place, usually
+  centred instead of the given coordinates). 6 are wrong shapes (M5, M12, H1, H2, H7, H13), 1 crashed (M3). Arm A: 1
+  position-only (H15), 10 wrong shapes, 3 crashes. Arm C: no failures.
+- Shape-only view: B 23/30 (77%) vs C 30/30 → gap 23 points. The official, pre-registered count stays strict (the jobs
+  give exact positions): B 67%.
+- Risk (lesson "run the cheap fix first"): a one-line coordinate hint might fix the position errors without training.
+  Proposed: arm B2 = Glimmer + manual + coordinate hint, pre-registered, ~$0.70. Waiting for the user.
