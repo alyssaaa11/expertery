@@ -3,7 +3,7 @@
 **Summary**: The one page to read first in a new session. Goal, what is proven, what is open, and the next step. Each
 claim links to the page that holds its evidence. Update this page at the end of every work session.
 
-**Last updated**: 2026-10-28 ~23:45
+**Last updated**: 2026-10-28 ~23:35
 
 ---
 
