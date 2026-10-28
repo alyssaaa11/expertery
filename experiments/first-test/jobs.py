@@ -352,7 +352,7 @@ JOBS = [
     dict(id="M14", level="medium", build=m14, wrong=[dict(knuckle_r=4.0), dict(pin_r=1.0)],
          text=T + "A hinge leaf. Plate: X from 0 to 40, Y from 0 to 30, Z from 0 to 2. Knuckle: a cylinder of "
               "diameter 6 along X, X from 0 to 40, its axis at Y = 0, Z = 3. A 3 mm pin hole goes through the knuckle "
-              "along the same axis."),
+              "along the same axis, X from 0 to 40; where it overlaps the plate it cuts the plate too."),
     dict(id="M15", level="medium", build=m15, wrong=[dict(post_x=35.0), dict(hole_depth=12.0)],
          text=T + "A drawer handle. Grip bar: X from -50 to 50, Y from -5 to 5, Z from 20 to 30. Two posts under it: "
               "X from -45 to -35 and X from 35 to 45, both Y from -5 to 5, Z from 0 to 20. Each post has a 3.3 mm "
@@ -369,12 +369,12 @@ JOBS = [
          text=T + "A circuit-board mounting plate. Plate: X from 0 to 100, Y from 0 to 70, Z from 0 to 3. Four "
               "standoffs, diameter 6, Z from 3 to 8, centred at (X, Y) = (21, 10), (79, 10), (21, 59), (79, 59). Each "
               "has a 2.7 mm hole along Z through the standoff and the plate (Z from 0 to 8). Two cable slots go "
-              "through the plate: each is a 20 long, 6 wide obround (rounded ends, long side along X), centred at "
+              "through the plate: each is an obround 20 long overall (end to end) and 6 wide, rounded ends, long side along X, centred at "
               "(50, 25) and at (50, 45)."),
     dict(id="H3", level="hard", build=h3, wrong=[dict(n=10), dict(key_len=3.0)],
-         text=T + "A gear blank on the Z axis. Disk: diameter 40, Z from 0 to 8. Twelve notches go through it along "
-              "Z: each removes the material within 1.5 of a ray from the centre and at a distance of 16 or more from "
-              "the centre (3 wide, 4 deep); the rays point at angles 0°, 30°, 60° … 330° from the +X axis. An 8 mm "
+         text=T + "A gear blank on the Z axis. Disk: diameter 40, Z from 0 to 8. Twelve flat-bottomed notches go "
+              "through it along Z: each removes a box 3 wide, centred on a ray from the centre, from 16 to 21 along the "
+              "ray (so the notch floor is flat, 16 from the centre, and the notch is 4 deep); the rays point at angles 0°, 30°, 60° … 330° from the +X axis. An 8 mm "
               "bore goes through the centre along Z, with a keyway: the box X from 0 to 5.5, Y from -1.5 to 1.5 "
               "(through Z) is also removed."),
     dict(id="H4", level="hard", build=h4, wrong=[dict(hole_z=12.0), dict(fin_h=12.0)],
@@ -427,7 +427,7 @@ JOBS = [
     dict(id="H14", level="hard", build=h14, wrong=[dict(slot_len=20.0), dict(upper_x0=30.0)],
          text=T + "A Z-bracket, everything Y from 0 to 20, 3 thick. Lower flange: X from 0 to 30, Z from 0 to 3. "
               "Web: X from 27 to 30, Z from 0 to 23. Upper flange: X from 27 to 57, Z from 20 to 23. Each flange has "
-              "a slot through it along Z: a 15 long, 5 wide obround (rounded ends, long side along X), centred at "
+              "a slot through it along Z: an obround 15 long overall (end to end) and 5 wide, rounded ends, long side along X, centred at "
               "(X, Y) = (15, 10) in the lower flange and (42, 10) in the upper flange."),
     dict(id="H15", level="hard", build=h15, wrong=[dict(cols=7), dict(vent=5.0)],
          text=T + "A vented lid. Plate: X from -40 to 40, Y from -25 to 25, Z from 0 to 2. Forty square vents, 4 by 4, "
@@ -443,5 +443,5 @@ JOBS = [
     dict(id="D3", level="dry", build=d3, wrong=[dict(boss_x=14.0), dict(slot_x=24.0)],
          text=T + "A plate X from 0 to 40, Y from 0 to 20, Z from 0 to 4, with a round boss of diameter 10 on top at "
               "(X, Y) = (10, 10), Z from 4 to 14, and a 3 mm hole along Z through the boss and the plate. A slot goes "
-              "through the plate along Z: a 16 long, 6 wide obround with its long side along Y, centred at (28, 10)."),
+              "through the plate along Z: an obround 16 long overall (end to end) and 6 wide, long side along Y, centred at (28, 10)."),
 ]

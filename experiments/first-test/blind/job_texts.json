@@ -53,7 +53,7 @@
  },
  {
   "id": "M14",
-  "text": "Millimetres, Z up. A hinge leaf. Plate: X from 0 to 40, Y from 0 to 30, Z from 0 to 2. Knuckle: a cylinder of diameter 6 along X, X from 0 to 40, its axis at Y = 0, Z = 3. A 3 mm pin hole goes through the knuckle along the same axis."
+  "text": "Millimetres, Z up. A hinge leaf. Plate: X from 0 to 40, Y from 0 to 30, Z from 0 to 2. Knuckle: a cylinder of diameter 6 along X, X from 0 to 40, its axis at Y = 0, Z = 3. A 3 mm pin hole goes through the knuckle along the same axis, X from 0 to 40; where it overlaps the plate it cuts the plate too."
  },
  {
   "id": "M15",
@@ -65,11 +65,11 @@
  },
  {
   "id": "H2",
-  "text": "Millimetres, Z up. A circuit-board mounting plate. Plate: X from 0 to 100, Y from 0 to 70, Z from 0 to 3. Four standoffs, diameter 6, Z from 3 to 8, centred at (X, Y) = (21, 10), (79, 10), (21, 59), (79, 59). Each has a 2.7 mm hole along Z through the standoff and the plate (Z from 0 to 8). Two cable slots go through the plate: each is a 20 long, 6 wide obround (rounded ends, long side along X), centred at (50, 25) and at (50, 45)."
+  "text": "Millimetres, Z up. A circuit-board mounting plate. Plate: X from 0 to 100, Y from 0 to 70, Z from 0 to 3. Four standoffs, diameter 6, Z from 3 to 8, centred at (X, Y) = (21, 10), (79, 10), (21, 59), (79, 59). Each has a 2.7 mm hole along Z through the standoff and the plate (Z from 0 to 8). Two cable slots go through the plate: each is an obround 20 long overall (end to end) and 6 wide, rounded ends, long side along X, centred at (50, 25) and at (50, 45)."
  },
  {
   "id": "H3",
-  "text": "Millimetres, Z up. A gear blank on the Z axis. Disk: diameter 40, Z from 0 to 8. Twelve notches go through it along Z: each removes the material within 1.5 of a ray from the centre and at a distance of 16 or more from the centre (3 wide, 4 deep); the rays point at angles 0\u00b0, 30\u00b0, 60\u00b0 \u2026 330\u00b0 from the +X axis. An 8 mm bore goes through the centre along Z, with a keyway: the box X from 0 to 5.5, Y from -1.5 to 1.5 (through Z) is also removed."
+  "text": "Millimetres, Z up. A gear blank on the Z axis. Disk: diameter 40, Z from 0 to 8. Twelve flat-bottomed notches go through it along Z: each removes a box 3 wide, centred on a ray from the centre, from 16 to 21 along the ray (so the notch floor is flat, 16 from the centre, and the notch is 4 deep); the rays point at angles 0\u00b0, 30\u00b0, 60\u00b0 \u2026 330\u00b0 from the +X axis. An 8 mm bore goes through the centre along Z, with a keyway: the box X from 0 to 5.5, Y from -1.5 to 1.5 (through Z) is also removed."
  },
  {
   "id": "H4",
@@ -113,7 +113,7 @@
  },
  {
   "id": "H14",
-  "text": "Millimetres, Z up. A Z-bracket, everything Y from 0 to 20, 3 thick. Lower flange: X from 0 to 30, Z from 0 to 3. Web: X from 27 to 30, Z from 0 to 23. Upper flange: X from 27 to 57, Z from 20 to 23. Each flange has a slot through it along Z: a 15 long, 5 wide obround (rounded ends, long side along X), centred at (X, Y) = (15, 10) in the lower flange and (42, 10) in the upper flange."
+  "text": "Millimetres, Z up. A Z-bracket, everything Y from 0 to 20, 3 thick. Lower flange: X from 0 to 30, Z from 0 to 3. Web: X from 27 to 30, Z from 0 to 23. Upper flange: X from 27 to 57, Z from 20 to 23. Each flange has a slot through it along Z: an obround 15 long overall (end to end) and 5 wide, rounded ends, long side along X, centred at (X, Y) = (15, 10) in the lower flange and (42, 10) in the upper flange."
  },
  {
   "id": "H15",
@@ -129,6 +129,6 @@
  },
  {
   "id": "D3",
-  "text": "Millimetres, Z up. A plate X from 0 to 40, Y from 0 to 20, Z from 0 to 4, with a round boss of diameter 10 on top at (X, Y) = (10, 10), Z from 4 to 14, and a 3 mm hole along Z through the boss and the plate. A slot goes through the plate along Z: a 16 long, 6 wide obround with its long side along Y, centred at (28, 10)."
+  "text": "Millimetres, Z up. A plate X from 0 to 40, Y from 0 to 20, Z from 0 to 4, with a round boss of diameter 10 on top at (X, Y) = (10, 10), Z from 4 to 14, and a 3 mm hole along Z through the boss and the plate. A slot goes through the plate along Z: an obround 16 long overall (end to end) and 6 wide, long side along Y, centred at (28, 10)."
  }
 ]

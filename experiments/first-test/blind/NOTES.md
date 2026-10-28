@@ -1,0 +1,35 @@
+# Blind rebuild notes (one line per job)
+
+- M1: clear
+- M2: clear
+- M3: clear
+- M4: clear
+- M5: clear
+- M6: clear
+- M7: clear
+- M8: clear
+- M9: clear (note: the back support's top reaches Y = 68.12, overhanging the base, which ends at Y = 60; built as written)
+- M10: clear
+- M11: clear
+- M12: clear
+- M13: clear
+- M14: ambiguous: says the pin hole goes "through the knuckle", but a 3 mm hole at Z = 3 also cuts into the plate (Z 1.5 to 2, Y 0 to 1.5) where the plate overlaps the knuckle. Interpreted as a full 3 mm cylinder cut along the axis for X 0 to 40, which also removes that sliver of the plate.
+- M15: clear
+- H1: clear
+- H2: ambiguous (minor): for a "20 long, 6 wide obround", it does not say whether 20 is the overall length (including the rounded ends) or the distance between the arc centres. Interpreted as overall length (CadQuery slot2D(20, 6)).
+- H3: ambiguous: "at a distance of 16 or more from the centre" gives a curved (arc, r = 16) notch bottom, while "4 deep" suggests a flat-bottomed box from r = 16 to 20. Built to the exact rule: a 3-wide strip along each ray minus the r = 16 cylinder (arc bottom).
+- H4: clear
+- H5: clear
+- H6: clear
+- H7: clear
+- H8: clear
+- H9: clear
+- H10: clear
+- H11: clear
+- H12: clear
+- H13: clear
+- H14: ambiguous (minor): same obround length question as H2 ("15 long"). Interpreted as overall length.
+- H15: clear
+- D1: clear
+- D2: clear
+- D3: ambiguous (minor): same obround length question as H2 ("16 long"). Interpreted as overall length, rotated 90 degrees so the long side runs along Y.
