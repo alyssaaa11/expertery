@@ -43,7 +43,7 @@ today's status), and the Oct 28 → Nov 4 schedule with one stop-or-go test on O
 1. Accounts and money: keys, plus Modal credits and a spending limit (both done; user said so, 2026-10-28 ~13:20, not checked in the dashboard).
    - verified: `META_HERDSHOT_API_KEY` and `BASETEN_API_KEY` are in envsave (`envsave list`).
    - Meta credit: about $65 left of $90 ($24.49 spent, per the money decision page; recheck before spending).
-2. Install: verified: Modal CLI 1.6.3 installed with `uv tool install modal` (13:20); verified logged in as workspace my-workspace (`modal profile current`, `modal app list` works); Modal secret `herdshot-glimmer` created with VLLM_API_KEY (value also in envsave as HERDSHOT_GLIMMER_VLLM_API_KEY). verified: Glimmer weights are not gated (HF API `gated: False`), so no HF token is needed. Still missing: `openscad`; cadquery is also not installed (optional).
+2. Install: verified: Modal CLI 1.6.3 installed with `uv tool install modal` (13:20); verified logged in as workspace my-workspace (`modal profile current`, `modal app list` works); Forge's Modal secret is `forge-glimmer` (VLLM_API_KEY; value also in envsave as FORGE_GLIMMER_VLLM_API_KEY). verified: Glimmer weights are not gated (HF API `gated: False`), so no HF token is needed. Still missing: `openscad`; cadquery is also not installed (optional).
    verified OK: Muse Code 1.4.14 (`muse --version`).
 3. Test the checks first: 5 hand-made correct parts and 2 wrong versions of each. A check is kept only if it passes the
    correct part and fails both wrong ones.

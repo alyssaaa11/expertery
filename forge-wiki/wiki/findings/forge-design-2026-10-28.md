@@ -74,5 +74,5 @@ diagrams ~/agents/.archify/workflow-forge-explained-20261028-115029/forge-explai
 - Has "learning a tool from real results checked by SAM" (2) or "relearn on tool change" already been published?
   A free superintel check was offered and not yet run.
 - Does the user commit to Forge, and with which main-demo tool?
-- Build rule (decision, user, Oct 28): our agents write specs and Muse Code builds the code. The herdshot briefs
-  still say Claude agents code, so they need updating once the user says go.
+- Build rule (decision, user, Oct 28): our agents write specs and Muse Code builds the code. Open: which agents write
+  the specs (a new Forge swarm, or this coordinator alone). The HerdShot swarm belongs to the earlier project.
