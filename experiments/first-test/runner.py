@@ -5,7 +5,7 @@ CadQuery code, score it with checks.py, and log everything.
 Built to RUNNER_SPEC.md. Uses only the standard library for HTTP
 (urllib.request) plus cadquery. Never prints, logs or writes an API key.
 
-CLI: runner.py --jobs dry|main --out <dir> [--budget 5.0] [--budget-c 3.0] [--gpu-start <unix seconds>]
+CLI: runner.py --jobs dry|main --out <dir> [--budget 5.0] [--budget-c 3.0] [--gpu-start <unix seconds>] [--arms A,B,C]
 """
 
 import argparse
@@ -60,12 +60,53 @@ GPU_DOLLARS_PER_HOUR = 2.50  # arms A+B share one A100-80GB, counted once
 FENCE_RE = re.compile(r"```(?:python)?[ \t]*\r?\n?(.*?)```", re.DOTALL)
 
 ARMS = ("A", "B", "C")
+VALID_ARMS = ("A", "B", "C", "BR", "B2")
+GLIMMER_ARMS = ("A", "B", "BR", "B2")
+DEFAULT_ARMS = ("A", "B", "C")
+HINT_PATH = os.path.join(os.path.dirname(HERE), "b2-hint", "hint.txt")
+_hint_cache = {}
+
+
+def load_hint_text(path=None):
+    """Read the B2 hint file (UTF-8, stripped)."""
+    with open(path or HINT_PATH, encoding="utf-8") as f:
+        return f.read().strip()
+
+
+def get_hint_text():
+    if "hint" not in _hint_cache:
+        _hint_cache["hint"] = load_hint_text()
+    return _hint_cache["hint"]
+
+
+def parse_arms(value):
+    """Parse a comma-separated --arms value into a tuple of valid arms."""
+    if isinstance(value, (tuple, list)):
+        parts = list(value)
+    else:
+        parts = str(value).split(",")
+    arms = tuple(p.strip() for p in parts if p.strip())
+    if not arms:
+        raise ValueError("no arms requested (expected comma list of A,B,C,BR,B2)")
+    for arm in arms:
+        if arm not in VALID_ARMS:
+            raise ValueError(
+                f"unknown arm {arm!r} (expected comma list of A,B,C,BR,B2)"
+            )
+    return arms
+
+
+def system_prompt_for_arm(arm, hint_text=None):
+    if arm == "B2":
+        hint = hint_text if hint_text is not None else get_hint_text()
+        return SYSTEM_PROMPT + " " + hint
+    return SYSTEM_PROMPT
 
 # ---------------------------------------------------------------- arms/messages
 
 
 def arm_model(arm):
-    if arm in ("A", "B"):
+    if arm in GLIMMER_ARMS:
         return GLIMMER_MODEL
     if arm == "C":
         return SPARK_MODEL
@@ -73,7 +114,7 @@ def arm_model(arm):
 
 
 def arm_endpoint(arm, glimmer_url):
-    if arm in ("A", "B"):
+    if arm in GLIMMER_ARMS:
         return glimmer_url.rstrip("/") + "/v1/chat/completions"
     if arm == "C":
         return BASETEN_URL
@@ -81,14 +122,18 @@ def arm_endpoint(arm, glimmer_url):
 
 
 def arm_uses_manual(arm):
-    return arm in ("B", "C")
+    return arm in ("B", "C", "BR", "B2")
 
 
-def build_messages(arm, job_text, manual_text):
+def build_messages(arm, job_text, manual_text, hint_text=None):
     """Exactly the spec's messages: system + job text (arm A), or system +
-    manual-as-first-user-message + job-text-as-second-user-message (B, C)."""
+    manual-as-first-user-message + job-text-as-second-user-message (B, C, BR,
+    B2). Arm BR is identical to B; arm B2 appends the hint text to the system
+    message (SYSTEM text + one space + hint)."""
+    if arm not in VALID_ARMS:
+        raise ValueError(f"unknown arm {arm!r}")
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt_for_arm(arm, hint_text)},
     ]
     if arm_uses_manual(arm):
         messages.append({"role": "user", "content": MANUAL_PREFIX + manual_text})
@@ -663,24 +708,35 @@ def build_summary(records, c_usages, elapsed_s, budget, budget_stopped,
     cost_c = sum(cost_c_of_usage(u) for u in c_usages)
     gpu_elapsed = gpu_elapsed_s if gpu_elapsed_s is not None else elapsed_s
     gpu_total = gpu_cost_of_elapsed(gpu_elapsed)
-    costs = {
-        "A": round(gpu_total / 2, 4),
-        "B": round(gpu_total / 2, 4),
-        "C": round(cost_c, 4),
+    glimmer_arms = [a for a in arms if a in GLIMMER_ARMS]
+    costs = {}
+    if glimmer_arms:
+        share = round(gpu_total / len(glimmer_arms), 4)
+        for arm in glimmer_arms:
+            costs[arm] = share
+    if "C" in arms:
+        costs["C"] = round(cost_c, 4)
+    costs.update({
         "gpu_total": round(gpu_total, 4),
         "total": round(gpu_total + cost_c, 4),
         "note": "Arms A+B share one A100-80GB at $2.50/h over the run "
         "wall-clock, counted once (split evenly for display). Arm C is "
         "input $1.25/M + output $4.25/M tokens from usage.",
-    }
+    })
     invalid_rates = {
         arm: per_arm[arm]["invalid_rate"] for arm in arms if per_arm[arm]["n"]
     }
-    decision, run_valid = compute_decision(
-        per_arm.get("B", {}).get("pass_rate"),
-        per_arm.get("C", {}).get("pass_rate"),
-        invalid_rates,
-    )
+    if "B" in per_arm and "C" in per_arm:
+        decision, run_valid = compute_decision(
+            per_arm.get("B", {}).get("pass_rate"),
+            per_arm.get("C", {}).get("pass_rate"),
+            invalid_rates,
+        )
+    else:
+        run_valid = all(
+            (r is None or r <= 0.05) for r in invalid_rates.values()
+        )
+        decision = "decision: see experiments/b2-hint/PLAN.md"
     table = {}
     for rec in records:
         table.setdefault(rec["job"], {})[rec["arm"]] = rec.get("outcome")
@@ -709,7 +765,7 @@ def _pct(rate):
 
 
 def build_report(summary):
-    arms = [a for a in ("A", "B", "C") if a in summary["arms"]]
+    arms = [a for a in summary["arms"]]
     lines = ["# First-test report", ""]
     lines.append(f"Decision (PLAN.md section 7): **{summary['decision']}**")
     lines.append(f"Run valid: {summary['run_valid']}")
@@ -785,22 +841,30 @@ def main(argv=None):
     parser.add_argument("--budget", type=float, default=5.0)
     parser.add_argument("--budget-c", type=float, default=3.0)
     parser.add_argument("--gpu-start", type=float, default=None)
+    parser.add_argument("--arms", default=",".join(DEFAULT_ARMS),
+                        help="comma list of arms (default A,B,C)")
     args = parser.parse_args(argv)
+    try:
+        arms = parse_arms(args.arms)
+    except ValueError as e:
+        parser.error(str(e))
 
     glimmer_url = os.environ.get("GLIMMER_URL", "")
     glimmer_key = os.environ.get("GLIMMER_KEY", "")
     baseten_key = os.environ.get("BASETEN_KEY", "")
-    missing = [
-        name
-        for name, val in (
-            ("GLIMMER_URL", glimmer_url),
-            ("GLIMMER_KEY", glimmer_key),
-            ("BASETEN_KEY", baseten_key),
-        )
-        if not val
-    ]
+    need = []
+    if any(a in GLIMMER_ARMS for a in arms):
+        need += [("GLIMMER_URL", glimmer_url), ("GLIMMER_KEY", glimmer_key)]
+    if "C" in arms:
+        need += [("BASETEN_KEY", baseten_key)]
+    missing = [name for name, val in need if not val]
     if missing:
         parser.error("missing environment variables: " + ", ".join(missing))
+    if "B2" in arms:
+        try:
+            load_hint_text()
+        except OSError as e:
+            parser.error(f"cannot read hint file {HINT_PATH}: {e}")
 
     JOBS, expected, manual_text = load_inputs()
     if args.jobs == "dry":
@@ -810,15 +874,21 @@ def main(argv=None):
     if not jobs:
         parser.error(f"no jobs for --jobs {args.jobs}")
 
-    arm_cfgs = {
-        "A": {"endpoint": arm_endpoint("A", glimmer_url), "model": GLIMMER_MODEL},
-        "B": {"endpoint": arm_endpoint("B", glimmer_url), "model": GLIMMER_MODEL},
-        "C": {"endpoint": BASETEN_URL, "model": SPARK_MODEL},
-    }
-    key_map = {"A": glimmer_key, "B": glimmer_key, "C": baseten_key}
+    arm_cfgs = {}
+    key_map = {}
+    for arm in arms:
+        if arm == "C":
+            arm_cfgs[arm] = {"endpoint": BASETEN_URL, "model": SPARK_MODEL}
+            key_map[arm] = baseten_key
+        else:
+            arm_cfgs[arm] = {
+                "endpoint": arm_endpoint(arm, glimmer_url),
+                "model": arm_model(arm),
+            }
+            key_map[arm] = glimmer_key
     run_suite(
         jobs, expected, manual_text, args.out, arm_cfgs, key_map, args.budget,
-        budget_c=args.budget_c, gpu_start=args.gpu_start,
+        budget_c=args.budget_c, gpu_start=args.gpu_start, arms=arms,
     )
     return 0
 

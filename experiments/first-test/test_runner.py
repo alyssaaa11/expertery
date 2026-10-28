@@ -433,3 +433,78 @@ def test_gpu_start_uses_deploy_start(tmp_path):
     assert abs(summary["gpu_elapsed_seconds"] - 3600.0) < 30.0
     saved = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
     assert saved["gpu_start"] == gpu_start
+
+
+# ---------------------------------------------------------------- --arms / BR / B2
+
+HINT_PATH = os.path.join(
+    os.path.dirname(HERE), "b2-hint", "hint.txt")
+with open(HINT_PATH, encoding="utf-8") as _hf:
+    HINT = _hf.read().strip()
+
+
+def test_arms_parsing():
+    assert runner.parse_arms("A,B,C") == ("A", "B", "C")
+    assert runner.parse_arms("BR,B2") == ("BR", "B2")
+    assert runner.parse_arms("B") == ("B",)
+    assert runner.parse_arms(" B , C ") == ("B", "C")
+
+
+def test_arms_parsing_rejects_unknown():
+    for bad in ("D", "A,D", "", "B,b2"):
+        with pytest.raises(ValueError):
+            runner.parse_arms(bad)
+
+
+def test_br_messages_equal_b():
+    assert runner.build_messages(
+        "BR", D2["text"], MANUAL) == runner.build_messages(
+        "B", D2["text"], MANUAL)
+    assert runner.arm_model("BR") == runner.arm_model("B")
+    assert runner.arm_uses_manual("BR") is True
+
+
+def test_b2_system_message_ends_with_hint():
+    msgs = runner.build_messages("B2", D2["text"], MANUAL)
+    b_msgs = runner.build_messages("B", D2["text"], MANUAL)
+    assert msgs[0]["role"] == "system"
+    assert msgs[0]["content"] == runner.SYSTEM_PROMPT + " " + HINT
+    assert msgs[0]["content"].endswith(HINT)
+    # Everything after the system message is identical to B.
+    assert msgs[1:] == b_msgs[1:]
+
+
+def test_c_not_called_when_not_requested(tmp_path):
+    seen = []
+
+    def post(endpoint, body, timeout):
+        seen.append(endpoint)
+        return fake_resp("x", finish="length")
+
+    cfgs = arm_cfgs()
+    records, summary = runner.run_suite(
+        DRY_JOBS[:1], EXPECTED, MANUAL, str(tmp_path), cfgs,
+        key_map={}, budget=5.0, post_fn=post,
+        sleep_fn=lambda s: None, max_workers=1, arms=("A", "B"))
+    assert {r["arm"] for r in records} == {"A", "B"}
+    assert set(summary["arms"]) == {"A", "B"}
+    assert cfgs["C"]["endpoint"] not in seen
+    assert summary["decision"] == "decision: see experiments/b2-hint/PLAN.md"
+
+
+def test_subset_summary_lists_only_requested_arms(tmp_path):
+    def post(endpoint, body, timeout):
+        return fake_resp("x", finish="length")
+
+    cfgs = arm_cfgs()
+    cfgs["BR"] = dict(cfgs["B"])
+    cfgs["B2"] = dict(cfgs["B"])
+    records, summary = runner.run_suite(
+        [D2], EXPECTED, MANUAL, str(tmp_path), cfgs,
+        key_map={}, budget=5.0, post_fn=post,
+        sleep_fn=lambda s: None, max_workers=1, arms=("BR", "B2"))
+    assert [r["arm"] for r in records] == ["BR", "B2"]
+    assert set(summary["arms"]) == {"BR", "B2"}
+    assert summary["decision"] == "decision: see experiments/b2-hint/PLAN.md"
+    report = (tmp_path / "report.md").read_text(encoding="utf-8")
+    assert "Arm C" not in report

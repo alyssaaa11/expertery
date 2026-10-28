@@ -22,5 +22,5 @@ done
 [ "$code" != "200" ] && { echo "Glimmer not ready after 30 min, abort"; exit 1; }
 BK=$(envsave get es_LMDrY_C1YRDJYOAGLb2hB1y5WpczSEujtnquV4V5DTzZSMhp 2>/dev/null)
 cd experiments/first-test
-GLIMMER_URL="$URL" GLIMMER_KEY="$K" BASETEN_KEY="$BK" ~/projects/forge/.venv/bin/python -I runner.py --jobs "$JOBS" --out "$OUT" --budget 5.0 --gpu-start "$GPU_START"
+GLIMMER_URL="$URL" GLIMMER_KEY="$K" BASETEN_KEY="$BK" ~/projects/forge/.venv/bin/python -I runner.py --jobs "$JOBS" --out "$OUT" --budget 5.0 --gpu-start "$GPU_START" "${@:3}"
 echo "runner exit $?"; date +"done %T"
