@@ -2,7 +2,8 @@
 
 Supersedes `experiments/keel-exam/` (v1 exam, kept as history: the user asked for a more realistic tool, 2026-10-28).
 
-Status: **FROZEN** 2026-10-28 ~23:30 (hashes in section 7; verifier exam GO; blind rebuild 30/30; runner tests 53/53).
+Status: **FROZEN** 2026-10-28 ~23:50 (hashes in section 7; verifier exam GO; blind rebuild 30/30; runner tests 62/62;
+rule 1 on C pass@3 per the user).
 The paid pilot and main run need the user's yes.
 
 ## 1. Question
@@ -33,12 +34,19 @@ Same prompt for both, same sampling as the first test (temperature 1.0, top_p 0.
 Score of an arm = mean pass rate over its 90 answers (= mean over the 30 jobs of passes/3), in percent.
 0. INVALID > 5% of answers in either arm (more than 4 of 90: cut off, empty, or network/HTTP failure after one
    retry) → **RUN INVALID**: fix the cause, rerun that arm; no decision from this run.
-1. C < 30% → **STOP**: the teacher cannot use an unseen tool from its manual; rethink (e.g. a richer manual).
+1. C pass@3 < 30% → **STOP**: the teacher cannot use an unseen tool from its manual; rethink (e.g. a richer manual).
+   C pass@3 = share of the 30 jobs with at least one PASS among C's complete samples (pass@k over the complete
+   samples if a cap left fewer than 3). Why (user, 2026-10-28): the factory keeps only referee-verified teacher
+   answers, so what matters is whether Spark can solve a job at all, not its average; e.g. 5 of 10 jobs solved once
+   in 3 tries = mean 17% but pass@3 50%, enough to make practice data.
 2. B ≥ 80% → **NO ROOM**: Glimmer + manual is already good; training cannot show much; rethink the tool.
 3. C − B ≥ 25 points and B ≤ 70% → **GO**: build the factory (practice generator → teacher run → training). Bar 25,
    the same as the first test.
 4. Otherwise → **GREY**: report to the user, who decides.
-Reported alongside (not part of the rule): pass@1 of each sample separately (samples 1, 2, 3 per arm); a paired
+Reported next to rule 1: C mean pass rate (sets the factory cost: tries needed per good example ≈ 1/mean) and C
+pass@3 split medium vs hard; flag EASY-ONLY if C hard pass@3 < 20% or < half of C medium pass@3: practice data would be
+easy-only. Rules 2–3 stay on the mean pass rate.
+Also reported alongside (not part of the rules): pass@1 of each sample separately (samples 1, 2, 3 per arm); a paired
 bootstrap 95% CI of C − B over the 30 jobs (10,000 resamples of jobs, seed 0, per-job score = passes/3); McNemar on
 sample 1 (informational). INVALID answers count as not PASS in the score and are listed separately.
 
@@ -102,12 +110,12 @@ sandbox result, measurement and verdict to `results/keel-v2-<run>/calls.jsonl`.
 Before the run, the sha256 of these files is written here and committed; the runner recomputes them at start and
 refuses to run if any differs: `jobs.py`, `expected.json`, `referee.py`, `runner.py`, `sandbox.sb`, `run_one.py`
 (this folder), `../first-test/checks.py`, `../../company/keel/__init__.py`, `../../company/manual.md`.
-Hashes (frozen 2026-10-28 ~23:30 with `runner.py --print-hashes`):
+Hashes (re-frozen 2026-10-28 ~23:50 with `runner.py --print-hashes`, after the rule-1 change):
 ```text
 fc6dfd1a44f0596fdb3a2bb43e672805b7a86490380a2e9df73768de93b58863  jobs.py
 aa5eef7077e7f7bb8375132749eb612efe2a47a2fefa0d9693762e9289bbc981  expected.json
 c340a5c3eced99ee1faad123df1ad89cf8385d7ffe0553fc57fad7fca5e33a2f  referee.py
-1033717647c38c8c11f2e6c4996a4f74376a8fc2b47b09e72822c7da55213e18  runner.py
+f38613aa9156750debfb4d902a2a7ca6463ecae4f6404a0a395a50dba0fcb39a  runner.py
 0d150bfbaea5a27c3128444c8220e99c460fb80503b6418c11dfe12c6a377396  sandbox.sb
 51376492dfd791a39d19c42a7e2a2ac681e36697b80a09c33781f9cabca05524  run_one.py
 3fc69f4baa0649d20210dc03e3a3143fa6f0bc28f15619d311e4f29c94e51c2a  ../first-test/checks.py

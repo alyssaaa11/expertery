@@ -1173,10 +1173,76 @@ def compute_mcnemar(records, job_ids):
     }
 
 
-def compute_decision(rate_b, rate_c, invalid_rates):
-    """PLAN.md 4 decision rules in order; first match wins. Rates are
-    fractions compared in whole points (round(rate*100)).
-    Returns (decision, run_valid)."""
+def arm_pass_at_k(per_job, job_ids, arm, n_complete):
+    """pass@k stats for one arm: share of jobs with at least one PASS
+    among the arm's complete samples (PLAN.md 4 rule 1). k is the
+    number of complete samples. Medium = job ids starting with "M",
+    hard = starting with "H". Fractions are None when there is nothing
+    to divide (no jobs, no complete samples, or no jobs in the tier)."""
+    medium_ids = [j for j in job_ids if j.startswith("M")]
+    hard_ids = [j for j in job_ids if j.startswith("H")]
+
+    def _frac(solved, total):
+        if not total or not n_complete:
+            return None
+        return solved / total
+
+    if not job_ids or not n_complete:
+        overall = medium = hard = None
+    else:
+        overall = _frac(
+            sum(1 for j in job_ids if per_job[j][arm] >= 1), len(job_ids))
+        medium = _frac(
+            sum(1 for j in medium_ids if per_job[j][arm] >= 1),
+            len(medium_ids)) if medium_ids else None
+        hard = _frac(
+            sum(1 for j in hard_ids if per_job[j][arm] >= 1),
+            len(hard_ids)) if hard_ids else None
+
+    def _pct(frac):
+        return None if frac is None else round(frac * 100, 1)
+
+    return {
+        "k": n_complete,
+        "overall_frac": overall,
+        "overall_pct": _pct(overall),
+        "medium_frac": medium,
+        "medium_pct": _pct(medium),
+        "hard_frac": hard,
+        "hard_pct": _pct(hard),
+        "n_jobs": len(job_ids),
+        "n_medium": len(medium_ids),
+        "n_hard": len(hard_ids),
+    }
+
+
+def compute_pass_at_k(per_job, job_ids, arms, per_arm):
+    """Per-arm pass@k dicts (see arm_pass_at_k), keyed by arm."""
+    return {
+        arm: arm_pass_at_k(
+            per_job, job_ids, arm,
+            per_arm[arm]["n_complete_samples"])
+        for arm in arms
+    }
+
+
+def is_easy_only(medium_frac, hard_frac):
+    """EASY-ONLY flag for arm C (PLAN.md 4): hard pass@k < 20% or
+    hard pass@k < half of medium pass@k (exact fractions)."""
+    if hard_frac is None:
+        return False
+    if hard_frac < 0.20:
+        return True
+    if medium_frac is None or medium_frac <= 0:
+        return False
+    return hard_frac < medium_frac / 2
+
+
+def compute_decision(rate_b, rate_c, invalid_rates, passk_c=None):
+    """PLAN.md 4 decision rules in order; first match wins. The mean
+    rates and pass@k are fractions compared in whole points
+    (round(rate*100)). Rule 1 uses C pass@k; rules 2-3 use the mean
+    pass rates. Returns (decision, run_valid)."""
     run_valid = all(
         (r is None or r <= 0.05) for r in (invalid_rates or {}).values()
     )
@@ -1186,15 +1252,16 @@ def compute_decision(rate_b, rate_c, invalid_rates):
             "fix the cause and rerun that arm (no decision from this run)",
             False,
         )
-    if rate_b is None or rate_c is None:
+    if rate_b is None or rate_c is None or passk_c is None:
         return ("GREY: too few scored answers for a decision", True)
     b_pts = round(rate_b * 100)
     c_pts = round(rate_c * 100)
+    c_pass_pts = round(passk_c * 100)
     gap = c_pts - b_pts
-    if c_pts < 30:
+    if c_pass_pts < 30:
         return (
-            f"STOP: arm C scores {c_pts}% (< 30%): the teacher cannot use "
-            "an unseen tool from its manual",
+            f"STOP: arm C pass@k is {c_pass_pts}% (< 30%): the teacher "
+            "cannot use an unseen tool from its manual",
             True,
         )
     if b_pts >= 80:
@@ -1216,6 +1283,12 @@ def build_summary(sent, job_ids, arms, k, mode, modal_usd, baseten_usd,
                   budget, budget_c, max_minutes, stopped_by, skipped,
                   elapsed_s, gpu_start=None, n_calls=None):
     per_arm, per_job = tally(sent, job_ids, arms, k)
+    pass_at_k = compute_pass_at_k(per_job, job_ids, arms, per_arm)
+    if "C" in pass_at_k:
+        easy_only = is_easy_only(
+            pass_at_k["C"]["medium_frac"], pass_at_k["C"]["hard_frac"])
+    else:
+        easy_only = False
     # Which cap stopped each arm: the cap named by its first NOT_RUN
     # record in call order (None when the arm ran everything).
     for r in sent:
@@ -1261,6 +1334,7 @@ def build_summary(sent, job_ids, arms, k, mode, modal_usd, baseten_usd,
             per_arm["B"]["score_frac"],
             per_arm["C"]["score_frac"],
             invalid_rates,
+            pass_at_k["C"]["overall_frac"],
         )
     else:
         run_valid = all(
@@ -1287,6 +1361,8 @@ def build_summary(sent, job_ids, arms, k, mode, modal_usd, baseten_usd,
             "seed": BOOTSTRAP_SEED,
         },
         "mcnemar_sample1": mcnemar,
+        "pass_at_k": pass_at_k,
+        "easy_only": easy_only,
         "decision": decision,
         "run_valid": run_valid,
         "pilot_ok": pilot_ok,
@@ -1369,6 +1445,30 @@ def build_report(summary):
                      + "; ".join(
                          f"{arm}: {','.join(str(x) for x in partial[arm])}"
                          for arm in arms if partial[arm]))
+    lines.append("")
+    lines.append("## Rule 1 (STOP on C pass@k < 30 whole points, PLAN.md 4)")
+    pak = summary.get("pass_at_k", {})
+    if "C" in summary["arms"] and "C" in pak:
+        cs = summary["arms"]["C"]
+        ck = pak["C"]
+        lines.append(
+            f"- C mean pass rate: {_pct(cs['score_frac'])} "
+            f"(k={cs.get('n_complete_samples', 0)})")
+        lines.append(
+            f"- C pass@k overall: {_pct(ck['overall_frac'])} "
+            f"(k={ck['k']})")
+        lines.append(
+            f"- C pass@k medium (M*): {_pct(ck['medium_frac'])}; "
+            f"hard (H*): {_pct(ck['hard_frac'])}")
+        lines.append(
+            "- EASY-ONLY: "
+            + ("YES" if summary.get("easy_only") else "no"))
+    if "B" in pak:
+        bk = pak["B"]
+        lines.append(
+            f"- B pass@k (informational) overall: {_pct(bk['overall_frac'])} "
+            f"(k={bk['k']}); medium: {_pct(bk['medium_frac'])}; "
+            f"hard: {_pct(bk['hard_frac'])}")
     lines.append("")
     lines.append("## pass@1 per sample (%)")
     lines.append("| Arm | " + " | ".join(

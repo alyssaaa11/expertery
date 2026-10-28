@@ -435,53 +435,193 @@ def test_print_hashes_format():
 
 
 def test_decision_run_invalid_and_ordering():
-    decision, valid = runner.compute_decision(0.5, 0.2, {"B": 0.06, "C": 0.0})
+    # INVALID (rule 0) beats STOP even with C pass@k at 0%.
+    decision, valid = runner.compute_decision(
+        0.5, 0.2, {"B": 0.06, "C": 0.0}, passk_c=0.0)
     assert decision.startswith("RUN INVALID") and not valid
 
 
 def test_decision_stop_and_ordering_over_no_room():
-    decision, valid = runner.compute_decision(0.85, 0.20, {"B": 0.0, "C": 0.0})
+    # STOP (rule 1, on C pass@k) beats NO ROOM: B's mean is 85%
+    # but C pass@k is 0%.
+    decision, valid = runner.compute_decision(
+        0.85, 0.90, {"B": 0.0, "C": 0.0}, passk_c=0.0)
     assert decision.startswith("STOP") and valid
 
 
+def test_decision_stop_uses_passk_not_mean():
+    # High C mean (90%) but C pass@k 0% -> still STOP.
+    decision, _ = runner.compute_decision(
+        0.0, 0.90, {"B": 0.0, "C": 0.0}, passk_c=0.0)
+    assert decision.startswith("STOP")
+    # Low C mean (20%) but C pass@k 100% -> not STOP.
+    decision, _ = runner.compute_decision(
+        0.0, 0.20, {"B": 0.0, "C": 0.0}, passk_c=1.0)
+    assert not decision.startswith("STOP")
+
+
 def test_decision_no_room():
-    decision, _ = runner.compute_decision(0.85, 0.90, {"B": 0.0, "C": 0.0})
+    decision, _ = runner.compute_decision(
+        0.85, 0.90, {"B": 0.0, "C": 0.0}, passk_c=0.90)
     assert decision.startswith("NO ROOM")
 
 
 def test_decision_go():
-    decision, _ = runner.compute_decision(0.60, 0.90, {"B": 0.0, "C": 0.0})
+    decision, _ = runner.compute_decision(
+        0.60, 0.90, {"B": 0.0, "C": 0.0}, passk_c=0.90)
     assert decision.startswith("GO")
 
 
 def test_decision_go_blocked_by_high_b():
-    decision, _ = runner.compute_decision(0.71, 1.00, {"B": 0.0, "C": 0.0})
+    decision, _ = runner.compute_decision(
+        0.71, 1.00, {"B": 0.0, "C": 0.0}, passk_c=1.00)
     assert decision.startswith("GREY")
 
 
 def test_decision_go_blocked_by_small_gap():
-    decision, _ = runner.compute_decision(0.60, 0.84, {"B": 0.0, "C": 0.0})
+    decision, _ = runner.compute_decision(
+        0.60, 0.84, {"B": 0.0, "C": 0.0}, passk_c=0.90)
     assert decision.startswith("GREY")
 
 
 def test_decision_grey_default():
-    decision, _ = runner.compute_decision(0.50, 0.60, {"B": 0.0, "C": 0.0})
+    decision, _ = runner.compute_decision(
+        0.50, 0.60, {"B": 0.0, "C": 0.0}, passk_c=0.60)
     assert decision.startswith("GREY")
 
 
 def test_decision_whole_point_rounding():
-    # 29.6% rounds to 30 whole points: not STOP.
-    decision, _ = runner.compute_decision(0.50, 0.296, {"B": 0.0, "C": 0.0})
+    # Rule 1 on C pass@k in whole points: 29.6% rounds to 30: not STOP
+    # (B 50%, C mean 60%: gap 10, so GREY).
+    decision, _ = runner.compute_decision(
+        0.50, 0.60, {"B": 0.0, "C": 0.0}, passk_c=0.296)
     assert decision.startswith("GREY")
     # 29.4% rounds to 29: STOP.
-    decision, _ = runner.compute_decision(0.50, 0.294, {"B": 0.0, "C": 0.0})
+    decision, _ = runner.compute_decision(
+        0.50, 0.60, {"B": 0.0, "C": 0.0}, passk_c=0.294)
     assert decision.startswith("STOP")
-    # 80.4% B rounds to 80 whole points: NO ROOM; 79.4% rounds to 79:
-    # with C at 90 the gap is only 11, so GREY.
-    decision, _ = runner.compute_decision(0.804, 0.90, {"B": 0.0, "C": 0.0})
+    # Rules 2-3 still on the mean: 80.4% B rounds to 80: NO ROOM
+    # (with C pass@k high so rule 1 does not fire); 79.4% rounds to
+    # 79: with C at 90 the gap is only 11, so GREY.
+    decision, _ = runner.compute_decision(
+        0.804, 0.90, {"B": 0.0, "C": 0.0}, passk_c=0.90)
     assert decision.startswith("NO ROOM")
-    decision, _ = runner.compute_decision(0.794, 0.90, {"B": 0.0, "C": 0.0})
+    decision, _ = runner.compute_decision(
+        0.794, 0.90, {"B": 0.0, "C": 0.0}, passk_c=0.90)
     assert decision.startswith("GREY")
+
+
+def _passk_records(outcomes_by_job):
+    # outcomes_by_job: {job: [outcome_s1, outcome_s2, ...]} for arm C.
+    records = []
+    for job, outcomes in outcomes_by_job.items():
+        for s, outcome in enumerate(outcomes, start=1):
+            records.append(_rec(job, "C", s, outcome))
+    return records
+
+
+def test_pass_at_k_counts_solved_jobs():
+    # 4 jobs, k=3: J1 solved once, J2 solved 3/3, J3 never, J4 INVALID.
+    # INVALID counts as not PASS, so pass@3 = 2/4.
+    records = _passk_records({
+        "M1": ["PASS", "FAIL", "FAIL"],
+        "M2": ["PASS", "PASS", "PASS"],
+        "H1": ["FAIL", "FAIL", "FAIL"],
+        "H2": ["INVALID", "INVALID", "INVALID"],
+    })
+    per_arm, per_job = runner.tally(
+        records, ["M1", "M2", "H1", "H2"], ["C"], 3)
+    assert per_arm["C"]["n_complete_samples"] == 3
+    pak = runner.compute_pass_at_k(per_job, ["M1", "M2", "H1", "H2"],
+                                   ["C"], per_arm)
+    assert pak["C"]["k"] == 3
+    assert pak["C"]["overall_frac"] == pytest.approx(0.5)
+    assert pak["C"]["medium_frac"] == pytest.approx(1.0)
+    assert pak["C"]["hard_frac"] == pytest.approx(0.0)
+
+
+def test_pass_at_k_uses_complete_samples_only():
+    # Sample 2 never sent: k=1, only sample 1 counts. J1 solved in the
+    # incomplete sample 2 only -> not solved at k=1.
+    records = [
+        _rec("M1", "C", 1, "FAIL"), _rec("M2", "C", 1, "PASS"),
+        _rec("M1", "C", 2, "PASS"),
+        {"job": "M2", "arm": "C", "sample": 2, "outcome": "NOT_RUN",
+         "stopped_by": "baseten-budget"},
+    ]
+    per_arm, per_job = runner.tally(records, ["M1", "M2"], ["C"], 2)
+    assert per_arm["C"]["complete_samples"] == [1]
+    pak = runner.compute_pass_at_k(per_job, ["M1", "M2"], ["C"], per_arm)
+    assert pak["C"]["k"] == 1
+    assert pak["C"]["overall_frac"] == pytest.approx(0.5)
+    assert per_job["M1"]["C"] == 0
+    assert per_job["M2"]["C"] == 1
+
+
+def test_plan_example_mean_17_but_pass3_50_not_stop():
+    # PLAN.md 4: 5 of 10 jobs solved once in 3 tries = mean ~17%
+    # but pass@3 50% -> enough for practice data, not STOP.
+    decision, valid = runner.compute_decision(
+        0.0, 5 / 30, {"B": 0.0, "C": 0.0}, passk_c=0.5)
+    assert valid
+    assert not decision.startswith("STOP")
+
+
+def test_stop_on_passk_29_pct():
+    decision, valid = runner.compute_decision(
+        0.0, 0.90, {"B": 0.0, "C": 0.0}, passk_c=0.29)
+    assert decision.startswith("STOP") and valid
+
+
+def test_easy_only_flag_hard_below_20():
+    assert runner.is_easy_only(1.0, 0.19) is True
+    # 20% is not below 20%, and not below half of 40% either.
+    assert runner.is_easy_only(0.4, 0.20) is False
+
+
+def test_easy_only_flag_hard_below_half_medium():
+    # Hard 30% is above 20% but below half of medium 80% -> EASY-ONLY.
+    assert runner.is_easy_only(0.8, 0.3) is True
+    # Hard 50% with medium 80%: above 20% and above half -> not.
+    assert runner.is_easy_only(0.8, 0.5) is False
+
+
+def test_rules_still_in_order():
+    inv = {"B": 0.0, "C": 0.0}
+    bad = {"B": 0.06, "C": 0.0}
+    # INVALID > STOP > NO ROOM > GO > GREY.
+    d, _ = runner.compute_decision(0.85, 0.90, bad, passk_c=0.0)
+    assert d.startswith("RUN INVALID")
+    d, _ = runner.compute_decision(0.85, 0.90, inv, passk_c=0.0)
+    assert d.startswith("STOP")
+    d, _ = runner.compute_decision(0.85, 0.90, inv, passk_c=0.9)
+    assert d.startswith("NO ROOM")
+    d, _ = runner.compute_decision(0.60, 0.90, inv, passk_c=0.9)
+    assert d.startswith("GO")
+    d, _ = runner.compute_decision(0.50, 0.60, inv, passk_c=0.6)
+    assert d.startswith("GREY")
+
+
+def test_summary_reports_passk_and_easy_only():
+    # C: both medium solved, no hard solved -> hard 0% < 20% -> EASY-ONLY.
+    # Mean is low but pass@k is 50%: decision must not be STOP.
+    records = [
+        _rec("M1", "B", 1, "FAIL"), _rec("M2", "B", 1, "FAIL"),
+        _rec("H1", "B", 1, "FAIL"), _rec("H2", "B", 1, "FAIL"),
+        _rec("M1", "C", 1, "PASS"), _rec("M2", "C", 1, "PASS"),
+        _rec("H1", "C", 1, "FAIL"), _rec("H2", "C", 1, "FAIL"),
+    ]
+    summary = _summary(records, ["M1", "M2", "H1", "H2"], ["B", "C"], 1)
+    assert summary["pass_at_k"]["C"]["overall_frac"] == pytest.approx(0.5)
+    assert summary["pass_at_k"]["C"]["medium_frac"] == pytest.approx(1.0)
+    assert summary["pass_at_k"]["C"]["hard_frac"] == pytest.approx(0.0)
+    assert summary["pass_at_k"]["B"]["overall_frac"] == pytest.approx(0.0)
+    assert summary["easy_only"] is True
+    assert not summary["decision"].startswith("STOP")
+    report = runner.build_report(summary)
+    assert "C pass@k overall" in report
+    assert "EASY-ONLY" in report
+    assert "B pass@k" in report
 
 
 # ---------------------------------------------------------------- bootstrap, McNemar, tally
