@@ -14,3 +14,5 @@
 ## [2026-10-28 17:45] update | lessons (overlap check, blind rebuild); first test prep: 33 jobs, self-test 33/33, blind 33/33, manual.md, RUNNER_SPEC.md
 
 ## [2026-10-28 18:00] update | forge-plan (Baseten $100 credit per user; card on file; check after dry run)
+
+## [2026-10-28 17:25] update | forge-plan (Muse Code built runner, ~$0.51; e2e 33/33)
