@@ -52,17 +52,9 @@ customer pays for its own computing. The selling part is not validated.
 - decision (user, 13:20): **don't run Meta models yet; install only.** Neither part has run.
 - Installs: nothing to install locally for the Glimmer test, because vLLM and the training stack run on Modal's side.
 
-## 4. Total cost (hypothesis, planning estimate)
-| Item | Estimate |
-|---|---|
-| Modal: Glimmer test $3–5, day-1 ~$5, training $12–24 (incl. 1 retry), scoreboard ~$8, demo ~$5, buffer ~$10 | **~$45–60** |
-| Meta Spark: day-1 $3–5, ~1,000 practice tries $20–30, scoreboard ~$2 | **~$25–40** (about $3–5 on the contributor tier) |
-| SAM 3.1 (local), CadQuery, OpenSCAD; Claude coordination on the user's plan | $0 |
-| **Total** | **~$85–105**, or ~$60–75 with the contributor tier |
-- The contributor tier is about 10× cheaper but Meta may train on the data. That's acceptable because the practice
-  data is fake. Waiting for the user's OK.
-- Suggested Modal spending limit: about $70. Unknown: the Modal credit amount (assumed ~$100), and whether Muse Code
-  bills the Meta credit (check before the first build).
+## 4. Total cost
+- Superseded: the first estimate ($85–105) was replaced by the user's **$30 cap**. Real spend and the current
+  budget are on [[status]]; the next stage's costs are in [[factory-plan-2026-10-29]].
 
 ## 5. "If I run out of credits, how can I sell it?"
 - Customers pay for their own computing. We sell the software and the setup. The customer's GPUs (their Modal, AWS or

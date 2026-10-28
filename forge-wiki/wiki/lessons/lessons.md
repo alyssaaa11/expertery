@@ -2,7 +2,7 @@
 
 **Summary**: Reusable lessons from building Forge, each with how it was learned and how to check it again.
 
-**Last updated**: 2026-10-28
+**Last updated**: 2026-10-28 (evening)
 
 ---
 
@@ -39,5 +39,28 @@
   parts from the text alone; all matched, but it flagged 5 wordings (curved vs flat notch, slot length end-to-end vs
   centre-to-centre), which were clarified. Check: score `blind/*.py` with `checks.score`.
 - **`modal app stop` asks for confirmation and silently does nothing in a script** (Oct 28). How learned: after the dry run, `modal app list` still showed forge-glimmer deployed with 1 container; rerunning by hand printed "no interactive terminal detected". Fix: `modal app stop <app> -y`, print a warning if it fails, and check `modal app list` after every live run.
+- **An independent verifier before a paid run pays for itself** (Oct 28). How learned: the verifier agent's pre-run
+  audit found 2 real errors I had missed (contradictory GO/STOP rules, "16k window" wrong) and a cut-off risk. Raising
+  max_tokens 8,000 → 16,000 then saved 3 answers in the main run (one per arm went over 8,000). Check: before every paid
+  run, ask the verifier (`hivey --session default msg send verifier/master …`) and wait for GO.
+- **Write decision rules as an ordered list, first match wins, in whole points** (Oct 28). How learned: "GO at +20" plus a
+  "15–25 grey band that overrides" made GO impossible at 20–25 and let grey override STOP; a float edge (0.95 − 0.80 =
+  0.1499) flipped a case. Check: probe the decision function on boundary cases (40/60, 40/65, 85/100, 80/95, 30/15).
+- **Look at how a model fails, not only how often** (Oct 28). How learned: the user saw that H15 "looks correct"; shifting
+  each failed part to line up with the reference showed 3 of 10 failures were position-only, not shape errors. Check:
+  rebuild FAIL answers from calls.jsonl, align bounding boxes, recompute the overlap mismatch.
+- **Grey zone means the user decides from the data, never a re-run to fish** (Oct 28). How learned: the main run landed
+  grey (B 67% > 60% ceiling, gap 33); the user chose GO with stated reasons, recorded before any further spending. A new
+  arm (B2) is only allowed as a pre-registered cheap-fix baseline, not to improve a number.
+- **Lock the frozen files** (Oct 28): `chmod a-w` on jobs/expected/checks/manual/PLAN kept Muse Code and later scripts
+  from changing the exam (selftest.py then failed only on writing expected.json, which is the intended guard).
+- **Keep every prompt, answer and code in the log** (Oct 28): a background run can be demonstrated later by rebuilding
+  every part from calls.jsonl for free (replay.html), and any judge can re-check it.
+- **Muse Code has no free allowance; read its run.usage event for cost** (Oct 28). How learned: `muse usage` →
+  no_allowance; the JSON stream's `run.usage` event gives the tokens (2 sessions ≈ $1.02). Cap it with
+  `--max-model-steps` and choose `--model muse-spark-1.3` (Wonder costs ~5× more).
+- **Use a fresh hivey session address when messaging agents in other sessions** (Oct 28). How learned: `hivey msg send
+  verifier/master` failed ("no swarm named verifier") until `hivey --session default msg send verifier/master …`. Check:
+  `hivey --session <s> swarm directory`.
 - **Archify reruns: use a new `--out-dir`** (Oct 28): a second `finalize` into the same folder failed with
   `viewer/evidence-path-conflict`. Check: rerun with `--out-dir <folder>/review-N`; never delete old evidence.

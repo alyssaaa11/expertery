@@ -24,3 +24,5 @@
 ## [2026-10-28 19:00] decision | first-test → GO (user, from grey zone)
 
 ## [2026-10-28 20:30] update | first-test (3 of B's failures are position-only; B2 cheap-fix arm proposed)
+
+## [2026-10-28 21:00] create/update | status (START HERE), tools-and-services, value-and-market, factory-plan; lessons +8; superseded cost estimate and old schedule marked; first-test 'how the exam was built'; index rewritten (user: "put it in the wiki so nothing is forgotten")

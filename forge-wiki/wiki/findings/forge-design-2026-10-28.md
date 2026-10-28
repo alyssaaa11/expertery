@@ -23,7 +23,8 @@ diagrams ~/agents/.archify/workflow-forge-explained-20261028-115029/forge-explai
 
 ![[assets/diagrams/forge-pro-agent.png]]
 
-> Update 2026-10-28 13:20 (decision, user): the demo tool is now **CadQuery only**; OpenSCAD is the backup. See [[forge-plan-2026-10-28]].
+> Current state (2026-10-28 evening): tool **CadQuery** (OpenSCAD backup); teacher **Spark Open on Baseten**; referee = CadQuery exact
+> measurement (SAM 3.1 not used so far, open question). The first test found a real gap and the user chose GO. Read [[status]] first.
 
 ## How it works (v2 design, hypothesis)
 1. **Your tool:** for the demo, a free 3D-design program, OpenSCAD (or CadQuery). Code becomes a 3D part plus a

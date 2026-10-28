@@ -2,18 +2,21 @@
 
 Project folder: `~/projects/forge` (README routes to code, results and everything else).
 
+- [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
+
 ## findings
-- [forge-design-2026-10-28](wiki/findings/forge-design-2026-10-28.md): START HERE: what Forge is, the design, why, demo, first-test gate
-- [forge-questions-2026-10-28](wiki/findings/forge-questions-2026-10-28.md): privacy per company, why CadQuery, why test Glimmer first, cost, selling without credits
-- [forge-diagrams](wiki/findings/forge-diagrams.md): all 6 Archify diagrams (what it is, design, use cases, checklist, plan, factory)
+- [first-test-2026-10-28](wiki/findings/first-test-2026-10-28.md): the main experiment: how the exam was built; Spark Open 30/30, Glimmer+manual 20/30, Glimmer 16/30 → grey zone → user GO; 3 of 10 failures position-only; B2 proposed
+- [value-and-market-2026-10-28](wiki/findings/value-and-market-2026-10-28.md): why Forge instead of the big model, cost per job, who would use it, space-company example, honest downside, how to demo a background run
+- [tools-and-services](wiki/findings/tools-and-services.md): checked facts: Modal, Baseten, Meta API + Muse Code, CadQuery, Glimmer, Spark Open
+- [glimmer-test-1-2026-10-28](wiki/findings/glimmer-test-1-2026-10-28.md): first live Glimmer run: cube ✅, L-bracket ❌ (wall off the base); $0.57
+- [forge-design-2026-10-28](wiki/findings/forge-design-2026-10-28.md): what Forge is, the design, why, demo idea
+- [forge-questions-2026-10-28](wiki/findings/forge-questions-2026-10-28.md): privacy per company, why CadQuery, why test Glimmer first, selling without credits, Spark Open vs 1.3
+- [forge-diagrams](wiki/findings/forge-diagrams.md): all 7 Archify diagrams (what it is, design, use cases, checklist, plan, factory, final plan)
 - [final-pick-research-2026-10-28](wiki/findings/final-pick-research-2026-10-28.md): why Forge was picked: claude.ai 90 + GPT-6 92 merged, prior art, risk paper 2607.08938
 
-- [glimmer-test-1-2026-10-28](wiki/findings/glimmer-test-1-2026-10-28.md): Glimmer on Modal works; cube ✅, L-bracket ❌ (wall off the base, caught by bounding box); cost $0.57 of $30
-
-- [first-test-2026-10-28](wiki/findings/first-test-2026-10-28.md): 30 jobs: Spark Open 30/30, Glimmer+manual 20/30, Glimmer 16/30 → grey zone; gap 33 pts, McNemar p=0.002; cost ≈ $1.4
-
 ## decisions
-- [forge-plan-2026-10-28](wiki/decisions/forge-plan-2026-10-28.md): $30 budget, CadQuery, project folder, checklist, schedule, GO rules
+- [factory-plan-2026-10-29](wiki/decisions/factory-plan-2026-10-29.md): next stage: B2 → recipe research → generator → teacher run → training → final exam; rules; ~$13–16
+- [forge-plan-2026-10-28](wiki/decisions/forge-plan-2026-10-28.md): history of Oct 28 decisions: $30 budget, CadQuery, Spark Open on Baseten, own folder/app, spend log
 
 ## lessons
-- [lessons](wiki/lessons/lessons.md): cheap baseline first, trivial test ≠ need, 30–70% window, one project per context, setup checks, Modal image fix
+- [lessons](wiki/lessons/lessons.md): 21 lessons with how they were learned: cheap baseline first, referee self-test + overlap check, blind rebuild, verifier before paid runs, ordered decision rules, look at how a model fails, modal app stop -y, Muse Code costs, one project per context

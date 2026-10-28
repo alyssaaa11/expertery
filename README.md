@@ -6,8 +6,8 @@ gets its own add-on file, running offline on its own servers.
 
 Meta Global AI Developer Hackathon 2026 (Indie track, Push the Frontier). Submission due Nov 4, 18:00 CET.
 
-Status (2026-10-28): setup done; Glimmer test 1 ran on Modal (cube ✅, L-bracket ❌, $0.57 of the $30 budget). Next:
-the spec for the first test program (Muse Code builds it).
+Status (2026-10-28 evening): first test done. Real gap: Spark Open 30/30 vs Glimmer + manual 20/30 (grey zone by the
+rule, user decided **GO**). Spent ≈ $3.5 of $30. Next: factory (see `forge-wiki/wiki/status.md`, read it first each day).
 
 ## Folders
 | Folder | What goes in it |

@@ -32,7 +32,7 @@ today's status), and the Oct 28 → Nov 4 schedule with one stop-or-go test on O
 
 ![[assets/diagrams/forge-use-cases.png]]
 
-## Use cases (hypothesis: ideas, not tested with customers)
+## Use cases (hypothesis: ideas, not tested with customers; demo tool is now CadQuery, see [[value-and-market-2026-10-28]])
 | Who | Tool | Pro agent does | Why not a cloud AI |
 |---|---|---|---|
 | Hackathon demo (built) | OpenSCAD | designs parts that fit | small model beats big, offline |
@@ -57,7 +57,7 @@ today's status), and the Oct 28 → Nov 4 schedule with one stop-or-go test on O
 
 ![[assets/diagrams/forge-plan.png]]
 
-## Schedule (decision: proposed by main session; the user has not changed it)
+## Schedule (superseded on 2026-10-28 evening: see [[status]] and [[factory-plan-2026-10-29]]; kept only as history)
 | Day | Work |
 |---|---|
 | Oct 28 | prepare + plan (this page) |

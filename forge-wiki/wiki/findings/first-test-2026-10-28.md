@@ -14,6 +14,17 @@ no re-runs).
 
 ---
 
+## How the exam was built (verified, experiments/first-test/)
+- PLAN.md written and frozen before any run; user approved; verifier audit found 2 errors → fixed (ordered rules, GO at
+  ≥ 25 points, max_tokens 16,000, Meta sampling 1.0 / 0.95 / 64 for all arms, max-model-len 32k) → verifier re-check GO.
+- 30 jobs (15 medium, 15 hard) + 3 dry-run jobs, every position given from the origin; each with a reference builder
+  and 2 wrong versions (jobs.py). Referee: one valid solid, bbox ±0.1 mm, volume/area ±1%, centre of mass ±0.3 mm,
+  overlap mismatch ≤ 0.2% (checks.py). Self-test 33/33; blind rebuild by a fresh agent 33/33 (5 texts reworded after,
+  re-verified 5/5 by the verifier).
+- Manual = CadQuery 2.8's own docstrings + selector table (manual.md, ~5,600 tokens).
+- Runner built by Muse Code from RUNNER_SPEC.md (+ CHANGES_SPEC.md); 30 tests; one try per job per arm, fresh
+  conversation, 16 parallel; run by run_live.sh (deploy → wait ready → run → `modal app stop -y`).
+
 ## Results (verified, report.md)
 | Arm | All 30 | Medium 15 | Hard 15 | INVALID |
 |---|---|---|---|---|
