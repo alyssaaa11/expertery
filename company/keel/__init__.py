@@ -1,4 +1,4 @@
-"""Keel: Quillon Orbital Works' private part-description tool (v2.0.0).
+"""Keel: Quillon Orbital Works' private part-description tool (v2.1.0).
 
 Units are millimetres. Datum = the part's lower-left-bottom corner (0, 0, 0).
 +X = east, +Y = north, +Z = up. Nothing is centred unless the call says so.
@@ -8,7 +8,7 @@ import math
 
 import cadquery as cq
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 # Company material standards: material -> (standard wall, standard fillet, minimum wall).
 MATERIALS = {
@@ -555,14 +555,18 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
         return top
 
     def _cut_base_hole(self, solid, code, x, y, additives):
-        """Cut one base hole (through + counterbore/countersink from the local top)."""
+        """Cut one base hole (through + counterbore/countersink from the local top).
+
+        Every cutter ends flush at the local top: no cut removes material
+        above it (v2.1.0 no-over-cut rule).
+        """
         base, suffix = _split_code(code)
         clr, (cbd, cbdpth) = KF[base]
         top = self._local_top(x, y, additives)
-        cut = cq.Solid.makeCylinder(clr / 2, top + 2.0, cq.Vector(x, y, -1.0))
+        cut = cq.Solid.makeCylinder(clr / 2, top + 1.0, cq.Vector(x, y, -1.0))
         solid = solid.cut(cut)
         if suffix == "-CB":
-            cb = cq.Solid.makeCylinder(cbd / 2, cbdpth + 1.0, cq.Vector(x, y, top - cbdpth))
+            cb = cq.Solid.makeCylinder(cbd / 2, cbdpth, cq.Vector(x, y, top - cbdpth))
             solid = solid.cut(cb)
         elif suffix == "-CS":
             csd = KF_CS[base]
@@ -573,25 +577,31 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
         return solid
 
     def _build(self):
+        # v2.1.0 order-free build: first fuse ALL additive features (walls,
+        # bosses), then apply ALL cuts (holes incl. CB/CS, mount holes,
+        # pockets, slots, wall holes) in recorded order. Every cut's local
+        # top considers all walls and bosses, whatever the call order.
+        # Recording order still governs mirror()/pattern() (see those methods).
         L, W, T = self._stock
         solid = cq.Solid.makeBox(L, W, T, pnt=cq.Vector(0, 0, 0))
         if self._fillet_r is not None:
             solid = (
                 cq.Workplane(obj=solid).edges("|Z").fillet(self._fillet_r).val()
             )
-        additives = []  # (kind, params) of walls/bosses applied so far
+        additives = [(kind, p) for kind, p in self._ops if kind in ("wall", "boss")]
         for kind, p in self._ops:
             if kind == "wall":
                 x0, y0, z0, dx, dy, dz = self._wall_box(p)
                 solid = solid.fuse(
                     cq.Solid.makeBox(dx, dy, dz, pnt=cq.Vector(x0, y0, z0))
                 )
-                additives.append((kind, p))
             elif kind == "boss":
                 x, y = p["at"]
                 cyl = cq.Solid.makeCylinder(p["dia"] / 2, p["h"], cq.Vector(x, y, T))
                 solid = solid.fuse(cyl)
-                additives.append((kind, p))
+        for kind, p in self._ops:
+            if kind in ("wall", "boss"):
+                continue
             elif kind == "hole":
                 solid = self._cut_base_hole(solid, p["code"], *p["at"], additives)
             elif kind == "mount":
@@ -605,7 +615,7 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
                 cx, cy = x + p["L"] / 2, y + p["W"] / 2
                 top = self._local_top(cx, cy, additives)
                 box = cq.Solid.makeBox(
-                    p["L"], p["W"], p["depth"] + 1.0, pnt=cq.Vector(x, y, top - p["depth"])
+                    p["L"], p["W"], p["depth"], pnt=cq.Vector(x, y, top - p["depth"])
                 )
                 solid = solid.cut(box)
             elif kind == "slot":
@@ -618,10 +628,10 @@ class part:  # noqa: N801 - company style uses lowercase, like the manual
                         self._local_top(x2, y2, additives),
                         self._local_top((x1 + x2) / 2, (y1 + y2) / 2, additives),
                     )
-                    z0, zlen = -1.0, top + 2.0
+                    z0, zlen = -1.0, top + 1.0
                 else:
                     top = self._local_top((x1 + x2) / 2, (y1 + y2) / 2, additives)
-                    z0, zlen = top - p["depth"], p["depth"] + 1.0
+                    z0, zlen = top - p["depth"], p["depth"]
                 mx, my = (x1 + x2) / 2, (y1 + y2) / 2
                 ang = math.degrees(math.atan2(y2 - y1, x2 - x1))
                 bar = cq.Solid.makeBox(

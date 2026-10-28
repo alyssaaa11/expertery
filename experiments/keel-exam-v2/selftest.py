@@ -3,7 +3,7 @@ FAILS. Writes expected.json (the measurements the referee compares against). Run
 import json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
-sys.path[:0] = [HERE, os.path.join(ROOT, "company"), os.path.join(ROOT, "experiments", "keel-exam")]
+sys.path[:0] = [HERE, os.path.join(ROOT, "company"), os.path.join(ROOT, "experiments", "first-test")]
 from jobs import JOBS, apply_wrong, build
 from referee import measure, score
 

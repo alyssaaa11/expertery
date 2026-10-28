@@ -1,6 +1,6 @@
 # Keel manual (internal wiki)
 
-*Quillon Orbital Works · Structures team · Keel v2.0.0 · QX-2 controlled: on-prem only.*
+*Quillon Orbital Works · Structures team · Keel v2.1.0 · QX-2 controlled: on-prem only.*
 *Fictional company, made for the Forge demo.*
 
 Keel is our small internal tool for describing machined satellite parts in Python.
@@ -143,8 +143,10 @@ face. (x, y) is the pocket's lower-left corner; `depth` must be less than the
 stock thickness.
 
 ```python
-p.pocket(at=(10, 10), L=80, W=60, depth=4)
+p.pocket(at=(10, 10), L=40, W=20, depth=2)
 ```
+
+Cuts (holes, mounts, pockets, slots, wall holes) are always applied after all walls and bosses, whatever the order you call them in.
 
 **slot(at=(x1, y1), to=(x2, y2), width, depth="thru")** — a straight slot with
 round ends along the centre line from start to end. `depth="thru"` cuts all the

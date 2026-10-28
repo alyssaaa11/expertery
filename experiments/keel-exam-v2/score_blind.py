@@ -1,7 +1,7 @@
 """Score the blind-rebuild programs (blind/<KEY>.py) against the references with the Keel-exam referee."""
 import json, os, runpy, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(os.path.dirname(HERE))
-sys.path[:0] = [HERE, os.path.join(ROOT, "company"), os.path.join(ROOT, "experiments", "keel-exam")]
+sys.path[:0] = [HERE, os.path.join(ROOT, "company"), os.path.join(ROOT, "experiments", "first-test")]
 from jobs import JOBS, build
 from referee import score
 exp = json.load(open(os.path.join(HERE, "expected.json"))); ok = 0

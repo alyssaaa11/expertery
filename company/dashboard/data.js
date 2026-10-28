@@ -27,7 +27,7 @@ window.QOW_DATA = {
   "tools": {
     "keel": {
       "name": "Keel",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "manual": "../manual.md",
       "blurb": "Our private part-description tool. A short Python recipe compiles to exactly one solid; the Gauge station checks it.",
       "status": "live"
@@ -181,7 +181,7 @@ window.QOW_DATA = {
       "svg": "parts/frm_0310.svg",
       "code": "\"\"\"FRM-0310 panel frame with a central pocket and side walls.\"\"\"\nimport sys\nimport os\n\nsys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\n\nimport keel\n\np = keel.part(\"FRM-0310\", material=\"AL6061\")\np.stock(100, 80, 6)\np.pocket(at=(10, 10), L=80, W=60, depth=4)\np.wall(\"north\", 12)\np.wall(\"south\", 12)\np.hole(\"KF-M5\", at=(5, 5))\np.pattern(2, 2, 90, 70)\nsolid = p.finish()\n",
       "size": "100 x 80 x 18 mm",
-      "volume": "34228.3 mm^3",
+      "volume": "34229.8 mm^3",
       "request": "Frame blank 100 x 80 x 6, pocket 80 x 60 x 4 deep starting at (10, 10), north and south walls 12 high, four KF-M5 corner holes 5 mm in from the corners.",
       "status": "Gauge PASS (sample data)"
     },
@@ -236,7 +236,7 @@ window.QOW_DATA = {
       "svg": "parts/brk_0142.svg",
       "code": "\"\"\"BRK-0142 flight bracket in titanium with a wall hole. Run with the project venv from company/ (or repo root).\"\"\"\nimport sys\nimport os\n\nsys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\n\nimport keel\n\np = keel.part(\"BRK-0142\", material=\"TI6AL4V\", cls=\"FLIGHT\")\np.stock(60, 40, 4)\np.wall(\"north\", 25)\np.hole(\"KF-M4-CB\", at=(6, 6))\np.pattern(2, 2, 48, 28)\np.wall_hole(\"north\", \"KF-M3\", at=(30, 12))\nsolid = p.finish()\n",
       "size": "60 x 40 x 29 mm",
-      "volume": "13253.5 mm^3",
+      "volume": "13260.8 mm^3",
       "request": "Flight bracket in titanium (TI6AL4V), base 60 x 40 x 4, standard north wall 25 high, four counterbored KF-M4-CB holes 6 mm in from the base corners, one KF-M3 wall hole in the north wall at u = 30, z = 12 above the stock top. Auto standard fillet.",
       "status": "Gauge PASS (sample data)"
     },
@@ -247,7 +247,7 @@ window.QOW_DATA = {
       "svg": "parts/frm_1031.svg",
       "code": "\"\"\"FRM-1031 frame dimensioned from the centre, west pair mirrored. Run with the project venv from company/ (or repo root).\"\"\"\nimport sys\nimport os\n\nsys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\n\nimport keel\n\n# Request gives holes at (+-45, +-35) from the frame centre; Keel uses the\n# corner datum, so x = 100/2 + xr, y = 80/2 + yr. West pair mirrored about x = 50.\np = keel.part(\"FRM-1031\", material=\"AL6061\")\np.stock(100, 80, 6)\np.wall(\"north\", 12)\np.wall(\"south\", 12)\np.hole(\"KF-M5\", at=(5, 5))\np.hole(\"KF-M5\", at=(5, 75))\np.mirror(\"ew\")\np.pocket(at=(10, 10), L=80, W=60, depth=4)\nsolid = p.finish()\n",
       "size": "100 x 80 x 18 mm",
-      "volume": "34228.3 mm^3",
+      "volume": "34229.8 mm^3",
       "request": "Frame blank 100 x 80 x 6, pocket 80 x 60 x 4 deep from (10, 10), north and south walls 12 high, four KF-M5 holes at (+-45, +-35) from the frame centre: convert with x = 50 + xr, y = 40 + yr, west pair mirrored about x = 50.",
       "status": "Gauge PASS (sample data)"
     },

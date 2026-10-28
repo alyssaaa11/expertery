@@ -433,6 +433,56 @@ def main():
 
     expect_error("unknown mirror axis raises", _mirror_bad_axis, needle="unknown mirror axis")
 
+    # --- v2.1.0 rules: order-free build, no over-cut ---
+    # A hole recorded before its boss still drills the boss (holes go all the
+    # way down), and the result equals boss-before-hole exactly.
+    def _boss_then_hole():
+        p = keel.part("OF-1", material="AL6061")
+        p.stock(60, 40, 4)
+        p.boss(at=(30, 20), dia=12, h=8)
+        p.hole("KF-M4", at=(30, 20))
+        return p.finish()
+
+    def _hole_then_boss():
+        p = keel.part("OF-2", material="AL6061")
+        p.stock(60, 40, 4)
+        p.hole("KF-M4", at=(30, 20))
+        p.boss(at=(30, 20), dia=12, h=8)
+        return p.finish()
+
+    same_shape("hole-before-boss equals boss-before-hole", _hole_then_boss(), _boss_then_hole())
+
+    def _wall_hole_order(ref_first):
+        p = keel.part("OF-3", material="AL6061")
+        p.stock(60, 40, 4)
+        if ref_first:
+            p.wall("north", 10)
+            p.hole("KF-M4", at=(30, 38))
+        else:
+            p.hole("KF-M4", at=(30, 38))
+            p.wall("north", 10)
+        return p.finish()
+
+    same_shape("hole-before-wall equals wall-before-hole", _wall_hole_order(False), _wall_hole_order(True))
+
+    # Pocket and counterbore next to a wall must leave the wall volume intact.
+    import cadquery as cq  # noqa: E402
+
+    p = keel.part("NC-1", material="AL6061")
+    p.stock(60, 40, 4)
+    p.wall("north", 10)  # default t=2.5: y in [37.5, 40], z in [4, 14]
+    p.pocket(at=(10, 34), L=20, W=5, depth=2)  # overlaps wall plan by 1.5 mm
+    p.hole("KF-M4-CB", at=(45, 34.5))  # CB disc overlaps wall; clearance does not
+    s = p.finish()
+    m_nc = checks.measure(s)
+    check("pocket+counterbore near wall builds one valid solid",
+          m_nc["solids"] == 1 and m_nc["valid"])
+    wall_box = cq.Solid.makeBox(60, 2.5, 10, pnt=cq.Vector(0, 37.5, 4))
+    kept = s.intersect(wall_box).Volume()
+    check("pocket+counterbore leave the wall volume intact",
+          abs(kept - wall_box.Volume()) / wall_box.Volume() < 1e-4,
+          f"wall kept={kept:g} full={wall_box.Volume():g}")
+
     print(f"SELFTEST {passed}/{total} PASS")
     return 0 if passed == total else 1
 
