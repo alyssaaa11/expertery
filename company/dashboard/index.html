@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quillon Orbital Works · Engineering Portal</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="fiction-banner" id="fiction-banner"></div>
+
+<header class="site-header">
+  <div class="wrap header-row">
+    <div>
+      <h1>Quillon Orbital Works <span class="portal">· Engineering Portal</span></h1>
+      <p class="subtitle" id="company-about"></p>
+    </div>
+    <span class="badge" id="company-badge"></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="company">
+    <h2>Company</h2>
+    <div class="cards" id="team-cards"></div>
+    <p class="programmes" id="programmes"></p>
+  </section>
+
+  <section id="tools">
+    <h2>Tools</h2>
+    <div class="cards" id="tool-cards"></div>
+    <div class="cards two-col">
+      <div class="card">
+        <h3>Fastener table KF</h3>
+        <table class="kf" id="kf-table">
+          <thead><tr><th>Code</th><th>Hole Ø</th><th>Counterbore Ø × depth</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Design rules</h3>
+        <ul id="rules-list"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="parts">
+    <h2>Parts catalog</h2>
+    <p class="hint">Practice-family parts only. Click “Keel code” to show the program.</p>
+    <div class="parts-grid" id="parts-grid"></div>
+  </section>
+
+  <section id="requests">
+    <h2>Design requests</h2>
+    <table class="requests" id="requests-table">
+      <thead><tr><th>ID</th><th>Title</th><th>Request</th><th>Status</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section id="assistant">
+    <h2>Forge assistant</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Where it runs</h3>
+        <p id="assistant-runs"></p>
+      </div>
+      <div class="card">
+        <h3>Scoreboard (held-out exam)</h3>
+        <div id="scoreboard"></div>
+      </div>
+      <div class="card">
+        <h3>Training</h3>
+        <div id="training"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p id="footer-note"></p>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
