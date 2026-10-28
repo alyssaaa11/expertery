@@ -56,7 +56,7 @@ def serve():
         "--served-model-name", SERVED_NAME,
         "--host", "0.0.0.0", "--port", str(PORT),
         "--tensor-parallel-size", "1",
-        "--max-model-len", "16384",
+        "--max-model-len", "32768",
         "--enable-auto-tool-choice",
         "--tool-call-parser", "muse_glimmer",
         "--reasoning-parser", "muse_glimmer",

@@ -1,6 +1,6 @@
 # First test: is Forge needed? (plan, written before any run)
 
-Status: **approved by the user (2026-10-28 ~17:20).** Free prep done: self-test 33/33, blind rebuild 33/33. Nothing in this file runs until the user says go. After approval
+Status: **approved by the user (2026-10-28 ~17:20); revised after the verifier audit (~/agents/verifier/reports/forge-2026-10-28.md), user approved the fixes (~18:40).** Free prep done: self-test 33/33, blind rebuild 33/33. Nothing in this file runs until the user says go. After approval
 the plan is frozen: no prompt, job, check or rule changes during the run. A change means a new, separately approved
 run.
 
@@ -18,7 +18,7 @@ Glimmer gets the manual**?
 | Identical agents on the same task: one shared mistake hit them all, so the result meant nothing | 30 **different** jobs; every call is a fresh conversation; no model ever sees another answer; one attempt per job per contestant |
 | The test did not contain the real mechanism | The jobs need parts placed relative to each other (the exact mistake seen in Glimmer test 1) |
 | The free fix was not tested first | "Glimmer + manual" is a contestant |
-| Thinking ate the token limit, empty answers counted as failures | Token cap 8,000; a cut-off answer is **INVALID**, counted apart, and must stay ≤ 5% |
+| Thinking ate the token limit, empty answers counted as failures | Token cap 16,000 (was 8,000; raised after the verifier audit); a cut-off answer is **INVALID**, counted apart, and must stay ≤ 5% |
 | Small changes during the run cost more money | Everything is frozen before the run; a 3-job dry run checks the plumbing first |
 | Unclear prompt → every model fails the same way (my bracket wording in Glimmer test 1) | Every job text is rebuilt blind by an independent reader before the run (step 4.2) |
 
@@ -29,8 +29,11 @@ Glimmer gets the manual**?
 | B | Glimmer 30B on Modal | yes |
 | C | Muse **Spark Open** on Baseten (`meta-models/muse-spark-open-1026`, envsave `BASETEN_API_KEY`) | yes |
 - The same 30 jobs and the same instructions for all. The "manual" is one fixed file, `manual.md` (CadQuery's own
-  docs: quick start, Workplane API, selectors; at most ~5,000 tokens, so Glimmer's 16k window still fits 8k of thinking).
-- Settings: temperature 0.6 for both models, max output 8,000 tokens, one attempt per job (pass@1).
+  docs: Workplane API and selectors, ~5,600 tokens measured in the dry run).
+- Settings (revised 2026-10-28 after the verifier audit, user approved): **temperature 1.0, top_p 0.95, top_k 64 for both models**
+  (Meta's recommended Glimmer sampling, dev.meta.ai/docs/muse-glimmer/vllm; a 2-call probe on 2026-10-28 showed Baseten
+  accepts all three for Spark Open, HTTP 200), **max output 16,000 tokens**, one attempt per job (pass@1). Glimmer's native context is 131,072 tokens; Forge
+  serves it with `--max-model-len 32768` (was 16,384, which is our setting, not the model's limit).
 
 ## 4. Before the run (all free: no Meta model, no GPU)
 1. **30 jobs** in `jobs.json`: 15 medium, 15 hard, all different. Each has the job text, exact
@@ -69,21 +72,24 @@ Code block → run in CadQuery on the Mac (time limit 60 s) → measure → comp
 ## 7. Decision rules (fixed now)
 The run counts only if: INVALID ≤ 5% per arm, and all 30 checks passed the self-test.
 
-Scores are on all 30 jobs. Arms are compared job by job (same jobs for both), which cancels much of the luck. If C − B lands between 15 and 25 points, treat it as the grey zone even if a rule is formally met:
-| Result | Decision |
-|---|---|
-| B (Glimmer + manual) ≤ 60% **and** C (Spark) ≥ 30% **and** C ≥ B + 20 points | **GO** to training |
-| B ≥ 80% | **STOP**: the manual is enough, Forge not needed for CadQuery |
-| C < 20% | Spark can't teach: one OpenSCAD run (new approval) or STOP |
-| Anything else | Grey zone: no re-runs to "fish" for a better number; decide with the user from the data |
+Pass rate = PASS ÷ (PASS + FAIL), in **whole percentage points** (rounded); INVALID answers are reported apart.
+Rules are applied **in this order; the first that matches decides** (revised 2026-10-28 after the verifier audit found
+the old rules contradicted each other; user approved; GO bar raised from 20 to 25 points because 20 points on 30 jobs
+is weak evidence):
+| Order | Result | Decision |
+|---|---|---|
+| 1 | B (Glimmer + manual) ≥ 80% | **STOP**: the manual is enough, Forge not needed for CadQuery |
+| 2 | C (Spark Open) < 20% | **Spark can't teach**: one OpenSCAD run (new approval) or STOP |
+| 3 | B ≤ 60% **and** C ≥ 30% **and** C − B ≥ 25 points | **GO** to training |
+| 4 | anything else (including a gap of 15–24 points) | **Grey zone**: no re-runs to "fish" for a better number; decide with the user from the data |
 
 ## 8. Budget (hard limits)
 | Item | Estimate | Hard stop |
 |---|---|---|
 | Glimmer arms A + B: 60 calls + 6 dry-run calls, up to 16 in parallel, ~25 min A100 incl. a one-time ~60 GB download into `forge-hf-cache` | ~$1.00–1.50 | the app stops itself after the run; max 1 GPU |
-| Spark Open arm C on **Baseten credits** (user, 2026-10-28): 30 + 3 calls (~6k tokens in, ~4k out each, same price as Spark) | ~$1.00–1.50 | stop if Baseten spend passes $3 |
+| Spark Open arm C on **Baseten credits** (user, 2026-10-28): 30 calls (~6k tokens in, up to ~8k out each; $1.25/M in, $4.25/M out, verified by the verifier) | ~$0.90–1.50 | runner stops arm C once its estimate passes $3 |
 | **Total** | **~$1.50–2.50** | **abort at $5** |
-- Spent so far: $0.57 of $30.
+- Spent so far (before the main run): ≈ $1.6 of $30 (Modal ~$0.99 incl. Glimmer test 1 + dry run, Meta ~$0.51 Muse Code, Baseten ~$0.06). The runner's GPU estimate leaves out the cold start (~3× low); the real Modal figure comes from `modal billing report`.
 - decision (user, 2026-10-28): Spark runs as **Spark Open on Baseten**, paid from the $100 Baseten credit (~$0.02 spent before). Meta credits are not used. Both models are now open weights, which also fits the "Best Build on Meta Open Weights" bonus. Every Baseten call is logged in this run's cost file, because HerdShot's limiter is not used.
 
 ## 9. Who builds what

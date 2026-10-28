@@ -5,7 +5,7 @@ CadQuery code, score it with checks.py, and log everything.
 Built to RUNNER_SPEC.md. Uses only the standard library for HTTP
 (urllib.request) plus cadquery. Never prints, logs or writes an API key.
 
-CLI: runner.py --jobs dry|main --out <dir> [--budget 5.0]
+CLI: runner.py --jobs dry|main --out <dir> [--budget 5.0] [--budget-c 3.0] [--gpu-start <unix seconds>]
 """
 
 import argparse
@@ -42,8 +42,10 @@ GLIMMER_MODEL = "muse-glimmer"
 SPARK_MODEL = "meta-models/muse-spark-open-1026"
 BASETEN_URL = "https://inference.baseten.co/v1/chat/completions"
 
-MAX_TOKENS = 8000
-TEMPERATURE = 0.6
+MAX_TOKENS = 16000
+TEMPERATURE = 1.0
+TOP_P = 0.95
+TOP_K = 64
 CALL_TIMEOUT = 600.0      # per-call HTTP timeout, seconds
 RETRY_DELAY = 20.0        # wait before the single allowed retry, seconds
 RUN_TIMEOUT = 60.0        # per-answer CadQuery execution limit, seconds
@@ -101,6 +103,8 @@ def build_body(model, messages):
         "messages": messages,
         "max_tokens": MAX_TOKENS,
         "temperature": TEMPERATURE,
+        "top_p": TOP_P,
+        "top_k": TOP_K,
     }
 
 
@@ -408,6 +412,14 @@ def over_budget(c_usages, elapsed_s, budget):
     return estimate_total(c_usages, elapsed_s) > budget
 
 
+def cost_c_total(c_usages):
+    return sum(cost_c_of_usage(u) for u in c_usages)
+
+
+def over_budget_c(c_usages, budget_c):
+    return cost_c_total(c_usages) > budget_c
+
+
 # ---------------------------------------------------------------- suite
 
 
@@ -425,9 +437,14 @@ def run_suite(
     exec_timeout=RUN_TIMEOUT,
     call_timeout=CALL_TIMEOUT,
     arms=ARMS,
+    budget_c=3.0,
+    gpu_start=None,
 ):
     """Call every (job, arm) pair once with up to `max_workers` concurrent
-    calls. Stop sending new calls once the cost estimate passes `budget`.
+    calls. Stop sending new calls once the cost estimate passes `budget`;
+    stop sending new arm-C calls once arm C's own estimate passes
+    `budget_c`. When `gpu_start` (unix seconds) is given, the GPU estimate
+    uses that start instead of the runner's start.
     Writes calls.jsonl, summary.json and report.md into `out_dir`.
 
     `arm_cfgs`: {arm: {"endpoint": ..., "model": ...}}.
@@ -446,6 +463,7 @@ def run_suite(
     t_start = time.monotonic()
     c_usages = []
     budget_stopped = False
+    budget_c_stopped = False
     next_i = 0
     in_flight = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
@@ -455,6 +473,10 @@ def run_suite(
                     budget_stopped = True
                     break
                 job, arm = pairs[next_i]
+                if arm == "C" and over_budget_c(c_usages, budget_c):
+                    budget_c_stopped = True
+                    next_i += 1
+                    continue
                 cfg = arm_cfgs[arm]
                 fut = pool.submit(
                     do_call,
@@ -533,10 +555,27 @@ def run_suite(
                             c_usages.append(records[idx]["usage"])
                 break
     elapsed = time.monotonic() - t_start
+    if gpu_start is not None:
+        try:
+            gpu_elapsed = max(0.0, time.time() - float(gpu_start))
+        except (TypeError, ValueError):
+            gpu_elapsed = elapsed
+    else:
+        gpu_elapsed = elapsed
     sent = [r for r in records if r is not None]
     skipped = len(records) - len(sent)
     summary = build_summary(
-        sent, c_usages, elapsed, budget, budget_stopped, skipped, arms
+        sent,
+        c_usages,
+        elapsed,
+        budget,
+        budget_stopped,
+        skipped,
+        arms,
+        budget_c=budget_c,
+        budget_c_stopped=budget_c_stopped,
+        gpu_start=gpu_start,
+        gpu_elapsed_s=gpu_elapsed,
     )
     calls_path = os.path.join(out_dir, "calls.jsonl")
     with open(calls_path, "w", encoding="utf-8") as f:
@@ -584,27 +623,25 @@ def arm_stats(records, arm):
 def compute_decision(rate_b, rate_c, invalid_rates):
     """PLAN.md section 7 from the numbers. Returns (decision, run_valid).
 
-    run_valid is False ("run not valid") if INVALID > 5% in any arm.
-    A C-B gap of 15-25 points forces the grey zone even if a rule is met.
+    Rates are compared in whole percentage points (round(rate*100)).
+    Rules apply in order; the first match wins. run_valid is False
+    ("run not valid") if INVALID > 5% in any arm.
     """
     run_valid = all(
-        (r is not None and r <= 0.05) for r in invalid_rates.values()
+        (r is None or r <= 0.05) for r in (invalid_rates or {}).values()
     )
     if rate_b is None or rate_c is None:
-        decision = "grey zone (too few scored calls to apply section 7)"
+        decision = "grey zone (too few scored calls)"
     else:
-        gap = rate_c - rate_b
-        if 0.15 <= gap <= 0.25:
-            decision = (
-                "grey zone (C-B gap %.1f points is in the 15-25 grey band)"
-                % (gap * 100)
-            )
-        elif rate_b <= 0.60 and rate_c >= 0.30 and gap >= 0.20:
-            decision = "GO to training"
-        elif rate_b >= 0.80:
+        b_pts = round(rate_b * 100)
+        c_pts = round(rate_c * 100)
+        gap = c_pts - b_pts
+        if b_pts >= 80:
             decision = "STOP (manual is enough)"
-        elif rate_c < 0.20:
+        elif c_pts < 20:
             decision = "Spark can't teach"
+        elif b_pts <= 60 and c_pts >= 30 and gap >= 25:
+            decision = "GO to training"
         else:
             decision = "grey zone"
     if not run_valid:
@@ -612,7 +649,9 @@ def compute_decision(rate_b, rate_c, invalid_rates):
     return decision, run_valid
 
 
-def build_summary(records, c_usages, elapsed_s, budget, budget_stopped, skipped, arms):
+def build_summary(records, c_usages, elapsed_s, budget, budget_stopped,
+                  skipped, arms, budget_c=3.0, budget_c_stopped=False,
+                  gpu_start=None, gpu_elapsed_s=None):
     per_arm = {arm: arm_stats(records, arm) for arm in arms}
     levels = sorted({r.get("level") for r in records if r.get("level")})
     by_level = {}
@@ -622,7 +661,8 @@ def build_summary(records, c_usages, elapsed_s, budget, budget_stopped, skipped,
             sub = [r for r in records if r.get("level") == level]
             by_level[level][arm] = arm_stats(sub, arm)
     cost_c = sum(cost_c_of_usage(u) for u in c_usages)
-    gpu_total = gpu_cost_of_elapsed(elapsed_s)
+    gpu_elapsed = gpu_elapsed_s if gpu_elapsed_s is not None else elapsed_s
+    gpu_total = gpu_cost_of_elapsed(gpu_elapsed)
     costs = {
         "A": round(gpu_total / 2, 4),
         "B": round(gpu_total / 2, 4),
@@ -652,7 +692,11 @@ def build_summary(records, c_usages, elapsed_s, budget, budget_stopped, skipped,
         "skipped": skipped,
         "budget": budget,
         "budget_stopped": budget_stopped,
+        "budget_c": budget_c,
+        "budget_c_stopped": budget_c_stopped,
         "elapsed_seconds": round(elapsed_s, 3),
+        "gpu_start": gpu_start,
+        "gpu_elapsed_seconds": round(gpu_elapsed, 3),
         "costs": costs,
         "decision": decision,
         "run_valid": run_valid,
@@ -672,13 +716,19 @@ def build_report(summary):
     lines.append(
         f"Calls: {summary['n_calls']}  "
         f"Skipped by budget guard: {summary['skipped']}  "
-        f"(budget ${summary['budget']}, stopped: {summary['budget_stopped']})"
+        f"(budget ${summary['budget']}, stopped: {summary['budget_stopped']}; "
+        f"arm-C budget ${summary.get('budget_c', 3.0)}, "
+        f"stopped: {summary.get('budget_c_stopped', False)})"
     )
     lines.append("")
     lines.append("## Cost estimate")
     for arm in arms:
         lines.append(f"- Arm {arm}: ${summary['costs'].get(arm, 0):.4f}")
     lines.append(f"- Total: ${summary['costs']['total']:.4f}")
+    lines.append(
+        "GPU estimate covers only the runner's own wall-clock; the real "
+        "Modal cost (incl. cold start) comes from `modal billing report`."
+    )
     lines.append("")
     lines.append("## Per arm (PASS / FAIL / INVALID, pass rate, INVALID rate)")
     lines.append("| Arm | PASS | FAIL | INVALID | pass rate | INVALID rate |")
@@ -733,6 +783,8 @@ def main(argv=None):
     parser.add_argument("--jobs", choices=("dry", "main"), required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--budget", type=float, default=5.0)
+    parser.add_argument("--budget-c", type=float, default=3.0)
+    parser.add_argument("--gpu-start", type=float, default=None)
     args = parser.parse_args(argv)
 
     glimmer_url = os.environ.get("GLIMMER_URL", "")
@@ -765,7 +817,8 @@ def main(argv=None):
     }
     key_map = {"A": glimmer_key, "B": glimmer_key, "C": baseten_key}
     run_suite(
-        jobs, expected, manual_text, args.out, arm_cfgs, key_map, args.budget
+        jobs, expected, manual_text, args.out, arm_cfgs, key_map, args.budget,
+        budget_c=args.budget_c, gpu_start=args.gpu_start,
     )
     return 0
 

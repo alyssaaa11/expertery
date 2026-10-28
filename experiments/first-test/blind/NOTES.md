@@ -33,3 +33,5 @@
 - D1: clear
 - D2: clear
 - D3: ambiguous (minor): same obround length question as H2 ("16 long"). Interpreted as overall length, rotated 90 degrees so the long side runs along Y.
+
+> Note (2026-10-28, after rewording): H2, H3, H14, D3 and M14 were reworded after this rebuild to match the references (H3 now has a flat notch floor). The verifier re-ran a fresh blind rebuild of those 5 from the final texts: 5/5 PASS (~/agents/verifier/reports/forge-2026-10-28.md, evidence/07).

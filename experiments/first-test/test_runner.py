@@ -169,15 +169,24 @@ def test_messages_and_body_exact():
     runner.do_call(D2, "C", cfgs["C"]["model"], cfgs["C"]["endpoint"], [],
                    MANUAL, EXPECTED["D2"], post, lambda s: None)
     body_a = seen[cfgs["A"]["endpoint"]]
-    assert set(body_a) == {"model", "messages", "max_tokens", "temperature"}
+    assert set(body_a) == {"model", "messages", "max_tokens", "temperature",
+                           "top_p", "top_k"}
     assert body_a["model"] == "muse-glimmer"
-    assert body_a["max_tokens"] == 8000
-    assert body_a["temperature"] == 0.6
+    assert body_a["max_tokens"] == 16000
+    assert body_a["temperature"] == 1.0
+    assert body_a["top_p"] == 0.95
+    assert body_a["top_k"] == 64
     assert body_a["messages"] == [
         {"role": "system", "content": runner.SYSTEM_PROMPT},
         {"role": "user", "content": D2["text"]},
     ]
     body_c = seen[cfgs["C"]["endpoint"]]
+    assert set(body_c) == {"model", "messages", "max_tokens", "temperature",
+                           "top_p", "top_k"}
+    assert body_c["max_tokens"] == 16000
+    assert body_c["temperature"] == 1.0
+    assert body_c["top_p"] == 0.95
+    assert body_c["top_k"] == 64
     assert body_c["model"] == "meta-models/muse-spark-open-1026"
     assert body_c["messages"] == [
         {"role": "system", "content": runner.SYSTEM_PROMPT},
@@ -263,3 +272,164 @@ def test_full_suite_pass_and_files(tmp_path):
     assert saved["table"]["D2"]["B"] == "PASS"
     assert "Costs" in (tmp_path / "report.md").read_text(encoding="utf-8") or \
         "Cost" in (tmp_path / "report.md").read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------- new body: all arms
+
+def test_body_b_arm_exact():
+    seen = {}
+
+    def post(endpoint, body, timeout):
+        seen["body"] = body
+        return fake_resp("x", finish="length")
+
+    cfgs = arm_cfgs()
+    runner.do_call(D2, "B", cfgs["B"]["model"], cfgs["B"]["endpoint"], [],
+                   MANUAL, EXPECTED["D2"], post, lambda s: None)
+    body = seen["body"]
+    assert set(body) == {"model", "messages", "max_tokens", "temperature",
+                         "top_p", "top_k"}
+    assert body["max_tokens"] == 16000
+    assert body["temperature"] == 1.0
+    assert body["top_p"] == 0.95
+    assert body["top_k"] == 64
+
+
+# ---------------------------------------------------------------- decision branches
+
+VALID = {"A": 0.0, "B": 0.0, "C": 0.0}
+
+
+def test_decision_grey_b40_c60():
+    decision, run_valid = runner.compute_decision(0.40, 0.60, VALID)
+    assert decision == "grey zone"
+    assert run_valid is True
+
+
+def test_decision_go_b40_c65():
+    decision, run_valid = runner.compute_decision(0.40, 0.65, VALID)
+    assert decision == "GO to training"
+    assert run_valid is True
+
+
+def test_decision_stop_b85_c100():
+    decision, run_valid = runner.compute_decision(0.85, 1.00, VALID)
+    assert decision == "STOP (manual is enough)"
+    assert run_valid is True
+
+
+def test_decision_stop_b80_c95():
+    decision, run_valid = runner.compute_decision(0.80, 0.95, VALID)
+    assert decision == "STOP (manual is enough)"
+    assert run_valid is True
+
+
+def test_decision_cant_teach_c15():
+    decision, run_valid = runner.compute_decision(0.40, 0.15, VALID)
+    assert decision == "Spark can't teach"
+    assert run_valid is True
+
+
+def test_decision_first_match_wins_stop_over_cant_teach():
+    # B >= 80 wins even though C < 20 also matches.
+    decision, _ = runner.compute_decision(0.85, 0.10, VALID)
+    assert decision == "STOP (manual is enough)"
+
+
+def test_decision_first_match_wins_stop_over_go():
+    # B >= 80 wins even though a GO gap is also present.
+    decision, _ = runner.compute_decision(0.85, 1.00, VALID)
+    assert decision == "STOP (manual is enough)"
+
+
+def test_decision_rounds_to_whole_points():
+    # 79.6% rounds to 80, so STOP; without rounding it would miss.
+    decision, _ = runner.compute_decision(0.796, 0.95, VALID)
+    assert decision == "STOP (manual is enough)"
+    decision, _ = runner.compute_decision(0.794, 0.95, VALID)
+    assert decision == "grey zone"
+
+
+def test_decision_invalid_prefix():
+    decision, run_valid = runner.compute_decision(
+        0.40, 0.65, {"A": 0.0, "B": 0.0, "C": 0.06})
+    assert run_valid is False
+    assert decision == \
+        "run not valid (INVALID > 5% in an arm); GO to training"
+
+
+def test_decision_too_few_scored_calls():
+    decision, run_valid = runner.compute_decision(None, 0.65, VALID)
+    assert decision == "grey zone (too few scored calls)"
+    decision, _ = runner.compute_decision(0.40, None, VALID)
+    assert decision == "grey zone (too few scored calls)"
+
+
+# ---------------------------------------------------------------- arm-C cap
+
+def test_arm_c_cap_skips_later_c_calls(tmp_path):
+    def post(endpoint, body, timeout):
+        return fake_resp("x", finish="length", prompt=1000,
+                         completion=1_000_000)
+
+    jobs = DRY_JOBS[:2]
+    records, summary = runner.run_suite(
+        jobs, EXPECTED, MANUAL, str(tmp_path), arm_cfgs(),
+        key_map={}, budget=50.0, post_fn=post,
+        sleep_fn=lambda s: None, max_workers=1, arms=("A", "C"),
+        budget_c=3.0)
+    # Pairs per job are (A, C): both As run, only the first C runs.
+    assert [r["arm"] for r in records] == ["A", "C", "A"]
+    assert summary["budget_c_stopped"] is True
+    assert summary["budget_stopped"] is False
+    assert summary["budget_c"] == 3.0
+    assert summary["skipped"] == 1
+    saved = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
+    assert saved["budget_c"] == 3.0
+    assert saved["budget_c_stopped"] is True
+    report = (tmp_path / "report.md").read_text(encoding="utf-8")
+    assert "arm-C budget" in report
+
+
+def test_arm_c_cap_math():
+    assert runner.over_budget_c(
+        [{"prompt_tokens": 1000, "completion_tokens": 1_000_000}], 3.0)
+    assert not runner.over_budget_c([{}], 3.0)
+
+
+# ---------------------------------------------------------------- gpu-start + cost note
+
+COST_NOTE = ("GPU estimate covers only the runner's own wall-clock; the real "
+             "Modal cost (incl. cold start) comes from `modal billing report`.")
+
+
+def test_report_cost_note(tmp_path):
+    def post(endpoint, body, timeout):
+        return fake_resp("x", finish="length")
+
+    runner.run_suite(
+        [D2], EXPECTED, MANUAL, str(tmp_path), arm_cfgs(),
+        key_map={}, budget=5.0, post_fn=post,
+        sleep_fn=lambda s: None, max_workers=1, arms=("A",))
+    report = (tmp_path / "report.md").read_text(encoding="utf-8")
+    assert COST_NOTE in report
+
+
+def test_gpu_start_uses_deploy_start(tmp_path):
+    import time
+
+    def post(endpoint, body, timeout):
+        return fake_resp("x", finish="length")
+
+    gpu_start = time.time() - 3600.0
+    records, summary = runner.run_suite(
+        [D2], EXPECTED, MANUAL, str(tmp_path), arm_cfgs(),
+        key_map={}, budget=500.0, post_fn=post,
+        sleep_fn=lambda s: None, max_workers=1, arms=("A",),
+        gpu_start=gpu_start)
+    assert summary["gpu_start"] == gpu_start
+    # One GPU-hour at $2.50/h, within a small timing tolerance.
+    assert abs(summary["costs"]["gpu_total"] - 2.50) < 0.05
+    assert abs(summary["gpu_elapsed_seconds"] - 3600.0) < 30.0
+    saved = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
+    assert saved["gpu_start"] == gpu_start
