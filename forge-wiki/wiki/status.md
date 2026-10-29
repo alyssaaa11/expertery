@@ -61,8 +61,18 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
    (makeCylinder keyword args). Run ≈ $1.6. Verifier: PASS WITH ISSUES, result and decision stand (rubric 7/6/4, 0 WRONG).
    Next Muse round (small): runner adds its own folder to sys.path (the -I launch failure), dashboard live for runner_fc,
    report's rule-5 label only on disagreement.
-2. Training pipeline: round 2 done (pytest green; `smoke --cap-dollars 2.0` → CAP REFUSED exit 2).
-3. Factory: plan READY (verifier); its target tool (FreeCAD or CadQuery hard jobs) follows from the gap test.
+2. **Thinking exam in FreeCAD: frozen, Muse round 2 running** ([[thinking-exam-2026-10-29]], experiments/thinking/).
+   - decision (user, 2026-10-29): the first exam was dictation, so the new jobs need reasoning from a company
+     standard. NDS-1 now has 40 rules; 30 are distractors and none changes a job.
+   - verified: 13 exam jobs + 5 pilot jobs, selftest 18/18, and 3 blind Sonnet solves (the last found 18/18 unique
+     after the E6 depth and T6/C1 "centred" fixes).
+   - Pass/fail at 1e-6, from the verifier's blocker. Pilot difficulty gate: G ≥ 8/9 calibration → STOP.
+   - Speed and $ per answer are a main result.
+   - Verifier pre-build: NO-GO (rubric 2/7/4). All 5 blockers are fixed in the spec and plan (commit f00a3e1).
+   - Muse build verified: pytest 136 passed, cost ≈ $2.19.
+   - Next: Muse round 2 → verifier pre-run → pilot (≈ $0.7) → main run if GO (≈ $2-3).
+3. Training pipeline: round 2 done (pytest green; `smoke --cap-dollars 2.0` → CAP REFUSED exit 2).
+4. Factory: plan READY (verifier); its target tool (FreeCAD or CadQuery hard jobs) follows from the gap test.
 
 ## Where things are
 - Project `~/projects/forge` (README routes; "How this was built" table + correction on Claude-written scripts).
