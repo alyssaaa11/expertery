@@ -17,7 +17,8 @@ must run this exam with the same box, grader and arms, and with no change to the
 
 ## 1. `--exam {first-test,thinking}` (default first-test, so old commands behave the same)
 - **Jobs.** For thinking, import JOBS from experiments/thinking/thinking_jobs.py with the same keys (id, level, text,
-  build). D1 and D2 are dry jobs; T1 to T10 are main jobs. Do not import first-test's jobs.py for this exam, because
+  build). level "dry" (D1, D2 and the calibration jobs C1-C3) is the pilot; levels "medium" and "hard" are the main
+  exam (13 jobs: T2, T5-T10, E1-E6). Select by level, never by a hard-coded id list. Do not import first-test's jobs.py for this exam, because
   both exams use the ids D1 and D2.
 - **Prompt.** The user message is FC_MANUAL_PREFIX + manual, then "\n\nHere is the company design standard. Apply
   it.\n\n" + the contents of experiments/thinking/STANDARDS.md, then "\n\n" + the job text. Keep the system prompt
@@ -28,7 +29,7 @@ must run this exam with the same box, grader and arms, and with no change to the
   - /grader/thinking/{thinking_jobs.py, expected.json}
   - checks.py, shared
   The function picks the exam's folder, so one exam's ids never resolve against the other's jobs. Give `check_refs`
-  the same `exam` parameter, plus a CLI `cloud_grade.py --check-refs --exam thinking` that must print REFS 10/10 PASS.
+  the same `exam` parameter, plus a CLI `cloud_grade.py --check-refs --exam thinking` that must print REFS 13/13 PASS.
 - **Output.** Write `exam` into every calls.jsonl record and into summary.json.
 
 ## 2. Wonder per failed sample

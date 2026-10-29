@@ -52,3 +52,18 @@ that needs Wonder is not "Wonder only on the hardest jobs"). Wonder's share of T
 Muse Code (runner generalisation + report fixes) ≈ $0.7; Glimmer 30 answers + cold start ≈ $1.0; Spark 30 ≈ $0.4;
 Wonder ≤ $3 cap (≈ $0.10 per rescue); box + grader ≈ $0.05. Typical ≈ $2.5-3.5. Forge spent ≈ $25.5 before; the user
 allows going above $30 (2026-10-29: "u can spend more"), within the $35 agreed for the FreeCAD work.
+
+## Hardening (2026-10-29, after the user's request "you can't fail another experiment because the jobs were easy")
+- decision: T1, T3 and T4 were dropped. Each needed only 1-2 rules, so they were close to dictation. Six expert jobs
+  were added, each chaining 3-6 rules: E1, enclosure with board bosses and lid bosses; E2, motor adapter plate; E3,
+  enclosure with floor slots; E4, aluminium housing, where corner holes are inset from the OUTER edges; E5, plate with
+  counterbores, gland bore and bosses; E6, aluminium lid. The main exam is 13 jobs: T2, T5-T10, E1-E6.
+- verified: selftest 18/18 OK, with every wrong version caught (13 main + D1, D2 + C1-C3).
+- **Pilot difficulty gate (pre-registered).** The pilot runs G and S at k = 3 on D1, D2 and three calibration jobs,
+  C1-C3. These are the same expert style but are NOT exam jobs, so stopping on them never tunes the exam.
+  - G passes ≥ 8 of 9 calibration answers → the exam is probably too easy → STOP before the main run. Write harder
+    jobs; no main money is spent.
+  - S passes ≤ 4 of 9 → too hard or ambiguous → STOP.
+  - Otherwise GO.
+- Rule 2 keeps ≥ 4 win jobs (now out of 13).
+- Money: 13 × 3 × 2 = 78 main answers + 30 pilot answers + Wonder ≤ $3 cap. Typical ≈ $3-4.5.

@@ -135,19 +135,98 @@ def t10(slot_extra=10.0, boss_d=7.5):
     return s.cut(zcyl(2.4 / 2, 0, 0, 5, 17))
 
 
+# ---------------------------------------------------------------- expert (added 2026-10-29: 3-6 rules chained each)
+
+def e1(board_top=8.5, lid_inset=3.75):
+    s = open_box(90, 60, 30, 2.5)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            s = boss(s, sx * 26.5, sy * 16.5, 2.5, board_top, 3)
+            s = boss(s, sx * (45 - lid_inset), sy * (30 - lid_inset), 2.5, 32.5, 3)
+    return s
+
+
+def e2(bore_d=41.0, m4_d=4.5, inset=12.0):
+    s = plate_with_holes(120, 80, 8, corners(120, 80, inset), 6.6)
+    for cx, cy in corners(120, 80, inset):
+        s = s.cut(zcyl(11 / 2, cx, cy, 8 - 6.5, 8))
+    s = s.cut(zcyl(bore_d / 2, 0, 0, 0, 8))
+    for cx, cy in corners(46, 46, 0):
+        s = s.cut(zcyl(m4_d / 2, cx, cy, 0, 8))
+    return s
+
+
+def e3(extra=10.0, along_x=True):
+    s = open_box(60, 40, 20, 2.5)
+    for cx in (-20, 20):
+        if along_x:
+            s = s.cut(slot_z(cx, 0, 5.5 + extra, 5.5, 0, 2.5))
+        else:
+            s = s.cut(slot_z(0, 0, 5.5 + extra, 5.5, 0, 2.5).rotate(Vector(0, 0, 0), Vector(0, 0, 1), 90)
+                      .translate(Vector(cx, 0, 0)))
+    return s
+
+
+def e4(hole_c=16.5, wall=4.0):
+    s = open_box(41, 41, 15, wall)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            s = s.cut(zcyl(4.5 / 2, sx * hole_c, sy * hole_c, 0, wall))
+    return s
+
+
+def e5(bore_d=23.0, boss_f=2.5, cb_depth=4.5):
+    s = plate_with_holes(80, 60, 6, corners(80, 60, 8), 4.5)
+    for cx, cy in corners(80, 60, 8):
+        s = s.cut(zcyl(8 / 2, cx, cy, 6 - cb_depth, 6))
+    s = s.cut(zcyl(bore_d / 2, 0, 0, 0, 6))
+    for cx in (-20, 20):
+        s = s.fuse(zcyl(boss_f * 3 / 2, cx, 0, 6, 16))
+        s = s.cut(zcyl(2.4 / 2, cx, 0, 6, 16))
+    return s
+
+
+def e6(t=4.0, gap=0.3):
+    ox, oy = 70 / 2 + t, 40 / 2 + t
+    s = box(-ox, ox, -oy, oy, 0, t)
+    lx, ly = 35 - gap, 20 - gap
+    ring = box(-lx, lx, -ly, ly, t, t + 4).cut(box(-lx + t, lx - t, -ly + t, ly - t, t, t + 4))
+    return s.fuse(ring).cut(zcyl(5.5 / 2, 0, 0, 0, t))
+
+
+# ---------------------------------------------------------------- calibration (pilot difficulty gate, not scored)
+
+def c1(top=7.5, hole_xy=(21.0, 11.0)):
+    s = open_box(51, 31, 15, 2.5)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            s = boss(s, sx * hole_xy[0], sy * hole_xy[1], 2.5, top, 3)
+    return s
+
+
+def c2(bore_d=36.0, slot_len=14.5):
+    s = plate_with_holes(100, 70, 10, corners(100, 70, 10), 5.5)
+    for cx, cy in corners(100, 70, 10):
+        s = s.cut(zcyl(10 / 2, cx, cy, 10 - 5.5, 10))
+    s = s.cut(zcyl(bore_d / 2, 0, 0, 0, 10))
+    for cx in (-30, 30):
+        s = s.cut(slot_z(cx, 0, slot_len, 4.5, 0, 10))
+    return s
+
+
+def c3(clear=0.5, gap=0.3):
+    ix, iy = 40 + 2 * clear, 25 + 2 * clear
+    s = box(-ix / 2 - 2.5, ix / 2 + 2.5, -iy / 2 - 2.5, iy / 2 + 2.5, 0, 2.5)
+    lx, ly = ix / 2 - gap, iy / 2 - gap
+    ring = box(-lx, lx, -ly, ly, 2.5, 6.5).cut(box(-lx + 2.5, lx - 2.5, -ly + 2.5, ly - 2.5, 2.5, 6.5))
+    return s.fuse(ring)
+
+
 JOBS = [
     # ---- medium
-    dict(id="T1", level="medium", build=t1, wrong=[dict(hole_d=5.0), dict(inset=5.0)],
-         text=T + "An aluminium base plate, 80 by 50, 6 thick, fixed by four M5 screws at the corners."),
     dict(id="T2", level="medium", build=t2, wrong=[dict(cb_d=10.0, cb_depth=5.5), dict(inset=6.0)],
          text=T + "A plastic clamp plate, 100 by 60, 12 thick, fixed by four M6 socket-head screws at the corners, "
               "with the screw heads sunk flush with the top face."),
-    dict(id="T3", level="medium", build=t3, wrong=[dict(clear=0.0), dict(wall=2.0)],
-         text=T + "A plastic enclosure, open at the top, for a circuit board of 60 by 40. The space inside must be "
-              "18 tall, measured from the floor."),
-    dict(id="T4", level="medium", build=t4, wrong=[dict(width=4.0), dict(extra=5.0)],
-         text=T + "A plastic adjustment plate, 70 by 30, 4 thick, with two mounting slots for M4 screws, centred on "
-              "the plate's centre line at X = -22 and X = 22."),
     dict(id="T5", level="medium", build=t5, wrong=[dict(gap=0.0), dict(lip_h=3.0)],
          text=T + "A plastic lid for an enclosure whose outside is 66 by 46 and whose walls are 2.5 thick."),
     # ---- hard
@@ -169,9 +248,44 @@ JOBS = [
          text=T + "A plastic sensor bracket: a base plate, 60 by 40, 5 thick, fixed by two mounting slots for M4 "
               "screws centred on the plate's centre line at X = -20 and X = 20. In the middle of the plate stands a "
               "screw boss for an M3 screw, 12 tall."),
+    # ---- expert additions (2026-10-29): each chains 3-6 NDS-1 rules
+    dict(id="E1", level="hard", build=e1, wrong=[dict(board_top=6.0), dict(lid_inset=6.0)],
+         text=T + "A plastic enclosure, open at the top, whose inside space is 90 by 60 and 30 deep, with lid-screw "
+              "bosses for M3 screws. A circuit board of 60 by 40 sits centred in it, screwed onto four screw bosses "
+              "that are 6 tall; the board has an M3 mounting hole near each corner, 3.5 from both board edges."),
+    dict(id="E2", level="hard", build=e2, wrong=[dict(bore_d=40.0), dict(inset=6.0)],
+         text=T + "An aluminium motor adapter plate, 120 by 80, 8 thick, fixed to the machine by four M6 socket-head "
+              "screws at the corners, heads sunk flush. A motor whose round body is 40 in diameter passes through "
+              "the centre of the plate and is fixed by four M4 screws on a 46 by 46 square pattern centred on the "
+              "plate."),
+    dict(id="E3", level="medium", build=e3, wrong=[dict(extra=5.0), dict(along_x=False)],
+         text=T + "A plastic enclosure, open at the top, whose inside space is 60 by 40 and 20 deep. It is fixed to "
+              "a rail by two mounting slots for M5 screws in its floor, centred on the centre line at X = -20 and "
+              "X = 20."),
+    dict(id="E4", level="hard", build=e4, wrong=[dict(hole_c=12.5), dict(wall=2.5)],
+         text=T + "An aluminium housing, open at the top, for a square module of 40 by 40. The space inside is 15 "
+              "deep. The housing is fixed by four M4 screws at the corners, through its floor."),
+    dict(id="E5", level="hard", build=e5, wrong=[dict(bore_d=22.0), dict(boss_f=2.0)],
+         text=T + "A plastic sensor plate, 80 by 60, 6 thick, fixed by four M4 socket-head screws at the corners, "
+              "heads sunk flush. Through its centre passes a cable gland of 22 outside diameter. On the plate's "
+              "centre line at X = -20 and X = 20 stand two screw bosses for M3 screws, 10 tall."),
+    dict(id="E6", level="medium", build=e6, wrong=[dict(t=2.5), dict(gap=0.15)],
+         text=T + "A lid for an aluminium enclosure whose inside space is 70 by 40, with a hole for an M5 handle "
+              "screw through the middle of the lid."),
     # ---- dry run (not scored)
     dict(id="D1", level="dry", build=d1, wrong=[dict(hole_d=4.0), dict(inset=4.0)],
          text=T + "A plastic mounting plate, 60 by 40, 5 thick, fixed by four M4 screws at the corners."),
     dict(id="D2", level="dry", build=d2, wrong=[dict(wall=2.0), dict(depth=22.5)],
          text=T + "A plastic open-top enclosure whose inside space is 50 by 30 and 20 deep."),
+    # ---- calibration (level dry: run in the pilot as the difficulty gate, never scored)
+    dict(id="C1", level="dry", build=c1, wrong=[dict(top=5.0), dict(hole_xy=(25.0, 15.0))],
+         text=T + "A plastic enclosure, open at the top, for a circuit board of 50 by 30. The space inside is 15 "
+              "tall. The board has an M3 mounting hole near each corner, 4 from both board edges, and is screwed "
+              "onto four screw bosses that are 5 tall."),
+    dict(id="C2", level="dry", build=c2, wrong=[dict(bore_d=35.0), dict(slot_len=9.5)],
+         text=T + "An aluminium bearing plate, 100 by 70, 10 thick, for a shaft housing of 35 outside diameter "
+              "passing through its centre. It is fixed by four M5 socket-head screws at the corners, heads sunk "
+              "flush, and has two mounting slots for M4 screws on its centre line at X = -30 and X = 30."),
+    dict(id="C3", level="dry", build=c3, wrong=[dict(clear=0.0), dict(gap=0.0)],
+         text=T + "A plastic lid for an enclosure made for a circuit board of 40 by 25."),
 ]
