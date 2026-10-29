@@ -610,7 +610,9 @@ def test_main_runs_suite_inside_grader_app_context(monkeypatch, tmp_path):
             return _Ctx()
 
     monkeypatch.setattr(cloud_exec, "modal", _Modal())
-    monkeypatch.setattr(cloud_grade, "lookup_grader_app", lambda: _App())
+    # The suite runs inside the App that defines grade (lookup().run()
+    # fails: App is already running).
+    monkeypatch.setattr(cloud_grade, "_app", _App())
     monkeypatch.setenv("GLIMMER_URL", "https://g.test")
     monkeypatch.setenv("GLIMMER_KEY", "k")
 

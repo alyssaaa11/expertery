@@ -151,6 +151,22 @@ def build_sandbox(image=None):
 NO_STEP_PREFIX = "the answer wrote no STEP"
 
 
+def _missing_file_errors():
+    """Exception types meaning "the answer wrote no STEP" (a FAIL).
+
+    Reading a missing STEP/measure raises
+    modal.exception.SandboxFilesystemNotFoundError on the real box
+    (not a FileNotFoundError subclass); KeyError covers test fakes.
+    Anything else from the box still propagates to the runner, which
+    tags it harness/INVALID."""
+    errs = [FileNotFoundError, KeyError]
+    exc_mod = getattr(modal, "exception", None) if modal is not None else None
+    cls = getattr(exc_mod, "SandboxFilesystemNotFoundError", None)
+    if isinstance(cls, type):
+        errs.append(cls)
+    return tuple(errs)
+
+
 def _read_stream(stream):
     """Best-effort text from a box process stream (stdout or stderr)."""
     try:
@@ -181,8 +197,11 @@ def run_answer_in_box(answer_code, sandbox=None, sandbox_factory=None):
             sandbox = build_sandbox()
         own = True
     try:
+        # Modal 1.6.3 is write_text(data, remote_path): keywords, so a
+        # reordered fake or SDK signature cannot silently swap the args.
         sandbox.filesystem.write_text(
-            WORK_DIR + "/" + ANSWER_NAME, answer_code or "")
+            data=answer_code or "",
+            remote_path=WORK_DIR + "/" + ANSWER_NAME)
         proc = sandbox.exec(
             "freecadcmd", "-c", BOOTSTRAP,
             env={"FC_SCRATCH": WORK_DIR},
@@ -191,8 +210,11 @@ def run_answer_in_box(answer_code, sandbox=None, sandbox_factory=None):
         log = _read_stream(getattr(proc, "stdout", None))
         err_text = _read_stream(getattr(proc, "stderr", None)).strip()
         try:
-            step_bytes = sandbox.filesystem.read_bytes(STEP_PATH)
-        except (FileNotFoundError, KeyError):  # KeyError: test fakes
+            step_bytes = sandbox.filesystem.read_bytes(
+                remote_path=STEP_PATH)
+            measure_text = sandbox.filesystem.read_text(
+                remote_path=MEASURE_PATH)
+        except _missing_file_errors():
             detail = err_text or log.strip()
             run_error = NO_STEP_PREFIX + (": %s" % detail if detail else "")
             return {"step_bytes": None, "measure": None, "log": log,
@@ -203,7 +225,7 @@ def run_answer_in_box(answer_code, sandbox=None, sandbox_factory=None):
                 % (len(step_bytes), MAX_STEP_BYTES))
         import json as _json
 
-        measure = _json.loads(sandbox.filesystem.read_text(MEASURE_PATH))
+        measure = _json.loads(measure_text)
         return {"step_bytes": step_bytes, "measure": measure, "log": log,
                 "run_error": None}
     finally:
@@ -245,9 +267,11 @@ HAND_DIR_NAME = "hand"
 HAND_MAC_MEASURE_NAME = "mac_measure.json"
 # HAND OK gate: these hand answers must PASS ...
 HAND_MUST_PASS = ("M1", "M6", "M10", "H6", "H13")
-# ... these must FAIL (wrong geometry), and every bbox/volume diff <= 1e-9.
+# ... these must FAIL (wrong geometry), and every bbox/volume diff <= 1e-6
+# (the Mac arm64 and the cloud x86 box differ by up to 6.4e-8 relative;
+# the gate is the strict referee's 1e-6).
 HAND_MUST_FAIL = ("M1_wrong", "H13_wrong")
-HAND_MAX_REL_DIFF = 1e-9
+HAND_MAX_REL_DIFF = 1e-6
 
 
 def hand_job_id(stem):
@@ -304,7 +328,7 @@ def check_hand(answer_paths=None, exec_fn=None, grade_fn=None, expected=None):
     hand/mac_measure.json (loaded when `expected` is None; keyed by
     file stem). Each file is graded under its job id (the file name
     prefix: M1_wrong -> M1). Prints `HAND OK` only if M1, M6, M10, H6,
-    H13 PASS, M1_wrong and H13_wrong FAIL, and every difference <= 1e-9;
+    H13 PASS, M1_wrong and H13_wrong FAIL, and every difference <= 1e-6;
     else prints `HAND FAIL`. Returns the lines (per-answer lines plus
     the HAND line). `exec_fn`/`grade_fn` are injected in tests; by
     default the real box and the cloud grader (needs the grader app
@@ -354,7 +378,7 @@ def check_hand(answer_paths=None, exec_fn=None, grade_fn=None, expected=None):
 
 def hand_gate(verdicts, maxdiffs):
     """True iff the HAND OK conditions hold: must-pass PASS, must-fail
-    FAIL, and every bbox/volume difference <= 1e-9."""
+    FAIL, and every bbox/volume difference <= 1e-6."""
     for name in HAND_MUST_PASS:
         if verdicts.get(name) != "PASS":
             return False

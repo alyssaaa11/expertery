@@ -25,19 +25,22 @@ import run_one_fc
 
 
 class FakeFS:
+    """Same parameter names as Modal 1.6.3 (data, remote_path), so the
+    keyword calls in run_answer_in_box bind here exactly as there."""
+
     def __init__(self):
         self.files = {}
         self.writes = []
 
-    def write_text(self, path, text):
-        self.writes.append(path)
-        self.files[path] = text
+    def write_text(self, data, remote_path):
+        self.writes.append(remote_path)
+        self.files[remote_path] = data
 
-    def read_bytes(self, path):
-        return self.files[path]
+    def read_bytes(self, remote_path):
+        return self.files[remote_path]
 
-    def read_text(self, path):
-        data = self.files[path]
+    def read_text(self, remote_path):
+        data = self.files[remote_path]
         return data if isinstance(data, str) else data.decode("utf-8")
 
 
@@ -424,6 +427,56 @@ def test_lookup_exec_app_name(monkeypatch):
     assert made["lookups"] == [("forge-freecad", True)]
 
 
+def test_filesystem_call_keywords_match_modal():
+    """The parameter names the code uses exist on the real SDK (Modal
+    1.6.3 is write_text(data, remote_path)); the fake shares them, so
+    keyword calls bind the same way on both. Skipped without modal."""
+    import inspect
+
+    modal = pytest.importorskip("modal")
+    from modal.sandbox import _filesystem as _fs
+
+    sig = inspect.signature(_fs._SandboxFilesystem.write_text)
+    assert "data" in sig.parameters and "remote_path" in sig.parameters
+    for meth in ("read_bytes", "read_text"):
+        assert "remote_path" in inspect.signature(
+            getattr(_fs._SandboxFilesystem, meth)).parameters
+    assert list(inspect.signature(FakeFS.write_text).parameters) == [
+        "self", "data", "remote_path"]
+    assert list(inspect.signature(FakeFS.read_bytes).parameters) == [
+        "self", "remote_path"]
+    assert list(inspect.signature(FakeFS.read_text).parameters) == [
+        "self", "remote_path"]
+    assert modal is not None
+
+
+def test_box_modal_not_found_is_answer_failure_not_harness():
+    """A missing STEP/measure raises SandboxFilesystemNotFoundError on
+    the real box: still 'the answer wrote no STEP' (FAIL), not harness."""
+    modal = pytest.importorskip("modal")
+    import modal.exception as _exc
+
+    box = FakeSandbox(step_bytes=None, stderr="ERROR: boom\n")
+    orig_read = box.filesystem.read_bytes
+
+    def _missing(remote_path):
+        raise _exc.SandboxFilesystemNotFoundError("missing: " + remote_path)
+
+    box.filesystem.read_bytes = _missing
+    out = cloud_exec.run_answer_in_box("x = 1", sandbox=box)
+    assert out["step_bytes"] is None and out["measure"] is None
+    assert cloud_exec.NO_STEP_PREFIX in out["run_error"]
+    assert "boom" in out["run_error"]
+    assert modal is not None and orig_read is not None
+
+    # STEP present but measure.json missing: same verdict.
+    box2 = FakeSandbox(step_bytes=b"S")
+    del box2.filesystem.files["/work/measure.json"]
+    out2 = cloud_exec.run_answer_in_box("result = 1", sandbox=box2)
+    assert out2["step_bytes"] is None
+    assert cloud_exec.NO_STEP_PREFIX in out2["run_error"]
+
+
 # ------------------------------------------------------- live check CLIs
 
 
@@ -538,11 +591,18 @@ def test_check_hand_gate_rejects_wrong_pass_and_big_diff(tmp_path):
     assert cloud_exec.check_hand(
         _hand_files(tmp_path, names), exec_fn=exec_fn,
         grade_fn=grade_fn, expected=expected)[-1] == "HAND FAIL"
-    # A >1e-9 difference is not HAND OK either.
+    # A difference over the 1e-6 gate is not HAND OK either.
     exec_fn, grade_fn, expected = _hand_fakes(exact=False)
     assert cloud_exec.check_hand(
         _hand_files(tmp_path, names), exec_fn=exec_fn,
         grade_fn=grade_fn, expected=expected)[-1] == "HAND FAIL"
+    # A 6.4e-8-scale Mac-vs-cloud float difference IS HAND OK (1e-6 gate).
+    assert cloud_exec.HAND_MAX_REL_DIFF == 1e-6
+    assert cloud_exec.hand_gate(
+        {n: "PASS" for n in cloud_exec.HAND_MUST_PASS
+         } | {n: "FAIL" for n in cloud_exec.HAND_MUST_FAIL},
+        {n: 6.4e-8 for n in list(cloud_exec.HAND_MUST_PASS)
+         + list(cloud_exec.HAND_MUST_FAIL)}) is True
     assert cloud_exec.hand_gate({"M1": "PASS"}, {}) is False  # no diffs
     assert cloud_exec.hand_gate(
         {n: "PASS" for n in cloud_exec.HAND_MUST_PASS
@@ -569,14 +629,49 @@ def test_check_refs_names_failures(capsys):
     assert "REF FAIL M1" in out and "REFS 29/30 PASS" in out
 
 
-def test_grader_app_lookup_name(monkeypatch):
-    stub, made = _stub_modal_with_image()
+def test_grader_runs_inside_defining_app():
+    """Grader calls run inside the App that defines grade: only the
+    sandbox app goes through App.lookup."""
+    src = open(os.path.join(HERE, "cloud_grade.py"),
+               encoding="utf-8").read()
+    assert "lookup_grader_app" not in src  # no grader App.lookup left
+    assert "_app.run()" in src  # the App that defines grade
+    runner_src = open(os.path.join(HERE, "runner_fc.py"),
+                      encoding="utf-8").read()
+    assert "lookup_grader_app" not in runner_src
+    assert "_cloud_grade._app.run()" in runner_src
+
+
+def test_grader_image_installs_gl_before_cadquery(monkeypatch):
+    """OCP needs libGL.so.1: apt libs install before pip (Round 3.4)."""
+    calls = []
+
+    class _GImage:
+        def apt_install(self, *pkgs):
+            calls.append(("apt", pkgs))
+            return self
+
+        def pip_install(self, *pkgs):
+            calls.append(("pip", pkgs))
+            return self
+
+        def add_local_file(self, local, remote):
+            calls.append(("file", (local, remote)))
+            return self
+
+    stub = types.SimpleNamespace(
+        Image=types.SimpleNamespace(
+            from_registry=lambda base: _GImage()))
     monkeypatch.setattr(cloud_grade, "modal", stub)
-    cloud_grade.lookup_grader_app()
-    assert made["lookups"] == [("forge-freecad-grader", True)]
-    monkeypatch.setattr(cloud_grade, "modal", None)
-    with pytest.raises(RuntimeError):
-        cloud_grade.lookup_grader_app()
+    cloud_grade.build_grader_image()
+    kinds = [k for k, _ in calls]
+    assert kinds.index("apt") < kinds.index("pip")
+    apt_pkgs = calls[kinds.index("apt")][1]
+    for lib in ("libgl1", "libglib2.0-0", "libxrender1", "libx11-6",
+                "libxext6"):
+        assert lib in apt_pkgs
+    pip_pkgs = calls[kinds.index("pip")][1]
+    assert "cadquery==2.8" in pip_pkgs
 
 
 # ------------------------------------------------------- safety probes

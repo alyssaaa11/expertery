@@ -109,11 +109,15 @@ def compare_measurements(m, e):
 
 def build_grader_image():
     """Modal image for the grader function: CadQuery 2.8 + jobs.py +
-    checks.py + expected.json baked in (references live only here)."""
+    checks.py + expected.json baked in (references live only here).
+    libGL etc. are apt-installed before pip: CadQuery's OCP needs
+    libGL.so.1."""
     if modal is None:
         raise RuntimeError("modal is not installed; cannot build the grader")
     return (
         modal.Image.from_registry("python:3.12-slim")
+        .apt_install("libgl1", "libglib2.0-0", "libxrender1", "libx11-6",
+                     "libxext6")
         .pip_install("cadquery==2.8")
         .add_local_file(
             os.path.join(FIRST_TEST_DIR, "jobs.py"), "/grader/jobs.py")
@@ -127,13 +131,6 @@ def build_grader_image():
 GRADER_APP_NAME = "forge-freecad-grader"  # Modal app the grader runs under
 
 
-def lookup_grader_app():
-    """The Modal app handle for grader calls (created on first lookup)."""
-    if modal is None:
-        raise RuntimeError("modal is not installed; cannot look up the app")
-    return modal.App.lookup(GRADER_APP_NAME, create_if_missing=True)
-
-
 if modal is not None:
     _grader_image = None
 
@@ -143,7 +140,7 @@ if modal is not None:
             _grader_image = build_grader_image()
         return _grader_image
 
-    _app = modal.App("forge-freecad-grader")
+    _app = modal.App(GRADER_APP_NAME)
 
     @_app.function(image=_image(), cpu=1, timeout=300)
     def grade(job_id, step_bytes):
@@ -240,8 +237,10 @@ def main(argv=None):
         if modal is None:
             raise RuntimeError(
                 "modal is not installed; cannot reach the grader")
+        # Grade inside the App that defines grade: App.lookup(...).run()
+        # fails with "App is already running".
         with modal.enable_output():
-            with lookup_grader_app().run():
+            with _app.run():
                 check_refs()
         return 0
     parser.error("need --check-refs")

@@ -997,9 +997,10 @@ def main(argv=None):
     import cloud_grade as _cloud_grade  # noqa: E402
 
     # The runner's remote work (grader calls) needs an app context, so
-    # cloud_grade.grade.remote() runs inside it.
+    # cloud_grade.grade.remote() runs inside the App that defines grade
+    # (App.lookup(...).run() fails with "App is already running").
     with _modal.enable_output():
-        with _cloud_grade.lookup_grader_app().run():
+        with _cloud_grade._app.run():
             run_suite_fc(jobs, manual_text, args.out, arm_cfgs, key_map,
                          budget=args.budget, budget_c=args.budget_c,
                          budget_w=args.budget_w, arms=arms, k=args.k,
