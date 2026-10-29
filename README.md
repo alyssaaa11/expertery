@@ -86,4 +86,11 @@ Who wrote what:
 | Independent review before every paid run | a separate Claude verifier agent | reports in `~/agents/verifier/reports/` |
 | Wiki and coordination | Claude | `forge-wiki/` |
 
+**Correction (2026-10-29):** Claude broke the project rule by writing a few scripts itself "to save time":
+`experiments/smoke/train_smoke.py` and `score_answer.py` (training smoke test), `experiments/bmax/run_session.sh` and
+`run_session_v2.sh` (run scripts), `experiments/bmax/glimmer_dashboard.py` (dashboard), and
+`experiments/option-a/audit/coverage_audit.py` (an analysis). They are kept only as records of runs that already
+happened; their results stand. Muse Code rebuilds the ones still needed from `experiments/train/MUSE_SPEC.md` (into
+`experiments/train/` and `experiments/common/`), and from now on all code is written by Muse Code.
+
 Commits made with Claude carry a "Co-Authored-By: Claude" line. Muse Code published this repository.
