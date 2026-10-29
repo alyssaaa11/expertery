@@ -10,35 +10,39 @@ free-check evidence: experiments/freecad/PLAN.md. Every item says why it matters
 - Tests: `~/projects/forge/.venv/bin/python -m pytest -q experiments/freecad` until all pass. Sandbox tests may skip
   inside your shell; Claude re-runs them outside.
 
-## 1. `run_one_fc.py` (runs inside the sandbox, under FreeCAD's own `freecadcmd`)
-Reads `<scratch>/answer.py`, executes it with `ns = {"__name__": "__main__"}`, requires `result` to be a FreeCAD
-`Part.Shape` with at least one solid (error text: `ERROR: no variable named 'result'` / `ERROR: result is not a Part
-solid`), writes `<scratch>/answer.step` (`result.exportStep`) and `<scratch>/measure.json` (bbox, volume, number of
-solids, isValid). Before running the answer, install an import hook that refuses `cadquery` and `OCP` (ImportError
-"not allowed in FreeCAD answers"). Why: FreeCAD could run CadQuery code if it were installed; this keeps the test about
-FreeCAD (the sandbox already denies the forge venv; this is the second lock).
-Invocation: `/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd <run_one_fc.py> <scratch>` — check how
-freecadcmd passes script arguments (if it doesn't, pass the scratch path via an env var set by `env -i`, e.g. FC_SCRATCH).
+## 1. Cloud safety box: `cloud_exec.py` (decision, user 2026-10-29: nothing Glimmer writes may run on the Mac)
+Every answer runs in a **fresh Modal Sandbox** (`modal.Sandbox.create`, https://modal.com/docs/sdk/py/latest/Sandbox):
+`block_network=True`, no secrets, no volumes, cpu 1, memory (1024, 4096) MiB, `timeout` 90 s, one sandbox per answer,
+terminated after use. Image: FreeCAD **1.1.4** for Linux (conda-forge `freecad=1.1.4` via a micromamba base image, or the
+official 1.1.4 AppImage extracted; the build must print `freecadcmd` version 1.1.4, the same as the Mac manual's
+version). The image contains ONLY FreeCAD + `run_one_fc.py`: no references, no jobs file, no expected.json, no cadquery.
+Steps: write `answer.py` with `sb.filesystem.write_text`, run `freecadcmd /work/run_one_fc.py` with `sb.exec`
+(env FC_SCRATCH=/work), read back `/work/answer.step` (bytes) and `/work/measure.json`, then `sb.terminate()`.
+Why: the box never holds the answers, has no internet and is new for each answer, so an answer cannot read the
+answer key, other jobs' results, or anything on the user's Mac.
+`run_one_fc.py` (inside the box): exec answer.py with `ns = {"__name__": "__main__"}`; require `result` to be a
+`Part.Shape` with ≥ 1 solid (`ERROR: no variable named 'result'` / `ERROR: result is not a Part solid`); refuse
+`import cadquery` / `OCP` with an import hook; write answer.step + measure.json (bbox, volume, solids, isValid).
 
-## 2. `sandbox_fc.sb`
-Start from experiments/freecad/sandbox_fc.reference.sb (tested by Claude: freecadcmd runs, cadquery import fails, the
-answer key is unreadable). Add a literal read allow for run_one_fc.py (param RUNONE). Why: the same safety as Keel v2
-(no network, no home or temp reads, writes only to scratch, `env -i HOME=<scratch>`), so a malicious answer cannot read
-the answer key or the user's files.
+## 2. Cloud grader: `cloud_grade.py`
+A separate Modal Function (CPU, our own trusted code) with CadQuery 2.8 + experiments/first-test/{jobs.py,checks.py,
+expected.json} baked into its image. Input: job id + STEP bytes; output: verdict at 0.2% (the verdict) and at 1e-6,
+the failed checks, measurements. It never runs model code. Why: the reference parts live only here, never in the box.
+**Consistency check before any paid run (free-ish, CPU only, < $0.05):** re-grade the 30 Mac-made STEP files of
+experiments/freecad/hand/ and the 30 CadQuery references through the cloud grader → same verdicts as on the Mac.
 
 ## 3. `runner_fc.py` (reuses the frozen first-test runner; do not copy-paste its logic)
 Import from experiments/first-test/runner.py: the Glimmer/Baseten request code and retry, code extraction, the budget
-guard, k and workers handling, and the sandboxed-run plumbing pattern (scratch dirs under --out, realpath inside
-scratch, 60 s CPU + wall limit, 4 GB RSS kill, process-group kill). Replace only:
+guard, k and workers handling. Replace only:
 - system prompt: "You write FreeCAD Python code using the Part module (import FreeCAD as App, Part). Units are
   millimetres. Assign the final solid (a Part.Shape) to a variable named result. Reply with exactly one Python code
   block and nothing else." Why: the same instruction as the CadQuery system prompt, tool swapped.
 - manual: experiments/freecad/manual.md, refused if its sha256 differs from the value frozen in PLAN.md
   (865ab9af45eb2fb554f97155fa8f3cf44f92d54973437a1f94c78d67cdc89bb6). Why: a changed manual changes the result.
 - user message: "Here is the FreeCAD manual. Use it.\n\n" + manual + "\n\n" + job text (same layout as arm B).
-- answer execution: freecadcmd + run_one_fc.py in the sandbox; the runner imports <scratch>/answer.step with CadQuery
-  and scores it with experiments/first-test/checks.py against jobs.py's reference: **0.2% is the verdict** (the
-  baseline's yardstick) and 1e-6 is also recorded.
+- answer execution: `cloud_exec.py` (Modal Sandbox) → STEP bytes → `cloud_grade.py` (Modal Function): **0.2% is the
+  verdict** (the baseline's yardstick) and 1e-6 is also recorded. Nothing from the model runs on the Mac; the Mac only
+  coordinates and writes logs. Run up to 8 sandboxes in parallel.
 - arms: `G` = Glimmer (same body as arm B: max_tokens 16000, temperature 1.0, top_p 0.95, top_k 64); `S` = Spark Open
   on Baseten (meta-models/muse-spark-open-1026, same sampling, header x-session-affinity, log cached_tokens). k = 1.
 - every FAIL is tagged `api_error` (the answer raised during the run: AttributeError, TypeError, NameError, Part
@@ -56,8 +60,11 @@ small wrapper experiments/freecad/run_fc_session.sh that sets the hook and passe
 and the app stop must be the same as for every other paid run.
 
 ## 5. Tests (offline, fake HTTP)
-Prompt = system + manual + job (manual hash check refuses a changed file); a fake G reply with the hand-written answer
-experiments/freecad/hand/M10.py PASSes end to end through the sandbox and STEP hand-off; hand/M1_wrong.py FAILs as
-wrong_geometry; an answer with a typo'd Part call FAILs as api_error; an answer that imports cadquery is refused; reading
-expected.json from inside the sandbox fails; the decision rule on synthetic summaries gives each of the 4 outcomes.
+Offline (no Modal): prompt = system + manual + job (manual hash check refuses a changed file); failure tagging from
+fake sandbox results (exception → api_error, built-but-FAIL → wrong_geometry, cut off → INVALID); the decision rule on
+synthetic summaries gives each outcome; the sandbox config asserts block_network=True, no secrets, no volumes, and that
+the box image file list contains no jobs/expected/reference files. Live checks (Claude runs them, CPU only, cents):
+hand/M10.py PASSes end to end in the cloud; hand/M1_wrong.py FAILs as wrong_geometry; a typo'd Part call → api_error;
+`import cadquery` refused; an answer that tries `urllib.request.urlopen` fails (no network); an answer that lists `/` finds
+no jobs/expected files.
 Short report at the end: files, pytest line, anything you could not follow.

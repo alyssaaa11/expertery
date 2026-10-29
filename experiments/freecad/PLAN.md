@@ -27,6 +27,11 @@ Spark Open + the same manual? If so, FreeCAD is the factory's training target (a
 3. Cheat test: an answer that imports cadquery is refused in the sandbox.
 4. Neutral-text scan done and frozen (sha256).
 
+## Where answers run (decision, user 2026-10-29)
+Nothing Glimmer or Spark writes runs on the user's Mac: every answer runs in a fresh Modal Sandbox (no network, no
+answers inside, FreeCAD 1.1.4), and a separate cloud grader holds the references (SPEC §1-2). The Mac checks below were
+done with Claude's hand-written answers only.
+
 ## Free checks done (verified 2026-10-29, Claude; check commands run ad hoc in Claude's temp folder, not project code)
 - FreeCAD 1.1.4 installed (`brew install --cask freecad`); headless `freecadcmd` builds a part and exports STEP in ~4 s
   (0.2 s warm); FreeCAD's own Python is 3.11.14 and has **no cadquery / OCP**.
