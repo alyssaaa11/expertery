@@ -22,20 +22,37 @@ WRONG_CODE = 'import cadquery as cq\nresult = cq.Workplane("XY").box(10, 10, 11)
 
 
 def test_budget_left_fixed_numbers():
-    assert budget_left.budget_left(3.0, 1000, now=1000, rate_per_hour=2.50) == 3.0
-    assert budget_left.budget_left(3.0, 1000, now=1000 + 3600, rate_per_hour=2.50) == 0.5
+    # The default $0.30 reserve is held back: in-flight answers still cost.
+    assert budget_left.budget_left(3.0, 1000, now=1000,
+                                   rate_per_hour=2.50) == 2.70
+    assert budget_left.budget_left(3.0, 1000, now=1000 + 3600,
+                                   rate_per_hour=2.50) == 0.20
+    assert budget_left.budget_left(3.0, 1000, now=1000, rate_per_hour=2.50,
+                                   reserve=0.0) == 3.0
+    assert budget_left.budget_left(3.0, 1000, now=1000, rate_per_hour=2.50,
+                                   reserve=1.0) == 2.0
 
 
 def test_budget_left_refuses_at_or_below_five_cents():
     assert budget_left.budget_left(1.0, 0, now=3600, rate_per_hour=2.50) is None
     assert budget_left.budget_left(0.05, 1000, now=1000, rate_per_hour=2.50) is None
+    # A cap that only covers the reserve refuses too.
+    assert budget_left.budget_left(0.30, 1000, now=1000,
+                                   rate_per_hour=2.50) is None
 
 
 def test_budget_left_cli_fixed_numbers():
-    # A gpu-start in the future means no GPU time has accrued: full cap left.
+    # A gpu-start in the future means no GPU time has accrued: cap minus
+    # the default $0.30 reserve is left.
     p = subprocess.run(
         [sys.executable, "-I", os.path.join(HERE, "budget_left.py"),
          "3.0", "9999999999"],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert p.returncode == 0 and p.stdout.strip() == "2.70"
+    p = subprocess.run(
+        [sys.executable, "-I", os.path.join(HERE, "budget_left.py"),
+         "3.0", "9999999999", "--reserve", "0"],
         capture_output=True, text=True, timeout=60,
     )
     assert p.returncode == 0 and p.stdout.strip() == "3.00"
@@ -63,6 +80,72 @@ def test_run_session_arms_jobs_k_are_parameters():
     # No hard-coded runner call: specs flow through the runspec helper.
     assert "runspec" in src
     assert "run --jobs dry" not in src and "run --jobs main" not in src
+
+
+def test_run_session_trap_kills_runner_and_stops_app():
+    src = open(os.path.join(HERE, "run_session.sh"), encoding="utf-8").read()
+    for sig in ("EXIT", "INT", "TERM", "HUP"):
+        assert sig in src  # the trap covers EXIT INT TERM HUP
+    assert "& RPID=$!" in src and "wait $RPID" in src  # backgrounded runner
+    assert "kill -TERM $RPID" in src  # runner killed ...
+    assert "pkill -TERM -P $RPID" in src  # ... with its children
+    assert "modal app stop" in src and "app stopped" in src
+
+
+def _alive(pid):
+    """True when a process with this pid exists (kill -0 probe)."""
+    try:
+        os.kill(pid, 0)
+    except (OSError, ValueError):
+        return False
+    return True
+
+
+def test_run_session_term_kills_dummy_runner(tmp_path):
+    import shutil
+    import signal
+    import time
+    if not shutil.which("zsh"):
+        pytest.skip("zsh is not installed")
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    stub = bindir / "modal"
+    stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    stub.chmod(0o755)
+    out = tmp_path / "out"
+    log = tmp_path / "session.log"
+    pidfile = tmp_path / "runner.pid"
+    wrap = tmp_path / "dummy_runner.sh"
+    # The runner spec args are appended to the command, so the dummy takes
+    # no arguments itself: it records its pid, then sleeps (the trap's
+    # victim). `exec` keeps the recorded pid as the sleeper.
+    wrap.write_text("#!/bin/sh\necho $$ > %s\nexec sleep 60\n" % pidfile,
+                    encoding="utf-8")
+    wrap.chmod(0o755)
+    env = dict(os.environ, RUN_SESSION_SKIP_DEPLOY="1",
+               RUN_SESSION_RUNNER_CMD="sh %s" % wrap, MODAL_BIN=str(stub))
+    with open(log, "w", encoding="utf-8") as fh:
+        proc = subprocess.Popen(
+            ["zsh", os.path.join(HERE, "run_session.sh"), str(out),
+             "--pilot", "", "--run", "dummy:sub:BR:1"],
+            stdout=fh, stderr=subprocess.STDOUT, env=env)
+    try:
+        for _ in range(100):
+            time.sleep(0.2)
+            if pidfile.exists() or proc.poll() is not None:
+                break
+        assert pidfile.exists(), "the dummy runner never started"
+        sleeper = int(pidfile.read_text(encoding="utf-8").strip().split()[0])
+        assert _alive(sleeper), "the dummy runner is not alive"
+        proc.send_signal(signal.SIGTERM)
+        proc.wait(timeout=60)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+    text = log.read_text(encoding="utf-8", errors="replace")
+    assert "app stopped" in text  # the trap stopped the app and said so
+    assert not _alive(sleeper), "the dummy runner survived TERM"
 
 
 # --------------------------------------------------------------- dashboard
