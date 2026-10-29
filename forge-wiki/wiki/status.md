@@ -68,6 +68,10 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
   recipe: TRL+PEFT bf16 LoRA on one H100, ~$4-5, smoke test first. Drafts: experiments/option-a/ (11 Tern/Skua rules,
   30 jobs, self-test 90/90) and b2-hint/SANDBOX_SPEC.DRAFT.md. The verifier's second review of the drafts was
   requested 00:10.
+- **2026-10-29 step 1 done (user yes):** Muse Code built the sandbox + BX arm (cd29dfa). verified: pytest 62/62 (outside
+  Muse's shell); 30 blind references pass through the sandbox 30/30. Cost: 62 calls, 6.30M input (6.15M cached), 62.5k
+  output → ≈ $1.4-1.55 Meta (run.usage × $1.25 / $0.15 / $4.25 per M), over the $0.8-1.2 estimate. **Spend ≈ $11.3 of
+  $30.** Open: my spec bug (no self-check after a crash is fixed); verifier check requested; then the user's yes for step 2.
 - **2026-10-29 NEW GOAL, decision (user):** "same quality as Glimmer + all fair cheap fixes, but many times cheaper and
   faster, and private" ([[new-goal-2026-10-29]]). Next: the user's yes for step 1 (Muse Code: sandbox + B-max arm).
 - **2026-10-29 morning, decision (user):** all 6 = yes, but cheapest kill tests first. verified: the free coverage audit
