@@ -103,3 +103,9 @@ allows going above $30 (2026-10-29: "u can spend more"), within the $35 agreed f
   was checked per job and none triggers. The closest are rule 34 on T7 (87.5% against 90%) and rule 35 on T2 (60
   against 48). 17 of 18 jobs had one reading and matched the references. Fixed as text only (geometry unchanged,
   selftest 18/18): E6 now states "30 deep" (rule 13 needs the depth), and T6 and C1 now say the board "sits centred".
+
+## Result (2026-10-29 21:07): pilot gate STOP
+- verified (results/thinking-2026-10-29-run2/pilot/calls.jsonl): G 8/9 and S 9/9 on calibration at 1e-6; D1-D2 6/6
+  each; 0 harness errors. By the pre-registered gate (G ≥ 8/9), the exam is too easy and the main run was not
+  started. Speed: G median 167 s against S 18 s per answer; cost about equal (≈ $0.023-0.032 against $0.025).
+  Findings: forge-wiki/wiki/findings/thinking-exam-pilot-2026-10-29.md.
