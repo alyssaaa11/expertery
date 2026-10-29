@@ -407,6 +407,21 @@ def test_image_recipe_downloads_verified_release(monkeypatch):
         (os.path.join(HERE, "run_one_fc.py"), "/work/run_one_fc.py")]
 
 
+def test_box_image_holds_no_thinking_files(monkeypatch):
+    """The answer box must not include experiments/thinking/ (Round 2
+    item 8): the standard and references live only in the grader
+    image. Inspects the image's local files."""
+    stub, made = _stub_modal_with_image()
+    monkeypatch.setattr(cloud_exec, "modal", stub)
+    cloud_exec.build_image()
+    assert made["image"].files == [
+        (os.path.join(HERE, "run_one_fc.py"), "/work/run_one_fc.py")]
+    for local, remote in made["image"].files:
+        for side in (local.lower(), remote.lower()):
+            assert "thinking" not in side
+            assert "expected" not in side and "jobs" not in side
+
+
 def test_sandbox_create_uses_the_app(monkeypatch):
     stub, made = _stub_modal_with_image()
     monkeypatch.setattr(cloud_exec, "modal", stub)

@@ -1198,3 +1198,299 @@ def test_session_wrapper_passes_exam_through():
     assert "RUN_SESSION_RUNNER_CMD" in src and "runner_fc.py" in src
     assert "--workers 8" in src
     assert "--budget 3.50" not in src and "--budget 3.5" not in src
+
+
+# ------------------------------------------------------- Round 2
+
+
+def vt_rec(job, arm, outcome, verdict, tight, sample=0):
+    """A record carrying both grades: the 0.2% verdict and tight (1e-6)."""
+    return {"job": job, "arm": arm, "sample": sample, "outcome": outcome,
+            "verdict": verdict, "tight": tight,
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50}}
+
+
+def test_thinking_decides_at_tight_first_test_at_verdict():
+    # A fake record with verdict PASS and tight FAIL counts as FAIL
+    # under the thinking exam and as PASS under first-test (and the
+    # mirror record the other way round).
+    r = vt_rec("J1", "S", "PASS", "PASS", "FAIL")
+    s_pass, s_fail = runner_fc._thinking_scored([r], "S")
+    assert ("J1", 0) in s_fail and ("J1", 0) not in s_pass
+    assert "J1" in runner_fc.pass_job_ids([r], "S")
+    m = vt_rec("J2", "S", "FAIL", "FAIL", "PASS")
+    s_pass, s_fail = runner_fc._thinking_scored([m], "S")
+    assert ("J2", 0) in s_pass
+    assert "J2" not in runner_fc.pass_job_ids([m], "S")
+    # INVALID stays INVALID under both exams.
+    inv = vt_rec("J3", "S", "INVALID", "PASS", "PASS")
+    assert runner_fc.scored_outcome(inv, "thinking") == "INVALID"
+    assert runner_fc.scored_outcome(inv, "first-test") == "INVALID"
+
+
+def test_thinking_rates_use_tight_first_test_rates_use_verdict():
+    jobs = ["J%d" % i for i in range(1, 6)]
+    records = []
+    for job in jobs[:4]:
+        for rep in range(3):
+            records.append(vt_rec(job, "S", "PASS", "PASS", "FAIL", rep))
+    for rep in range(3):
+        records.append(vt_rec("J5", "S", "FAIL", "FAIL", "FAIL", rep))
+    for job in jobs:
+        for rep in range(3):
+            records.append(vt_rec(job, "G", "FAIL", "FAIL", "FAIL", rep))
+    d = runner_fc.evaluate_thinking_decision(records)
+    assert d["rate_s"] == pytest.approx(0.0)  # all tights FAIL
+    assert d["decision_s"].startswith("INVALID")
+    d2 = runner_fc.evaluate_fc_decision(records)
+    assert d2["rate_s"] == pytest.approx(0.8)  # verdicts PASS on J1-J4
+    # Old records without verdict/tight still score by outcome.
+    assert runner_fc.scored_outcome(rec("J1", "S", "PASS"), "thinking") == \
+        "PASS"
+
+
+def test_thinking_report_has_verdict_reference_table():
+    records = [vt_rec("J1", "S", "PASS", "PASS", "PASS", rep)
+               for rep in range(2)]
+    records.append(vt_rec("J1", "S", "FAIL", "PASS", "FAIL", 2))
+    records += [vt_rec("J1", "G", "FAIL", "FAIL", "FAIL", rep)
+                for rep in range(3)]
+    summary = runner_fc.build_thinking_summary(
+        records, [], [], 1.0, 10.0, 3.0, 3.0, False, False, False,
+        ("G", "S"), k=3, workers=1)
+    assert summary["accuracy_verdict"]["S"]["rate"] == pytest.approx(1.0)
+    assert summary["rate_s"] == pytest.approx(2 / 3)
+    report = runner_fc.build_thinking_report(summary)
+    assert "## 0.2% (for reference, not the decision)" in report
+    assert "| S | 3 | 0 | 0 | 100.0% |" in report  # the verdict row
+    assert "## Accuracy (tight 1e-6: the decision)" in report
+
+
+def _timed(job, arm, sample, outcome, t_call_s, prompt, cached, completion):
+    return {"job": job, "arm": arm, "sample": sample, "outcome": outcome,
+            "verdict": outcome, "tight": outcome, "t_call_s": t_call_s,
+            "usage": {"prompt_tokens": prompt, "cached_tokens": cached,
+                      "completion_tokens": completion}}
+
+
+def test_speed_and_cost_per_answer_in_summary_and_report():
+    records = [_timed("J1", "G", 0, "PASS", 1.0, 1000, 0, 100),
+               _timed("J1", "G", 1, "FAIL", 3.0, 1000, 0, 100),
+               _timed("J1", "S", 0, "PASS", 2.0, 2000, 500, 200),
+               _timed("J1", "S", 1, "PASS", 4.0, 2000, 500, 200)]
+    summary = runner_fc.build_thinking_summary(
+        records, [], [], 1.0, 10.0, 3.0, 3.0, False, False, False,
+        ("G", "S"), k=2, workers=1)
+    g, s = summary["speed_cost"]["G"], summary["speed_cost"]["S"]
+    assert g["median_s"] == pytest.approx(2.0)
+    assert g["mean_s"] == pytest.approx(2.0)
+    assert s["median_s"] == pytest.approx(3.0)
+    assert s["mean_input_tokens"] == pytest.approx(2000.0)
+    assert s["mean_cached_tokens"] == pytest.approx(500.0)
+    assert s["mean_output_tokens"] == pytest.approx(200.0)
+    assert s["cost_per_answer"] == pytest.approx(
+        runner_fc.cost_s_of_usage(
+            {"prompt_tokens": 2000, "cached_tokens": 500,
+             "completion_tokens": 200}))
+    assert s["answers_per_dollar"] == pytest.approx(1 / s["cost_per_answer"])
+    # Glimmer calls are not metered: no invented price, n/a in report.
+    assert g["cost_per_answer"] is None
+    assert g["answers_per_dollar"] is None
+    ratios = summary["speed_cost_ratios"]
+    assert ratios["time_G_div_S"] == pytest.approx(2.0 / 3.0)
+    assert ratios["time_S_div_G"] == pytest.approx(3.0 / 2.0)
+    assert ratios["cost_G_div_S"] is None
+    report = runner_fc.build_thinking_report(summary)
+    assert "## Speed and cost per answer" in report
+    assert "G÷S" in report and "S÷G" in report
+    assert "n/a" in report
+    # The first-test summary carries the same table.
+    fc = runner_fc.build_fc_summary(
+        [rec("J1", "G", "PASS"), rec("J1", "S", "PASS")],
+        [], [], 1.0, 10.0, 3.0, 3.0, False, False, False,
+        ("G", "S"), k=1, workers=1)
+    assert "speed_cost" in fc and "speed_cost_ratios" in fc
+    assert "## Speed and cost per answer" in runner_fc.build_fc_report(fc)
+
+
+def test_frozen_standards_sha_is_the_40_rule_standard():
+    assert runner_fc.FROZEN_STANDARDS_SHA256 == \
+        "f9aa341e6224fdfbf0770900b9404fbf3146577e0640b91b5cc1e6b31784877c"
+
+
+def test_call_limits_match_first_test_and_first_call_logged(tmp_path, capsys):
+    assert runner_fc.FC_MAX_TOKENS == runner_fc.runner.MAX_TOKENS
+    assert runner_fc.CALL_TIMEOUT == runner_fc.runner.CALL_TIMEOUT
+
+    def post(endpoint, body, timeout):
+        assert body["max_tokens"] == runner_fc.runner.MAX_TOKENS
+        return fake_chat("```python\nresult = 1\n```", prompt=777,
+                         completion=55, cached_tokens=7)
+
+    box = lambda code: {"step_bytes": b"S", "measure": {}, "log": ""}  # noqa: E731
+    cfgs = {"G": {"endpoint": "g", "model": "gm"},
+            "S": {"endpoint": "s", "model": "sm"}}
+    out = str(tmp_path / "run")
+    sent, summary = runner_fc.run_suite_fc(
+        [{"id": "D1", "level": "dry", "text": "job one"}], "MANUAL", out,
+        cfgs, {}, budget=10.0, arms=("G", "S"), k=1, workers=1,
+        post_fn=post, sleep_fn=lambda s: None, exec_fn=box,
+        grade_fn=lambda jid, step: dict(PASS_GRADE))
+    assert all(r["t_call_s"] is not None and r["usage"] for r in sent)
+    assert summary["first_call_prompt_tokens"] == {"G": 777, "S": 777}
+    logged = capsys.readouterr().out
+    assert "FIRST_CALL_PROMPT_TOKENS arm=G prompt_tokens=777" in logged
+    assert "FIRST_CALL_PROMPT_TOKENS arm=S prompt_tokens=777" in logged
+
+
+def test_fc_summary_with_thinking_exam_calls_decide_thinking():
+    records = think_grid(GAP_S, GAP_G)
+    for r in records:
+        r["exam"] = "thinking"
+    summary = runner_fc.build_fc_summary(
+        records, [], [], 1.0, 10.0, 3.0, 3.0, False, False, False,
+        ("G", "S"), k=3, workers=1, exam="thinking")
+    want = runner_fc.evaluate_thinking_decision(records)
+    assert summary["decision"] == want["decision"]
+    assert summary["decision_s"] == want["decision_s"]
+    assert summary["wins_s"] == want["wins_s"] == 4
+    assert summary["accuracy_verdict"]["S"]["rate"] == pytest.approx(0.8)
+    report = runner_fc.build_fc_report(summary)
+    assert "## 0.2% (for reference, not the decision)" in report
+    assert "## Speed and cost per answer" in report
+
+
+def test_summarize_reads_exam_and_k_from_the_records(tmp_path):
+    gs_dir, w_dir = tmp_path / "gs", tmp_path / "w"
+    gs_dir.mkdir()
+    w_dir.mkdir()
+    records = think_grid(GAP_S, GAP_G)
+    for r in records:
+        r["exam"] = "thinking"
+    _write_calls_jsonl(str(gs_dir / "calls.jsonl"), records)
+    _write_calls_jsonl(str(w_dir / "calls.jsonl"), [])
+    out = str(tmp_path / "decision")
+    _, summary = runner_fc.summarize_runs(str(gs_dir), str(w_dir), out)
+    assert summary["exam"] == "thinking" and summary["k"] == 3
+    assert summary["decision"].startswith("gap found")
+
+
+def _exam_dir(tmp_path, name, exam, jobs=("J1",)):
+    d = tmp_path / name
+    d.mkdir()
+    _write_calls_jsonl(str(d / "calls.jsonl"),
+                       [{**rec(j, "S", "PASS"), "exam": exam} for j in jobs])
+    return str(d)
+
+
+def test_mixed_exams_are_refused(tmp_path):
+    thinking = _exam_dir(tmp_path, "s-thinking", "thinking")
+    first = _exam_dir(tmp_path, "s-first", "first-test")
+    legacy = tmp_path / "s-legacy"
+    legacy.mkdir()
+    _write_calls_jsonl(str(legacy / "calls.jsonl"),
+                       [rec("J1", "S", "PASS")])  # no exam: first-test
+    out = str(tmp_path / "decision")
+    with pytest.raises(ValueError):
+        runner_fc.summarize_runs(thinking, first, out)  # dirs differ
+    with pytest.raises(ValueError):
+        runner_fc.summarize_runs(thinking, thinking, out,
+                                 exam="first-test")  # vs --exam
+    with pytest.raises(ValueError):
+        runner_fc.check_escalate_exam(thinking, "first-test")
+    # A record without `exam` counts as first-test: compatible pair.
+    _, summary = runner_fc.summarize_runs(first, str(legacy), out)
+    assert summary["exam"] == "first-test"
+    with pytest.raises(SystemExit) as exc:
+        runner_fc.main(["--summarize", thinking, first, "--out", out])
+    assert exc.value.code == 2
+    with pytest.raises(SystemExit) as exc:
+        runner_fc.main(["--exam", "first-test", "--jobs", "dry",
+                        "--out", out, "--arms", "G",
+                        "--escalate-from", thinking])
+    assert exc.value.code == 2
+
+
+def test_invalid_counts_inside_the_thinking_decision():
+    # A G INVALID counts as passed for G: S 3/3 with G at 1 PASS + 2
+    # INVALID is no win (a lone G PASS would win).
+    records = [trec("J1", "S", rep, "PASS") for rep in range(3)]
+    records.append(trec("J1", "G", 0, "PASS"))
+    for rep in (1, 2):
+        records.append({"job": "J1", "arm": "G", "sample": rep,
+                        "outcome": "INVALID", "failure_tag": "harness",
+                        "run_error": "harness: boom", "usage": {}})
+    s_pass, _ = runner_fc._thinking_scored(records, "S")
+    assert runner_fc.thinking_wins(records, s_pass) == 0
+    clean = [trec("J1", "S", rep, "PASS") for rep in range(3)]
+    clean.append(trec("J1", "G", 0, "PASS"))
+    clean += [trec("J1", "G", rep, "FAIL") for rep in (1, 2)]
+    s_pass, _ = runner_fc._thinking_scored(clean, "S")
+    assert runner_fc.thinking_wins(clean, s_pass) == 1
+    # An S INVALID counts as not passed for S: 1 PASS + 2 INVALID wins
+    # nothing.
+    sinv = [trec("J2", "S", 0, "PASS")]
+    sinv += [{"job": "J2", "arm": "S", "sample": rep, "outcome": "INVALID",
+              "failure_tag": "INVALID", "run_error": "cut off", "usage": {}}
+             for rep in (1, 2)]
+    sinv += [trec("J2", "G", rep, "FAIL") for rep in range(3)]
+    s_pass, _ = runner_fc._thinking_scored(sinv, "S")
+    assert runner_fc.thinking_wins(sinv, s_pass) == 0
+    # A W INVALID is not a rescue.
+    wrec = [trec("J3", "S", 0, "FAIL"),
+            {"job": "J3", "arm": "W", "sample": 0, "outcome": "INVALID",
+             "failure_tag": "INVALID", "run_error": "cut off", "usage": {}}]
+    assert runner_fc.thinking_teacher_passes(wrec) == set()
+    wrec2 = [trec("J3", "S", 0, "FAIL"), trec("J3", "W", 0, "PASS")]
+    assert runner_fc.thinking_teacher_passes(wrec2) == {("J3", 0)}
+    # Rule 0's gate is G and S only: W INVALIDs never force RUN INVALID.
+    base = think_grid(GAP_S, GAP_G)
+    w_bad = list(base) + [{"job": "J%d" % i, "arm": "W", "sample": 0,
+                           "outcome": "INVALID", "failure_tag": "INVALID",
+                           "run_error": "cut off", "usage": {}}
+                          for i in (1, 2, 3)]
+    d = runner_fc.evaluate_thinking_decision(w_bad)
+    assert d["run_invalid"] is False
+    assert d["decision"].startswith("gap found")
+    g_bad = think_grid(GAP_S, GAP_G, harness=[("G", "J1"), ("G", "J2")])
+    assert runner_fc.evaluate_thinking_decision(g_bad)["decision"] == \
+        "RUN INVALID"
+
+
+def test_live_write_goes_under_a_lock(monkeypatch):
+    entries = []
+
+    class _Lock:
+        def __enter__(self):
+            entries.append(True)
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(runner_fc, "_LIVE_LOCK", _Lock())
+    fh = io.StringIO()
+    runner_fc._write_live(fh, {"job": "J1"})
+    assert entries == [True]
+    assert json.loads(fh.getvalue()) == {"job": "J1"}
+
+
+def test_suite_with_eight_workers_writes_every_record(tmp_path):
+    jobs = [{"id": "D%d" % i, "level": "dry", "text": "t%d" % i}
+            for i in range(2)]
+    cfgs = {"G": {"endpoint": "g", "model": "gm"},
+            "S": {"endpoint": "s", "model": "sm"}}
+    out = str(tmp_path / "run")
+    sent, _ = runner_fc.run_suite_fc(
+        jobs, "MANUAL", out, cfgs, {}, budget=10.0, arms=("G", "S"),
+        k=2, workers=8, post_fn=fake_post_for({}),
+        sleep_fn=lambda s: None,
+        exec_fn=lambda code: {"step_bytes": b"S", "measure": {},
+                              "log": ""},
+        grade_fn=lambda jid, step: dict(PASS_GRADE))
+    assert len(sent) == 8  # 2 jobs x 2 arms x k = 2, none lost
+    with open(os.path.join(out, "calls.jsonl"), encoding="utf-8") as f:
+        assert len(f.readlines()) == 8
+
+
+def test_wonder_cached_input_priced_at_twenty_cents_per_m():
+    assert runner_fc.COST_W_CACHED_PER_M == 0.20

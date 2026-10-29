@@ -25,6 +25,7 @@ import hashlib
 import json
 import os
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -344,17 +345,172 @@ def cost_s_total(s_usages):
     return sum(cost_s_of_usage(u) for u in s_usages)
 
 
+def exam_of_record(rec):
+    """The record's exam (a record without `exam` counts as first-test)."""
+    return rec.get("exam", "first-test") or "first-test"
+
+
+def scored_outcome(rec, exam="first-test"):
+    """PASS/FAIL/INVALID for rates and decisions under one exam.
+
+    Round 2 item 1: the thinking exam decides at 1e-6 (`tight`);
+    first-test keeps the 0.2% `verdict`. INVALID (harness failure,
+    cut-off, failed call) stays INVALID under both. Records without
+    the exam's field fall back to `outcome` (old k = 1 records)."""
+    if rec.get("outcome") == "INVALID":
+        return "INVALID"
+    if exam == "thinking":
+        cand = rec.get("tight", rec.get("outcome"))
+    else:
+        cand = rec.get("verdict", rec.get("outcome"))
+    if cand in ("PASS", "FAIL"):
+        return cand
+    return rec.get("outcome")
+
+
+def cost_of_usage_for_arm(arm, usage):
+    """Model-token $ for one answer (None when the arm is unmetered).
+
+    S is priced cached-aware, W at $20/M output, $4/M input, $0.20/M
+    cached. G (Glimmer) has no metered rate in this harness, so its $
+    stays None (shown as n/a) instead of an invented price."""
+    if arm == "S":
+        return cost_s_of_usage(usage)
+    if arm == "W":
+        return cost_w_of_usage(usage)
+    return None
+
+
+def _num_or_none(value):
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _median(values):
+    ordered = sorted(values)
+    n = len(ordered)
+    if not n:
+        return None
+    mid = n // 2
+    if n % 2:
+        return ordered[mid]
+    return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
+def speed_cost_per_arm(records, arm):
+    """Speed and cost per answer for one arm (Round 2 item 2).
+
+    Wall time is request sent to response received per answer
+    (`t_call_s`, the model call only). Tokens are means per answer;
+    $ per answer is the mean model-token $ (None for unmetered arms);
+    answers per dollar is None when the cost is zero or unmetered."""
+    recs = [r for r in records if r.get("arm") == arm]
+    n = len(recs)
+    times = []
+    in_tok, cached_tok, out_tok = [], [], []
+    costs = []
+    for r in recs:
+        t = _num_or_none(r.get("t_call_s", r.get("latency")))
+        if t is not None:
+            times.append(t)
+        usage = r.get("usage") or {}
+        in_tok.append(_num_or_none(usage.get("prompt_tokens")) or 0.0)
+        cached_tok.append(float(cached_tokens_of(usage)))
+        out_tok.append(_num_or_none(usage.get("completion_tokens")) or 0.0)
+        if arm in ("S", "W"):
+            costs.append(cost_of_usage_for_arm(arm, usage))
+    total_cost = sum(costs) if costs else 0.0
+    return {
+        "n": n,
+        "median_s": _median(times),
+        "mean_s": (sum(times) / len(times)) if times else None,
+        "mean_input_tokens": (sum(in_tok) / n) if n else None,
+        "mean_cached_tokens": (sum(cached_tok) / n) if n else None,
+        "mean_output_tokens": (sum(out_tok) / n) if n else None,
+        "cost_per_answer": ((total_cost / n) if n else None)
+        if arm in ("S", "W") else None,
+        "answers_per_dollar": ((n / total_cost) if total_cost > 0 else None)
+        if arm in ("S", "W") else None,
+    }
+
+
+def speed_cost_ratios(speed_cost):
+    """G÷S and S÷G ratios for time and $ (None when either side is
+    missing or unmetered)."""
+    g = speed_cost.get("G", {})
+    s = speed_cost.get("S", {})
+
+    def _ratio(a, b):
+        if a is None or b is None:
+            return None
+        try:
+            return (float(a) / float(b)) if float(b) else None
+        except (TypeError, ValueError):
+            return None
+
+    return {
+        "time_G_div_S": _ratio(g.get("mean_s"), s.get("mean_s")),
+        "time_S_div_G": _ratio(s.get("mean_s"), g.get("mean_s")),
+        "cost_G_div_S": _ratio(g.get("cost_per_answer"),
+                               s.get("cost_per_answer")),
+        "cost_S_div_G": _ratio(s.get("cost_per_answer"),
+                               g.get("cost_per_answer")),
+    }
+
+
+def summarize_speed_cost(records, arms):
+    """Per-arm speed/cost plus G÷S/S÷G ratios for summary.json."""
+    table = {arm: speed_cost_per_arm(records, arm) for arm in arms}
+    return table, speed_cost_ratios(table)
+
+
+def first_call_prompt_tokens(records, arms):
+    """Prompt token count of the first call per arm (Round 2 item 4).
+
+    The prompt is longer now (manual + the 40-rule standard); the
+    runner logs this per arm. Records carry their usage, so this is
+    read off the records (None when an arm never called)."""
+    out = {}
+    for arm in arms:
+        out[arm] = None
+        for r in records:
+            if r.get("arm") == arm and isinstance(r.get("usage"), dict):
+                out[arm] = r["usage"].get("prompt_tokens")
+                break
+    return out
+
+
+def accuracy_at_verdict(records, arms):
+    """Per-arm PASS/FAIL/INVALID at the 0.2% verdict (the reference
+    table: the thinking decision uses tight instead)."""
+    table = {}
+    for arm in arms:
+        sub = [r for r in records if r.get("arm") == arm]
+        p = sum(1 for r in sub if scored_outcome(r, "first-test") == "PASS")
+        f = sum(1 for r in sub if scored_outcome(r, "first-test") == "FAIL")
+        inv = sum(1 for r in sub if r.get("outcome") == "INVALID")
+        table[arm] = {"PASS": p, "FAIL": f, "INVALID": inv,
+                      "rate": (p / (p + f)) if (p + f) else None}
+    return table
+
+
 # ------------------------------------------------------- PLAN decision
 
 
 def pass_job_ids(records, arm):
     return {r["job"] for r in records
-            if r.get("arm") == arm and r.get("outcome") == "PASS"}
+            if r.get("arm") == arm
+            and scored_outcome(r, "first-test") == "PASS"}
 
 
 def fail_records(records, arm):
     return [r for r in records
-            if r.get("arm") == arm and r.get("outcome") == "FAIL"]
+            if r.get("arm") == arm
+            and scored_outcome(r, "first-test") == "FAIL"]
 
 
 def api_error_share(records, arm):
@@ -417,9 +573,11 @@ def teacher_pass_ids(records):
     a W PASS only counts where S ran and failed)."""
     t = set(pass_job_ids(records, "S"))
     s_failed = {r["job"] for r in records
-                if r.get("arm") == "S" and r.get("outcome") == "FAIL"}
+                if r.get("arm") == "S"
+                and scored_outcome(r, "first-test") == "FAIL"}
     for r in records:
-        if (r.get("arm") == "W" and r.get("outcome") == "PASS"
+        if (r.get("arm") == "W"
+                and scored_outcome(r, "first-test") == "PASS"
                 and r.get("job") in s_failed):
             t.add(r["job"])
     return t
@@ -438,7 +596,7 @@ def scored_job_ids(records, arm):
     """Jobs in `arm` with a scored answer (PASS or FAIL; INVALID excluded)."""
     return {r["job"] for r in records
             if r.get("arm") == arm
-            and r.get("outcome") in ("PASS", "FAIL")}
+            and scored_outcome(r, "first-test") in ("PASS", "FAIL")}
 
 
 def evaluate_fc_decision(records):
@@ -500,35 +658,50 @@ def evaluate_fc_decision(records):
 
 
 def _thinking_scored(records, arm):
-    """Scored (PASS/FAIL) samples of one arm as {(job, sample)} sets."""
+    """Scored (PASS/FAIL) samples of one arm as {(job, sample)} sets.
+
+    Round 2 item 1: the thinking exam scores at 1e-6 (`tight`), so a
+    record with verdict PASS and tight FAIL counts as FAIL here (and
+    as PASS under first-test, which scores the verdict)."""
     passed, failed = set(), set()
     for r in records:
-        if r.get("arm") != arm or r.get("outcome") not in ("PASS", "FAIL"):
+        if r.get("arm") != arm:
+            continue
+        outcome = scored_outcome(r, "thinking")
+        if outcome not in ("PASS", "FAIL"):
             continue
         key = (r.get("job"), r.get("sample", 0))
-        (passed if r.get("outcome") == "PASS" else failed).add(key)
+        (passed if outcome == "PASS" else failed).add(key)
     return passed, failed
 
 
 def thinking_teacher_passes(records):
     """T = S passes plus W rescues per (job, rep) sample: a sample
-    passes for T when S passed it or W rescued it (an S FAIL)."""
+    passes for T when S passed it or W rescued it (an S FAIL). A W
+    INVALID counts as not rescued (Round 2 item 7)."""
     s_pass, s_fail = _thinking_scored(records, "S")
     t = set(s_pass)
     for r in records:
-        if (r.get("arm") == "W" and r.get("outcome") == "PASS"
+        if (r.get("arm") == "W"
+                and scored_outcome(r, "thinking") == "PASS"
                 and (r.get("job"), r.get("sample", 0)) in s_fail):
             t.add((r.get("job"), r.get("sample", 0)))
     return t
 
 
 def thinking_wins(records, x_pass_samples):
-    """Jobs where X passes >= 2 of 3 samples and G passes <= 1 of 3."""
+    """Jobs where X passes >= 2 of 3 samples and G passes <= 1 of 3.
+
+    Round 2 item 7 (conservative against claiming a gap): an INVALID
+    sample counts as not passed for X and as passed for G."""
     g_pass, _ = _thinking_scored(records, "G")
+    g_invalid = {(r.get("job"), r.get("sample", 0)) for r in records
+                 if r.get("arm") == "G" and r.get("outcome") == "INVALID"}
+    g_block = set(g_pass) | g_invalid
     wins = 0
     for job in {j for j, _ in x_pass_samples}:
         n_x = sum(1 for (j, _) in x_pass_samples if j == job)
-        n_g = sum(1 for (j, _) in g_pass if j == job)
+        n_g = sum(1 for (j, _) in g_block if j == job)
         if n_x >= 2 and n_g <= 1:
             wins += 1
     return wins
@@ -590,7 +763,10 @@ def evaluate_thinking_decision(records):
     decision_t = decide_thinking_one(rate_g, rate_t, wins_t)
     agree = decision_s == decision_t
     decision = decision_s if not agree else decision_t
-    bad_arms = run_invalid_arms(records)
+    # Round 2 item 7: rule 0's 5% gate applies to G and S only (W
+    # INVALIDs are already "not rescued", never a harness signal).
+    bad_arms = {arm: share for arm, share in run_invalid_arms(records).items()
+                if arm in ("G", "S")}
     if bad_arms:
         decision = "RUN INVALID"
     return {
@@ -610,6 +786,61 @@ def evaluate_thinking_decision(records):
     }
 
 
+def render_accuracy_lines(summary, arms, rates=None):
+    """Markdown accuracy table (per arm PASS / FAIL / INVALID + rate).
+
+    `rates` is {arm: {"PASS", "FAIL", "INVALID", "rate"}} (the 0.2%
+    reference table); without it the arm stats' own counts and
+    pass_rate are shown (the decision table)."""
+    lines = ["| Arm | PASS | FAIL | INVALID | pass rate |",
+             "|---|---|---|---|---|"]
+    for arm in arms:
+        stats = summary["arms"][arm]
+        if rates and arm in rates:
+            counts, rate = rates[arm], rates[arm]["rate"]
+        else:
+            counts, rate = stats, stats.get("pass_rate")
+        pr = "n/a" if rate is None else "%.1f%%" % (100 * rate)
+        lines.append("| %s | %s | %s | %s | %s |"
+                     % (arm, counts["PASS"], counts["FAIL"],
+                        counts["INVALID"], pr))
+    return lines
+
+
+def render_speed_cost_lines(summary):
+    """Markdown 'Speed and cost per answer' table + G÷S/S÷G ratios."""
+    lines = ["## Speed and cost per answer",
+             "Wall time is request sent to response received, per answer.",
+             "| Arm | answers | median s | mean s | mean in | mean cached | "
+             "mean out | $ / answer | answers / $ |",
+             "|---|---|---|---|---|---|---|---|---|"]
+    for arm in summary["speed_cost"]:
+        sc = summary["speed_cost"][arm]
+
+        def _cell(value, fmt="%.2f"):
+            return "n/a" if value is None else fmt % value
+
+        lines.append(
+            "| %s | %d | %s | %s | %s | %s | %s | %s | %s |"
+            % (arm, sc["n"], _cell(sc["median_s"]), _cell(sc["mean_s"]),
+               _cell(sc["mean_input_tokens"], "%.0f"),
+               _cell(sc["mean_cached_tokens"], "%.0f"),
+               _cell(sc["mean_output_tokens"], "%.0f"),
+               "n/a" if sc["cost_per_answer"] is None
+               else "$%.4f" % sc["cost_per_answer"],
+               _cell(sc["answers_per_dollar"], "%.1f")))
+    r = summary["speed_cost_ratios"]
+
+    def _r(value):
+        return "n/a" if value is None else "%.2f" % value
+
+    lines.append("Ratios: time G÷S %s, S÷G %s; $ G÷S %s, S÷G %s "
+                 "(n/a: Glimmer calls are not metered)."
+                 % (_r(r["time_G_div_S"]), _r(r["time_S_div_G"]),
+                    _r(r["cost_G_div_S"]), _r(r["cost_S_div_G"])))
+    return lines
+
+
 def build_thinking_summary(records, s_usages, w_usages, elapsed_s, budget,
                            budget_c, budget_w, budget_stopped,
                            budget_c_stopped, budget_w_stopped, arms, k=3,
@@ -617,6 +848,7 @@ def build_thinking_summary(records, s_usages, w_usages, elapsed_s, budget,
     arm_timing = arm_timing or {}
     per_arm = {arm: runner.arm_stats(records, arm, extra=True, k=k)
                for arm in arms}
+    speed_cost, ratios = summarize_speed_cost(records, arms)
     cost_s = round(cost_s_total(s_usages), 4)
     cost_w = round(cost_w_total(w_usages), 4)
     gpu = round(runner.gpu_cost_of_elapsed(elapsed_s), 4)
@@ -656,6 +888,10 @@ def build_thinking_summary(records, s_usages, w_usages, elapsed_s, budget,
         "rate_s": t["rate_s"],
         "wins_s": t["wins_s"],
         "wins_t": t["wins_t"],
+        "accuracy_verdict": accuracy_at_verdict(records, arms),
+        "speed_cost": speed_cost,
+        "speed_cost_ratios": ratios,
+        "first_call_prompt_tokens": first_call_prompt_tokens(records, arms),
         "table": table,
         "k": k,
         "workers": workers,
@@ -664,8 +900,10 @@ def build_thinking_summary(records, s_usages, w_usages, elapsed_s, budget,
 
 
 def build_thinking_report(summary):
+    arms = [a for a in summary["arms"]]
     lines = ["# Thinking-jobs gap-test report", ""]
     lines.append("Teacher T = S ∪ W-rescues per (job, rep) sample.")
+    lines.append("The decision rates PASS/FAIL at 1e-6 (`tight`).")
     lines.append("Decision on T: **%s**" % summary["decision_t"])
     lines.append("Decision on S alone: **%s**" % summary["decision_s"])
     lines.append("Report decision: **%s**" % summary["decision"])
@@ -686,6 +924,15 @@ def build_thinking_report(summary):
                          "%s (%.1f%%)" % (a, 100 * shr)
                          for a, shr in sorted(
                              summary["run_invalid_arms"].items())))
+    lines.append("")
+    lines.append("## Accuracy (tight 1e-6: the decision)")
+    lines.extend(render_accuracy_lines(summary, arms))
+    lines.append("")
+    lines.append("## 0.2% (for reference, not the decision)")
+    lines.extend(
+        render_accuracy_lines(summary, arms, summary["accuracy_verdict"]))
+    lines.append("")
+    lines.extend(render_speed_cost_lines(summary))
     lines.append("")
     return "\n".join(lines)
 
@@ -737,7 +984,7 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
     content, finish_reason, usage = "", None, {}
     reasoning_len, cached = 0, 0
     outcome = fails = measurements = code = run_error = None
-    failure_tag, grade_tight = "", None
+    failure_tag, grade_tight, grade_verdict = "", None, None
     call_error, built = None, False
     box_ok, was_graded = False, False  # the live dashboard counts these
     latency = 0.0
@@ -790,13 +1037,28 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
                             built = True
                             was_graded = True
                             measurements = graded.get("measurements")
-                            grade_tight = graded.get("tight")
-                            if graded.get("verdict") == "PASS":
+                            grade_verdict = graded.get("verdict")
+                            grade_tight = graded.get("tight", grade_verdict)
+                            if exam == "thinking":
+                                # Round 2 item 1: the thinking PASS/FAIL
+                                # is the 1e-6 `tight` field; the 0.2%
+                                # verdict is recorded next to it.
+                                tight_fails = graded.get("fails_tight")
+                                if tight_fails is None:
+                                    tight_fails = graded.get("fails")
+                                if grade_tight == "PASS":
+                                    outcome, fails = "PASS", []
+                                else:
+                                    outcome = "FAIL"
+                                    fails = list(tight_fails or [])
+                            elif grade_verdict == "PASS":
                                 outcome, fails = "PASS", []
-                                failure_tag = ""
                             else:
                                 outcome = "FAIL"
                                 fails = list(graded.get("fails") or [])
+                            if outcome == "PASS":
+                                failure_tag = ""
+                            else:
                                 failure_tag = tag_failure(
                                     finish_reason, content, run_error,
                                     built, fails)
@@ -821,6 +1083,7 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
         "end": end,
         "seconds": round(seconds, 3),
         "latency": round(latency, 3),
+        "t_call_s": round(latency, 3),
         "finish_reason": finish_reason,
         "usage": usage,
         "cached_tokens": cached,
@@ -832,6 +1095,7 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
         "fails": fails or [],
         "failed_checks": fails or [],
         "measurements": measurements,
+        "verdict": grade_verdict,
         "tight": grade_tight,
         "run_error": run_error,
         "failure_tag": failure_tag,
@@ -939,7 +1203,54 @@ def merge_run_costs(summary, gs_dir, w_dir):
     return summary
 
 
-def summarize_runs(gs_dir, w_dir, out_dir):
+def dir_exams(run_dir):
+    """The exams in one run dir's calls.jsonl (a record without `exam`
+    counts as first-test)."""
+    return {exam_of_record(r) for r in read_calls_jsonl(run_dir)}
+
+
+def check_exams_match(gs_dir, w_dir, exam=None):
+    """Refuse mixed exams (Round 2 item 6): the two run dirs must name
+    one exam between them (and inside each), and it must equal `exam`
+    when given. Returns that exam. Raises ValueError otherwise."""
+    gs_exams = dir_exams(gs_dir)
+    w_exams = dir_exams(w_dir)
+    if len(gs_exams) > 1:
+        raise ValueError(
+            "--summarize refuses: %s mixes exams %s"
+            % (gs_dir, sorted(gs_exams)))
+    if len(w_exams) > 1:
+        raise ValueError(
+            "--summarize refuses: %s mixes exams %s"
+            % (w_dir, sorted(w_exams)))
+    both = gs_exams | w_exams
+    if len(both) > 1:
+        raise ValueError(
+            "--summarize refuses: run dirs' exams differ (%s vs %s)"
+            % (sorted(gs_exams), sorted(w_exams)))
+    dir_exam = next(iter(both)) if both else "first-test"
+    if exam is not None and exam != dir_exam:
+        raise ValueError(
+            "--summarize refuses: run dirs are %s but --exam is %s"
+            % (dir_exam, exam))
+    return dir_exam
+
+
+def check_escalate_exam(escalate_dir, exam):
+    """Refuse a mixed exam for --escalate-from (Round 2 item 6): the S
+    run dir's exam must equal `exam`. Raises ValueError otherwise."""
+    exams = dir_exams(escalate_dir)
+    if len(exams) > 1:
+        raise ValueError(
+            "--escalate-from refuses: %s mixes exams %s"
+            % (escalate_dir, sorted(exams)))
+    if exams and next(iter(exams)) != exam:
+        raise ValueError(
+            "--escalate-from refuses: %s is %s but --exam is %s"
+            % (escalate_dir, next(iter(exams)), exam))
+
+
+def summarize_runs(gs_dir, w_dir, out_dir, exam=None):
     """Decision over the union of the GS and W runs (FIX_SPEC Round 4.1).
 
     Each run's own summary sees only its own records, so the
@@ -949,11 +1260,14 @@ def summarize_runs(gs_dir, w_dir, out_dir):
     first-test rules otherwise), keeps the two runs' costs and token
     counts, and writes summary.json + report.md into `out_dir`. No
     model, Modal, or network calls: pure local reads and arithmetic.
+
+    Round 2 item 5: the exam comes from the records (with `k` as
+    recorded there, never a hard-coded k = 1); item 6 refuses mixed
+    exams (ValueError; the CLI turns it into exit 2).
     """
+    exam = check_exams_match(gs_dir, w_dir, exam)
     records = read_calls_jsonl(gs_dir) + read_calls_jsonl(w_dir)
     arms = tuple(sorted({r.get("arm") for r in records if r.get("arm")}))
-    exams = {r.get("exam", "first-test") for r in records}
-    exam = exams.pop() if len(exams) == 1 else "first-test"
     k = max([r.get("sample", 0) for r in records] + [0]) + 1
     if exam == "thinking":
         summary = build_thinking_summary(
@@ -979,11 +1293,16 @@ def summarize_runs(gs_dir, w_dir, out_dir):
     return records, summary
 
 
+_LIVE_LOCK = threading.Lock()
+
+
 def _write_live(fh, rec):
-    """Append one graded record now (flush): the dashboard reads the
-    file while the run is still going."""
-    fh.write(json.dumps(rec) + "\n")
-    fh.flush()
+    """Append one graded record now (flush), under a lock: up to 8
+    workers share the file. The dashboard reads it while the run is
+    still going."""
+    with _LIVE_LOCK:
+        fh.write(json.dumps(rec) + "\n")
+        fh.flush()
 
 
 def finish_rec(rec, rep, live_fh):
@@ -1124,6 +1443,13 @@ def run_suite_fc(jobs, manual_text, out_dir, arm_cfgs, key_map,
         live.close()
     elapsed = time.monotonic() - t_start
     sent = [r for r in records if r is not None]
+    # Round 2 item 4: the prompt is longer now (manual + the 40-rule
+    # standard), so the prompt token count of the first call per arm
+    # is logged (max_tokens and the call timeout are unchanged from
+    # the first-test FreeCAD run).
+    for arm, tokens in first_call_prompt_tokens(sent, arms).items():
+        print("FIRST_CALL_PROMPT_TOKENS arm=%s prompt_tokens=%s"
+              % (arm, tokens))
     if exam == "thinking":
         summary = build_thinking_summary(
             sent, s_usages, w_usages, elapsed, budget, budget_c, budget_w,
@@ -1185,11 +1511,32 @@ def build_fc_summary(records, s_usages, w_usages, elapsed_s, budget,
     cost_s = round(cost_s_total(s_usages), 4)
     cost_w = round(cost_w_total(w_usages), 4)
     gpu = round(runner.gpu_cost_of_elapsed(elapsed_s), 4)
-    decision = evaluate_fc_decision(records)
+    speed_cost, ratios = summarize_speed_cost(records, arms)
+    if exam == "thinking":
+        # Round 2 item 5: with exam = thinking this summary calls
+        # decide_thinking too (the end-of-run and --summarize paths
+        # reach it with k as recorded, never a hard-coded k = 1).
+        t = evaluate_thinking_decision(records)
+        decision = {
+            "decision_t": t["decision_t"],
+            "decision_s": t["decision_s"],
+            "decision": t["decision"],
+            "agree": t["agree"],
+            "wonder_share": t["wonder_share"],
+            "run_invalid": t["run_invalid"],
+            "run_invalid_arms": t["run_invalid_arms"],
+            "rate_g": t["rate_g"],
+            "rate_t": t["rate_t"],
+            "rate_s": t["rate_s"],
+            "wins_s": t["wins_s"],
+            "wins_t": t["wins_t"],
+        }
+    else:
+        decision = evaluate_fc_decision(records)
     table = {}
     for rec in records:
         table.setdefault(rec["job"], {})[rec["arm"]] = rec.get("outcome")
-    return {
+    summary = {
         "exam": exam,
         "arms": per_arm,
         "levels": by_level,
@@ -1212,6 +1559,9 @@ def build_fc_summary(records, s_usages, w_usages, elapsed_s, budget,
                   "total": per_arm[arm]["total_tokens"]}
             for arm in arms
         },
+        "speed_cost": speed_cost,
+        "speed_cost_ratios": ratios,
+        "first_call_prompt_tokens": first_call_prompt_tokens(records, arms),
         "teacher_T_pass": sorted(teacher_pass_ids(records)),
         "wonder_share": decision["wonder_share"],
         "decision_t": decision["decision_t"],
@@ -1228,10 +1578,46 @@ def build_fc_summary(records, s_usages, w_usages, elapsed_s, budget,
         "workers": workers,
         "arm_timing": arm_timing,
     }
+    if exam == "thinking":
+        summary["accuracy_verdict"] = accuracy_at_verdict(records, arms)
+        summary["wins_s"] = decision["wins_s"]
+        summary["wins_t"] = decision["wins_t"]
+    return summary
 
 
 def build_fc_report(summary):
     arms = [a for a in summary["arms"]]
+    if summary.get("exam") == "thinking":
+        # Round 2 item 5: this report also runs the thinking rules.
+        lines = ["# Thinking-jobs gap-test report", ""]
+        lines.append("Teacher T = S ∪ W-rescues per (job, rep) sample.")
+        lines.append("The decision rates PASS/FAIL at 1e-6 (`tight`).")
+        lines.append("Decision on T: **%s**" % summary["decision_t"])
+        lines.append("Decision on S alone: **%s**" % summary["decision_s"])
+        lines.append("Report decision: **%s**" % summary["decision"])
+        if not summary["agree_T_S"]:
+            lines.append("Governing rule: S governs (T disagrees: %s)"
+                         % summary["decision_t"])
+        lines.append("Wonder's share of T's passes: %.1f%%"
+                     % (100.0 * summary["wonder_share"]))
+        lines.append("Rates: G %.1f%%, T %.1f%%, S %.1f%%"
+                     % (100 * (summary["rate_g"] or 0),
+                        100 * (summary["rate_t"] or 0),
+                        100 * (summary["rate_s"] or 0)))
+        lines.append("Win jobs (X >= 2/3, G <= 1/3): S %d, T %d"
+                     % (summary["wins_s"], summary["wins_t"]))
+        lines.append("")
+        lines.append("## Accuracy (tight 1e-6: the decision)")
+        lines.extend(render_accuracy_lines(summary, arms))
+        lines.append("")
+        lines.append("## 0.2% (for reference, not the decision)")
+        lines.extend(
+            render_accuracy_lines(summary, arms,
+                                  summary["accuracy_verdict"]))
+        lines.append("")
+        lines.extend(render_speed_cost_lines(summary))
+        lines.append("")
+        return "\n".join(lines)
     lines = ["# FreeCAD gap-test report", ""]
     lines.append("Teacher T = S ∪ W-rescues per job "
                  "(S INVALID jobs are never escalated).")
@@ -1266,6 +1652,8 @@ def build_fc_report(summary):
             "| %s | %s | %s | %s | %s | %s | %s | %s |"
             % (arm, s["PASS"], s["FAIL"], s["INVALID"], pr,
                t["api_error"], t["wrong_geometry"], t.get("harness", 0)))
+    lines.append("")
+    lines.extend(render_speed_cost_lines(summary))
     lines.append("")
     lines.append("Jobs passed by S but not G: %s"
                  % (", ".join(summary["jobs_passed_by_S_not_G"]) or "-"))
@@ -1357,7 +1745,17 @@ def main(argv=None):
     if args.summarize is not None:
         # Offline union decision (Round 4.1): before any key or Modal
         # handling, so no model, Modal, or network call can happen here.
-        summarize_runs(args.summarize[0], args.summarize[1], args.out)
+        # Round 2 item 6: mixed exams are refused (exit 2). The exam
+        # otherwise comes from the records (item 5), so --exam is only
+        # enforced when explicitly passed.
+        raw = list(argv) if argv is not None else sys.argv[1:]
+        explicit = any(a == "--exam" or a.startswith("--exam=")
+                       for a in raw)
+        try:
+            summarize_runs(args.summarize[0], args.summarize[1], args.out,
+                           exam=args.exam if explicit else None)
+        except ValueError as e:
+            parser.error(str(e))
         return 0
     if args.jobs is None:
         parser.error("--jobs is required "
@@ -1370,6 +1768,12 @@ def main(argv=None):
         arms = parse_fc_arms(args.arms)
     except ValueError as e:
         parser.error(str(e))
+    if args.escalate_from:
+        # Round 2 item 6: W may only escalate an S run of the same exam.
+        try:
+            check_escalate_exam(args.escalate_from, args.exam)
+        except ValueError as e:
+            parser.error(str(e))
 
     glimmer_url = os.environ.get("GLIMMER_URL", "")
     glimmer_key = os.environ.get("GLIMMER_KEY", "")
