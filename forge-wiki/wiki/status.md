@@ -20,6 +20,8 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
   judging rubric (Impact 30 / Meta tooling 25 / Depth 20 / Demo 25) decides "final project + raise" vs "rethink".
 - decision (user, 2026-10-29): **all code is written by Muse Code** from Claude's specs (incl. run scripts, training,
   dashboards, checks); Claude writes specs, plans, exams/references, wiki, and checks results.
+- decision (user, 2026-10-29): **the Mac is the office, the cloud is the workshop**: no AI-written code runs on the
+  Mac; models, answer execution (Modal Sandbox), grading and training run in the cloud ([[where-things-run-2026-10-29]]).
 - decision (user, 2026-10-29): **verifier workflow**: after every finished step and before every paid step, ask
   verifier/master (with the user's decision + PLAN/spec + commit), wait for verdict + rubric line, report both.
 
