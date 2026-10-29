@@ -5,6 +5,11 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
 
 ## findings
+- [scoreboard](wiki/findings/scoreboard.md): every measured Forge number on one page (accuracy, tokens, seconds)
+- [how-training-changes-weights-2026-10-30](wiki/findings/how-training-changes-weights-2026-10-30.md): plain guide + diagram: one training step, LoRA patch (105M of 29.6B), merge, the knobs you drive and warning signs
+- [freecad-gap-2026-10-29](wiki/findings/freecad-gap-2026-10-29.md): FreeCAD gap test: Glimmer 93%, Spark 100% → stay on CadQuery hard jobs
+- [thinking-exam-2026-10-29](wiki/findings/thinking-exam-2026-10-29.md): the 40-rule company-standard exam (NDS-1): jobs and rules
+- [thinking-exam-pilot-2026-10-29](wiki/findings/thinking-exam-pilot-2026-10-29.md): pilot STOP (too easy): Glimmer 8/9, Spark 9/9; Glimmer 9× slower
 - [learn-training-and-verifiers-2026-10-29](wiki/findings/learn-training-and-verifiers-2026-10-29.md): learning guide: 5 levels (prompting → SFT on verified teacher → data tricks → DPO → GRPO), what research says on data, LoRA, RL cost, referee design (mutants, spec-based CADTests), reward hacking, SAM 3.1 verdict, Forge checklist, reading list, exercises
 - [quillon-keel-build-2026-10-28](wiki/findings/quillon-keel-build-2026-10-28.md): how the private-tool experiment was built: company, Keel v1→2.1, dashboard, exam method, tolerance 1e-6, sandbox, freeze by hash, verifier rounds, user plan rules
 - [keel-v2-baseline-2026-10-28](wiki/findings/keel-v2-baseline-2026-10-28.md): private tool Keel v2: Glimmer + manual 97.8%, Spark 100% → NO ROOM; a short complete manual is enough
@@ -18,6 +23,9 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [final-pick-research-2026-10-28](wiki/findings/final-pick-research-2026-10-28.md): why Forge was picked: claude.ai 90 + GPT-6 92 merged, prior art, risk paper 2607.08938
 
 ## decisions
+- [morning-brief-2026-10-30](wiki/decisions/morning-brief-2026-10-30.md): read first Oct 30: overnight work, direction review 6/10, 3 yes/no questions
+- [submission-draft-2026-10-30](wiki/decisions/submission-draft-2026-10-30.md): submission story, verified numbers, blanks, 3-min demo outline, must-dos (public repo)
+- final plan: `experiments/final/PLAN.md` + `MUSE_SPEC.md` (prepared, not run; verifier READY after edits); diagram attachments/final-plan-diagram.html
 - [option-a-plan-2026-10-29](wiki/decisions/option-a-plan-2026-10-29.md): plan for Oct 29: hidden standards in ~300 past designs, arms B / B-search / C, Spark context check, blind rule check, B2 CadQuery test in parallel
 - [night-prep-2026-10-28](wiki/decisions/night-prep-2026-10-28.md): night prep for Oct 29: Spark context, training recipe, verifier pre-review, drafts, risks and second plans, morning decisions
 - [coverage-audit-2026-10-29](wiki/findings/coverage-audit-2026-10-29.md): free retrieval-coverage audit: 83% of exam jobs covered by top-5 → Option A skipped
@@ -30,4 +38,4 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [forge-plan-2026-10-28](wiki/decisions/forge-plan-2026-10-28.md): history of Oct 28 decisions: $30 budget, CadQuery, Spark Open on Baseten, own folder/app, spend log
 
 ## lessons
-- [lessons](wiki/lessons/lessons.md): 34 lessons with how they were learned: cheap baseline first, referee self-test + overlap check, blind rebuild, verifier before paid runs, ordered decision rules, look at how a model fails, modal app stop -y, Muse Code costs, one project per context
+- [lessons](wiki/lessons/lessons.md): 42 lessons (8 added Oct 29 night: grep after rule changes, capped-run holes, where savings come from, caps totals, Mac memory, fresh direction review, banned topics) with how they were learned: cheap baseline first, referee self-test + overlap check, blind rebuild, verifier before paid runs, ordered decision rules, look at how a model fails, modal app stop -y, Muse Code costs, one project per context

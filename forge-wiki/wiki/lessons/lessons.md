@@ -2,7 +2,7 @@
 
 **Summary**: Reusable lessons from building Forge, each with how it was learned and how to check it again.
 
-**Last updated**: 2026-10-28 (evening)
+**Last updated**: 2026-10-30 (night)
 
 ---
 
@@ -110,3 +110,32 @@
   Claude nor the verifier caught it (both read the flag, not the guard code). Check: before a multi-call session, read
   where the guard's clock starts; pass each call the budget LEFT (experiments/bmax/run_session_v2.sh), and leave margin
   for in-flight answers (up to ~400 s each ≈ $0.3).
+
+## Oct 29 night (training + final exam preparation)
+- **When a rule changes, grep for every place that breaks it** (Oct 29). How learned: writing the final-exam spec, I
+  found the CadQuery path (factory spec, the training exam guard, first-test runner) still runs model code on the Mac
+  via sandbox-exec, months-old code written before the "Mac is the office" rule. Check:
+  `grep -rn "sandbox-exec\|run_code" experiments/` before any new runner; anything that runs answer code must use a
+  Modal box.
+- **A capped run leaves holes in a pre-registered comparison** (Oct 29). How learned: the verifier counted BX final
+  answers per job: 0 on H13-H15, 1 on H12, so the 30-job paired bootstrap was undefined. Check: before writing compare
+  rules, count finals per (arm, job); size workers so the slowest answers (BX hard up to 821 s) finish in one wave
+  (11 answers → 12 workers), and STOP if a finishing run is incomplete.
+- **Say where a saving comes from** (Oct 29). How learned: the verifier split tokens per correct part from calls.jsonl:
+  B2 = 6,458 prompt + 4,205 completion, BX = 14,101 + 7,213. Most of a trained model's saving is the dropped 5.7k
+  manual. Check: always report prompt vs completion and wall-clock/$ next to "tokens per correct part".
+- **A bar computed on partial data moves when the data is completed** (Oct 29). How learned: verifier A2: bar (d)'s
+  7,105 is over 79 BX answers; with 90 (hard answers average 22,303 vs 20,235) it loosens. Check: recompute every
+  threshold from the final data and disclose the change.
+- **Re-add the caps every time a step is added** (Oct 29). How learned: my PLAN said "≤ $13.5 caps + Muse"; the
+  verifier summed $12.80 + Muse $2-4 = $14.8-16.8. Check: a caps table with a total row, recomputed on every edit.
+- **Check the Mac's memory against the model card before promising an offline demo** (Oct 29). How learned:
+  `sysctl -n hw.memsize` = 24 GB; the Glimmer MLX q4 is ~15 GB and its README recommends ≥ 48 GB (17.6 tok/s on a
+  64 GB M5 Pro). Check: those two numbers before any local model plan.
+- **Ask a fresh reviewer about direction, not only the verifier about rigor** (Oct 29). How learned: the verifier checks
+  correctness; a fresh agent given only the files and the rubric scored the direction 6/10: proof-heavy, demo-light
+  (Impact + Demo = 55%). Check: once per phase, give a fresh agent the status page + rubric, never my conclusion.
+- **Check the hackathon's banned topics before choosing pitch examples** (Oct 29). How learned: I used
+  "medical-device makers" as an example; the rules ban health/medical ideas
+  (~/.hivey/agent/hiveyAgent-wiki/wiki/user/meta-hackathon-2026.md). Check: read that list before writing pitch text.
+
