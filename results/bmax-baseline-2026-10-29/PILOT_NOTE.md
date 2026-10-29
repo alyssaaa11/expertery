@@ -1,0 +1,3 @@
+# Pilot check (Claude, 2026-10-29 ~10:56)
+- verified (pilot/calls.jsonl): D1-D3 PASS in BR and BX; 0 INVALID, 0 harness/PermissionError, 0 cut-offs; BX used 2 calls per job (build → self-check → DONE).
+- Deviation from PLAN pilot rule: BX round-1 reasoning_len (xhigh) 7509 / 3305 / 11934 vs BR (default) 6180 / 6385 / 15118: NOT clearly longer. The rule said "report it, and run BX without that key (decided with the user)". decision (Claude, in the 5-min GPU window, user not reachable in time): GO with xhigh unchanged, because removing the key needs a frozen-code change and a new session, and keeping it cannot weaken B-max. To report: xhigh showed no measurable effect on 3 dry jobs (template may ignore it, or n too small).

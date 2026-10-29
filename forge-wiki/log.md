@@ -41,3 +41,9 @@
 - 2026-10-29 00:15 filed: decisions/night-prep-2026-10-28 (5 free night tasks: Spark context 1M from catalog, training recipe, verifier pre-review READY WITH FIXES, Tern/Skua drafts self-test 90/90, B2 sandbox spec), raw/training-recipe-research-2026-10-28.
 - 2026-10-29 verified: coverage audit 83% (k=5) → Option A skipped by the user's noon rule. Page findings/coverage-audit-2026-10-29.
 - 2026-10-29 decision (user): new goal = same quality, many times cheaper and faster, private. Page decisions/new-goal-2026-10-29.
+
+## [2026-10-29] research | learning guide: training weights + verifiers
+- Added raw: raw/knowledge/research-training-from-verified-data-2026-10-29.md, research-verifier-design-2026-10-29.md, research-cad-code-papers-2026-10-29.md (subagent reports, unedited)
+- Created: wiki/findings/learn-training-and-verifiers-2026-10-29.md (3 key papers re-read in full: 2505.19713, 2605.07807, 2610.25812)
+- Updated: wiki/status.md open questions 2 and 5; index.md
+- 2026-10-29 12:32 verified: step-2 baseline: BR 87%, B2 88%, BX 95% (79/90 ran); Modal ≈ $4.5. Page findings/bmax-baseline-2026-10-29.

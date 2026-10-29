@@ -48,10 +48,10 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 
 ## Open questions
 0. decision (user, 2026-10-28 ~22:30): the private tool belongs to a **fictional space company, Quillon Orbital Works** (satellite structural parts; name checked by web search, no real company found). Its private tool is **Keel** (compiles to CadQuery, so the same referee works). The user also wants an **internal company dashboard** like a real company. Draft spec: `company/SPEC.md`, waiting for the user's review, then one Muse Code build (~$0.50–0.80, needs approval). B2 was cancelled by the user earlier (21:50) and is kept as history in experiments/b2-hint/.
-2. **Training recipe** for Glimmer LoRA (tool, settings, memory on one GPU): not researched yet.
+2. **Training recipe** for Glimmer LoRA: researched ([[night-prep-2026-10-28]] §2); the 2026-10-29 literature review agrees with it ([[learn-training-and-verifiers-2026-10-29]] A5). Add: loss on the final `<|eot|>`, ≤ 2-3 passes per job, hint-then-remove for teacher failures, pass@1 and pass@3 per arm.
 3. **Practice-job generator:** new part families that don't overlap the 30 held-out exam jobs.
 4. Baseten billing: confirm the Spark Open usage is covered by the $100 credit, not the card on file.
-5. SAM 3.1: what it would add beyond CadQuery's exact measurement (it may be decoration; not researched).
+5. SAM 3.1: researched 2026-10-29. It makes pixel masks (video segmentation), not millimetres; no paper uses SAM to check CAD parts → recommendation: drop it from the diagram, keep CadQuery measurement ([[learn-training-and-verifiers-2026-10-29]] B4). User to decide.
 6. Which companies would pay (market not validated; use the user's two problem frameworks after the hackathon).
 
 ## Next step (Oct 29)
@@ -68,6 +68,10 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
   recipe: TRL+PEFT bf16 LoRA on one H100, ~$4-5, smoke test first. Drafts: experiments/option-a/ (11 Tern/Skua rules,
   30 jobs, self-test 90/90) and b2-hint/SANDBOX_SPEC.DRAFT.md. The verifier's second review of the drafts was
   requested 00:10.
+- **2026-10-29 step 2 done (baseline):** plain 87%, hint 1-try **88%**, all fair fixes **95%** (79/90 answers ran) on the 30
+  held-out jobs ([[bmax-baseline-2026-10-29]]). Stop rule not triggered; medium saturated, room only on hard jobs.
+  Modal ≈ $4.5 (cap overshoot, user approved finishing; fixed in run_session_v2.sh). **Spend ≈ $17 of $30.** Next: user
+  decides on step 3 (factory) given the risk that "clearly beats hint 1-try" can't be shown with 30 jobs.
 - **2026-10-29 step 1 done (user yes):** Muse Code built the sandbox + BX arm (cd29dfa). verified: pytest 62/62 (outside
   Muse's shell); 30 blind references pass through the sandbox 30/30. Cost: 62 calls, 6.30M input (6.15M cached), 62.5k
   output → ≈ $1.4-1.55 Meta (run.usage × $1.25 / $0.15 / $4.25 per M), over the $0.8-1.2 estimate. **Spend ≈ $11.3 of

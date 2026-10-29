@@ -1,0 +1,547 @@
+{
+ "arms": {
+  "B2": {
+   "n": 90,
+   "PASS": 79,
+   "FAIL": 11,
+   "INVALID": 0,
+   "pass_rate": 0.8777777777777778,
+   "invalid_rate": 0.0,
+   "calls": 90,
+   "input_tokens": 510147,
+   "output_tokens": 332171,
+   "total_tokens": 842318,
+   "k": 3,
+   "pass_at_k": 0.9666666666666667,
+   "wall_seconds": 1869.133,
+   "dollars_per_pass": 0.016430494022503517,
+   "mean_calls_per_job": 3.0,
+   "mean_tokens_per_job": 28077.266666666666,
+   "mean_latency_per_job": 451.43123333333335,
+   "tokens_per_pass": 10662.253164556962,
+   "latency_per_pass": 171.429582278481
+  },
+  "BX": {
+   "n": 79,
+   "PASS": 75,
+   "FAIL": 4,
+   "INVALID": 0,
+   "pass_rate": 0.9493670886075949,
+   "invalid_rate": 0.0,
+   "calls": 162,
+   "input_tokens": 1057543,
+   "output_tokens": 540999,
+   "total_tokens": 1598542,
+   "k": 3,
+   "pass_at_k": 1.0,
+   "wall_seconds": 3050.111,
+   "dollars_per_pass": 0.028241768518518513,
+   "mean_calls_per_job": 6.0,
+   "mean_tokens_per_job": 59205.25925925926,
+   "mean_latency_per_job": 819.2128888888889,
+   "tokens_per_pass": 21313.893333333333,
+   "latency_per_pass": 294.91664
+  }
+ },
+ "levels": {
+  "hard": {
+   "B2": {
+    "n": 45,
+    "PASS": 34,
+    "FAIL": 11,
+    "INVALID": 0,
+    "pass_rate": 0.7555555555555555,
+    "invalid_rate": 0.0,
+    "calls": 45,
+    "input_tokens": 255804,
+    "output_tokens": 194108,
+    "total_tokens": 449912,
+    "k": 3,
+    "pass_at_k": 0.9333333333333333
+   },
+   "BX": {
+    "n": 34,
+    "PASS": 31,
+    "FAIL": 3,
+    "INVALID": 0,
+    "pass_rate": 0.9117647058823529,
+    "invalid_rate": 0.0,
+    "calls": 69,
+    "input_tokens": 453007,
+    "output_tokens": 305289,
+    "total_tokens": 758296,
+    "k": 3,
+    "pass_at_k": 1.0
+   }
+  },
+  "medium": {
+   "B2": {
+    "n": 45,
+    "PASS": 45,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0,
+    "calls": 45,
+    "input_tokens": 254343,
+    "output_tokens": 138063,
+    "total_tokens": 392406,
+    "k": 3,
+    "pass_at_k": 1.0
+   },
+   "BX": {
+    "n": 45,
+    "PASS": 44,
+    "FAIL": 1,
+    "INVALID": 0,
+    "pass_rate": 0.9777777777777777,
+    "invalid_rate": 0.0,
+    "calls": 93,
+    "input_tokens": 604536,
+    "output_tokens": 235710,
+    "total_tokens": 840246,
+    "k": 3,
+    "pass_at_k": 1.0
+   }
+  }
+ },
+ "by_level": {
+  "hard": {
+   "B2": {
+    "n": 45,
+    "PASS": 34,
+    "FAIL": 11,
+    "INVALID": 0,
+    "pass_rate": 0.7555555555555555,
+    "invalid_rate": 0.0,
+    "calls": 45,
+    "input_tokens": 255804,
+    "output_tokens": 194108,
+    "total_tokens": 449912,
+    "k": 3,
+    "pass_at_k": 0.9333333333333333
+   },
+   "BX": {
+    "n": 34,
+    "PASS": 31,
+    "FAIL": 3,
+    "INVALID": 0,
+    "pass_rate": 0.9117647058823529,
+    "invalid_rate": 0.0,
+    "calls": 69,
+    "input_tokens": 453007,
+    "output_tokens": 305289,
+    "total_tokens": 758296,
+    "k": 3,
+    "pass_at_k": 1.0
+   }
+  },
+  "medium": {
+   "B2": {
+    "n": 45,
+    "PASS": 45,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0,
+    "calls": 45,
+    "input_tokens": 254343,
+    "output_tokens": 138063,
+    "total_tokens": 392406,
+    "k": 3,
+    "pass_at_k": 1.0
+   },
+   "BX": {
+    "n": 45,
+    "PASS": 44,
+    "FAIL": 1,
+    "INVALID": 0,
+    "pass_rate": 0.9777777777777777,
+    "invalid_rate": 0.0,
+    "calls": 93,
+    "input_tokens": 604536,
+    "output_tokens": 235710,
+    "total_tokens": 840246,
+    "k": 3,
+    "pass_at_k": 1.0
+   }
+  }
+ },
+ "n_calls": 169,
+ "skipped": 11,
+ "budget": 3.0,
+ "budget_stopped": true,
+ "budget_c": 3.0,
+ "budget_c_stopped": false,
+ "elapsed_seconds": 4919.244,
+ "gpu_start": 1793267113.0,
+ "gpu_elapsed_seconds": 6405.948,
+ "costs": {
+  "B2": 1.298,
+  "BX": 2.1181,
+  "gpu_total": 4.4486,
+  "total": 4.4486,
+  "note": "Each arm ran alone on the GPU: that arm's cost is its own wall-clock at $2.50/h (A100-80GB Modal rate). Arm C token cost is input $1.25/M + output $4.25/M tokens from usage. The estimate covers only the runner's own wall-clock; the real Modal cost (incl. cold start) comes from `modal billing report`."
+ },
+ "decision": "decision: see experiments/bmax/PLAN.md",
+ "run_valid": true,
+ "table": {
+  "M1": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M2": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M3": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M4": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M5": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M6": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M7": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M8": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M9": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M10": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M11": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M12": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M13": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "FAIL"
+   ]
+  },
+  "M14": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "M15": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H1": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H2": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H3": {
+   "B2": [
+    "FAIL",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H4": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "FAIL",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H5": {
+   "B2": [
+    "PASS",
+    "FAIL",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H6": {
+   "B2": [
+    "PASS",
+    "FAIL",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H7": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "FAIL",
+    "PASS",
+    "FAIL"
+   ]
+  },
+  "H8": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H9": {
+   "B2": [
+    "FAIL",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H10": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "FAIL"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H11": {
+   "B2": [
+    "FAIL",
+    "PASS",
+    "FAIL"
+   ],
+   "BX": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H12": {
+   "B2": [
+    "FAIL",
+    "PASS",
+    "PASS"
+   ],
+   "BX": [
+    "PASS"
+   ]
+  },
+  "H13": {
+   "B2": [
+    "FAIL",
+    "FAIL",
+    "FAIL"
+   ]
+  },
+  "H14": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  },
+  "H15": {
+   "B2": [
+    "PASS",
+    "PASS",
+    "PASS"
+   ]
+  }
+ },
+ "k": 3,
+ "workers": 8,
+ "arm_timing": {
+  "B2": {
+   "start": "2026-10-29T10:09:59.719Z",
+   "end": "2026-10-29T10:41:08.835Z",
+   "seconds": 1869.133
+  },
+  "BX": {
+   "start": "2026-10-29T10:41:08.835Z",
+   "end": "2026-10-29T11:31:58.947Z",
+   "seconds": 3050.111
+  }
+ }
+}

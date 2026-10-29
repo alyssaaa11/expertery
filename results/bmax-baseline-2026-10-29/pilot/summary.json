@@ -1,0 +1,156 @@
+{
+ "arms": {
+  "BR": {
+   "n": 3,
+   "PASS": 3,
+   "FAIL": 0,
+   "INVALID": 0,
+   "pass_rate": 1.0,
+   "invalid_rate": 0.0,
+   "calls": 3,
+   "input_tokens": 16731,
+   "output_tokens": 8288,
+   "total_tokens": 25019,
+   "k": 1,
+   "pass_at_k": 1.0,
+   "wall_seconds": 175.33,
+   "dollars_per_pass": 0.040585648148148155,
+   "mean_calls_per_job": 1.0,
+   "mean_tokens_per_job": 8339.666666666666,
+   "mean_latency_per_job": 106.39999999999999,
+   "tokens_per_pass": 8339.666666666666,
+   "latency_per_pass": 106.39999999999999
+  },
+  "BX": {
+   "n": 3,
+   "PASS": 3,
+   "FAIL": 0,
+   "INVALID": 0,
+   "pass_rate": 1.0,
+   "invalid_rate": 0.0,
+   "calls": 6,
+   "input_tokens": 38899,
+   "output_tokens": 9641,
+   "total_tokens": 48540,
+   "k": 1,
+   "pass_at_k": 1.0,
+   "wall_seconds": 198.538,
+   "dollars_per_pass": 0.04595787037037038,
+   "mean_calls_per_job": 2.0,
+   "mean_tokens_per_job": 16180.0,
+   "mean_latency_per_job": 123.16966666666667,
+   "tokens_per_pass": 16180.0,
+   "latency_per_pass": 123.16966666666667
+  }
+ },
+ "levels": {
+  "dry": {
+   "BR": {
+    "n": 3,
+    "PASS": 3,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0,
+    "calls": 3,
+    "input_tokens": 16731,
+    "output_tokens": 8288,
+    "total_tokens": 25019,
+    "k": 1,
+    "pass_at_k": 1.0
+   },
+   "BX": {
+    "n": 3,
+    "PASS": 3,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0,
+    "calls": 6,
+    "input_tokens": 38899,
+    "output_tokens": 9641,
+    "total_tokens": 48540,
+    "k": 1,
+    "pass_at_k": 1.0
+   }
+  }
+ },
+ "by_level": {
+  "dry": {
+   "BR": {
+    "n": 3,
+    "PASS": 3,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0,
+    "calls": 3,
+    "input_tokens": 16731,
+    "output_tokens": 8288,
+    "total_tokens": 25019,
+    "k": 1,
+    "pass_at_k": 1.0
+   },
+   "BX": {
+    "n": 3,
+    "PASS": 3,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0,
+    "calls": 6,
+    "input_tokens": 38899,
+    "output_tokens": 9641,
+    "total_tokens": 48540,
+    "k": 1,
+    "pass_at_k": 1.0
+   }
+  }
+ },
+ "n_calls": 6,
+ "skipped": 0,
+ "budget": 3.0,
+ "budget_stopped": false,
+ "budget_c": 3.0,
+ "budget_c_stopped": false,
+ "elapsed_seconds": 373.868,
+ "gpu_start": 1793267113.0,
+ "gpu_elapsed_seconds": 584.688,
+ "costs": {
+  "BR": 0.1218,
+  "BX": 0.1379,
+  "gpu_total": 0.406,
+  "total": 0.406,
+  "note": "Each arm ran alone on the GPU: that arm's cost is its own wall-clock at $2.50/h (A100-80GB Modal rate). Arm C token cost is input $1.25/M + output $4.25/M tokens from usage. The estimate covers only the runner's own wall-clock; the real Modal cost (incl. cold start) comes from `modal billing report`."
+ },
+ "decision": "decision: see experiments/bmax/PLAN.md",
+ "run_valid": true,
+ "table": {
+  "D1": {
+   "BR": "PASS",
+   "BX": "PASS"
+  },
+  "D2": {
+   "BR": "PASS",
+   "BX": "PASS"
+  },
+  "D3": {
+   "BR": "PASS",
+   "BX": "PASS"
+  }
+ },
+ "k": 1,
+ "workers": 8,
+ "arm_timing": {
+  "BR": {
+   "start": "2026-10-29T09:48:43.823Z",
+   "end": "2026-10-29T09:51:39.151Z",
+   "seconds": 175.33
+  },
+  "BX": {
+   "start": "2026-10-29T09:51:39.151Z",
+   "end": "2026-10-29T09:54:57.687Z",
+   "seconds": 198.538
+  }
+ }
+}

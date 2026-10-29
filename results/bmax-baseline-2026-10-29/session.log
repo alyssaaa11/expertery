@@ -1,0 +1,15 @@
+key saved
+secret updated
+deploy start 10:45:13
+
+View Deployment: 
+https://modal.com/apps/my-workspace/main/deployed/forge-glimmer
+ready 10:48:41 (try 3)
+pilot start 10:48:41
+runner exit 0 10:54:57
+PILOT DONE: waiting for ~/projects/forge/results/bmax-baseline-2026-10-29/GO or ~/projects/forge/results/bmax-baseline-2026-10-29/STOP (20 min max)
+main start 10:55:27
+runner exit 0 11:09:58
+runner exit 0 12:31:59
+done 12:31:59
+app stopped 12:32:00
