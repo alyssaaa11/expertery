@@ -52,8 +52,7 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
    on hard jobs. The fixed script logs the rendered example + learned tokens; decide after looking.
 2. Final exam must use the same runner + 0.2% referee + 16,000 tokens + k=3 + 8 workers as the baselines (verifier);
    a short-prompt trained arm needs a small runner spec. Finish BX's 11 missing hard answers in that session.
-3. Which Meta account owns the key used for Wonder (META_KEY)? It must be the user's own (verifier A6). Ask before the run.
-4. Budget: ≈ $10 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
+3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Next step
 1. **FreeCAD gap test** (decision, user 2026-10-29: test FreeCAD before the factory).
@@ -61,6 +60,7 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
      Wonder rescues; the rule is evaluated on T and on S alone (PLAN rule 5), and the report labels a decision that
      rests on Wonder (closed API). Same `--escalate` in the factory, with a teacher tag per record.
    - decision (Claude, following existing accounting): Meta credit for Wonder counts inside Forge's budget.
+   - verified (user, 2026-10-29): Wonder uses META_HERDSHOT_API_KEY, which is on the user's own Meta account (verifier A6 closed).
    - verified: modal 1.6.3 + cadquery 2.8.0 in the forge venv (verifier evidence/02, forge-freecad-escalation).
    - Verifier: READY WITH 3 EDITS, rubric 6/7/5 (forge-freecad-escalation-2026-10-29); edits applied f999208 + 7854051.
    - **Now:** Muse Code build (FreeCAD cloud box + grader + runner_fc with W + training round 2) running, log
