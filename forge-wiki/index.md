@@ -24,6 +24,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [new-goal-2026-10-29](wiki/decisions/new-goal-2026-10-29.md): new goal: same quality, many times cheaper and faster, private; B-max baseline; kill rule
 - [glimmer-dashboard-2026-10-29](wiki/findings/glimmer-dashboard-2026-10-29.md): live Chrome dashboard of the baseline run (how Glimmer is doing)
 - [bmax-baseline-2026-10-29](wiki/findings/bmax-baseline-2026-10-29.md): step-2 baseline: plain 87%, hint 1-try 88%, all fixes 95%; bar for the trained Glimmer
+- [training-smoke-2026-10-29](wiki/findings/training-smoke-2026-10-29.md): training smoke test: LoRA trains, 8k OOM, vLLM LoRA crash, merge fallback works, PASS
 - [factory-plan-2026-10-29](wiki/decisions/factory-plan-2026-10-29.md): next stage: B2 → recipe research → generator → teacher run → training → final exam; rules; ~$13–16
 - [forge-plan-2026-10-28](wiki/decisions/forge-plan-2026-10-28.md): history of Oct 28 decisions: $30 budget, CadQuery, Spark Open on Baseten, own folder/app, spend log
 

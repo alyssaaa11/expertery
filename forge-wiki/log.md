@@ -47,3 +47,4 @@
 - Created: wiki/findings/learn-training-and-verifiers-2026-10-29.md (3 key papers re-read in full: 2505.19713, 2605.07807, 2610.25812)
 - Updated: wiki/status.md open questions 2 and 5; index.md
 - 2026-10-29 12:32 verified: step-2 baseline: BR 87%, B2 88%, BX 95% (79/90 ran); Modal ≈ $4.5. Page findings/bmax-baseline-2026-10-29.
+- 2026-10-29 13:49 verified: training smoke test (≈$1.06): train OK, 8k OOM, vLLM LoRA crash, merge OK, strict PASS. Page findings/training-smoke-2026-10-29.

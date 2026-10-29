@@ -1,0 +1,34 @@
+[
+ {
+  "text": "A nameplate. Plate: X from 0 to 70, Y from 0 to 30, Z from 0 to 4. A rectangular recess in the top face, X from 5 to 65, Y from 5 to 25, 1 deep (Z from 3 to 4). Two 3.4 mm holes along Z through the plate, centred at (X, Y) = (10, 15) and (60, 15).",
+  "code": "import cadquery as cq\n# Boxes are centred by default: build with centered=False so the corner sits at the origin, as the job says.\nplate = cq.Workplane(\"XY\").box(70, 30, 4, centered=False)\nrecess = cq.Workplane(\"XY\").box(60, 20, 1, centered=False).translate((5, 5, 3))\nholes = (cq.Workplane(\"XY\").pushPoints([(10, 15), (60, 15)]).circle(3.4 / 2).extrude(4))\nresult = plate.cut(recess).cut(holes)"
+ },
+ {
+  "text": "A plus-shaped spacer. Two crossing bars, Z from 0 to 6: bar 1 X from 10 to 50, Y from 25 to 35; bar 2 X from 25 to 35, Y from 10 to 50. A 5 mm hole along Z through the centre of the cross at (30, 30).",
+  "code": "import cadquery as cq\n# A centred box lands on its centre point: place each bar by moving its centre to the job's centre.\nbar1 = cq.Workplane(\"XY\").box(40, 10, 6).translate((30, 30, 3))\nbar2 = cq.Workplane(\"XY\").box(10, 40, 6).translate((30, 30, 3))\nhole = cq.Workplane(\"XY\").center(30, 30).circle(2.5).extrude(6)\nresult = bar1.union(bar2).cut(hole)\n# Self-check: bounding box should be X 10..50, Y 10..50, Z 0..6."
+ },
+ {
+  "text": "A tube with a cross hole. Tube along the X axis from X = 0 to X = 40, outer diameter 16, inner diameter 10, axis at Y = 0, Z = 8. A 4 mm hole along Y through both walls at X = 20 (axis at Z = 8).",
+  "code": "import cadquery as cq\n# A YZ workplane extrudes along +X; its origin is moved to the tube axis (Y = 0, Z = 8).\ntube = (cq.Workplane(\"YZ\", origin=(0, 0, 8)).circle(8).circle(5).extrude(40))\ncross = (cq.Workplane(\"XZ\", origin=(20, 10, 8)).circle(2).extrude(20))  # XZ normal is -Y: from Y = 10 to Y = -10\nresult = tube.cut(cross)"
+ },
+ {
+  "text": "Millimetres, Z up. A mounting plate: X from -30 to 30, Y from -20 to 20, Z from 0 to 5, with four 4 mm holes through it along Z at (X, Y) = (\u00b125, \u00b115).",
+  "code": "import cadquery as cq\nimport math\n\ndef box(x0, x1, y0, y1, z0, z1):\n    return cq.Workplane(\"XY\").box(x1-x0, y1-y0, z1-z0, centered=False).translate((x0, y0, z0))\n\ndef zcyl(d, x, y, z0, z1):\n    return cq.Workplane(\"XY\").circle(d/2).extrude(z1-z0).translate((x, y, z0))\n\ndef xcyl(d, y, z, x0, x1):\n    return cq.Workplane(\"YZ\").circle(d/2).extrude(x1-x0).translate((x0, y, z))\n\ndef ycyl(d, x, z, y0, y1):\n    # XZ plane normal is -Y; extrude then move so it spans y0..y1\n    return cq.Workplane(\"XZ\").circle(d/2).extrude(y1-y0).translate((x, y1, z))\n\nr = box(-30,30,-20,20,0,5)\nr = r.cut(cq.Workplane(\"XY\").pushPoints([(sx*25,sy*15) for sx in (1,-1) for sy in (1,-1)]).circle(2).extrude(5))\nresult = r"
+ },
+ {
+  "text": "Millimetres, Z up. A plate X from 0 to 40, Y from 0 to 20, Z from 0 to 4, with a round boss of diameter 10 on top at (X, Y) = (10, 10), Z from 4 to 14, and a 3 mm hole along Z through the boss and the plate. A slot goes through the plate along Z: an obround 16 long overall (end to end) and 6 wide, long side along Y, centred at (28, 10).",
+  "code": "import cadquery as cq\nimport math\n\ndef box(x0, x1, y0, y1, z0, z1):\n    return cq.Workplane(\"XY\").box(x1-x0, y1-y0, z1-z0, centered=False).translate((x0, y0, z0))\n\ndef zcyl(d, x, y, z0, z1):\n    return cq.Workplane(\"XY\").circle(d/2).extrude(z1-z0).translate((x, y, z0))\n\ndef xcyl(d, y, z, x0, x1):\n    return cq.Workplane(\"YZ\").circle(d/2).extrude(x1-x0).translate((x0, y, z))\n\ndef ycyl(d, x, z, y0, y1):\n    # XZ plane normal is -Y; extrude then move so it spans y0..y1\n    return cq.Workplane(\"XZ\").circle(d/2).extrude(y1-y0).translate((x, y1, z))\n\nr = box(0,40,0,20,0,4).union(zcyl(10,10,10,4,14))\nr = r.cut(zcyl(3,10,10,0,14))\nr = r.cut(cq.Workplane(\"XY\").center(28,10).slot2D(16,6,90).extrude(4))\nresult = r"
+ },
+ {
+  "text": "A nameplate. Plate: X from 0 to 70, Y from 0 to 30, Z from 0 to 4. A rectangular recess in the top face, X from 5 to 65, Y from 5 to 25, 1 deep (Z from 3 to 4). Two 3.4 mm holes along Z through the plate, centred at (X, Y) = (10, 15) and (60, 15).",
+  "code": "import cadquery as cq\n# Boxes are centred by default: build with centered=False so the corner sits at the origin, as the job says.\nplate = cq.Workplane(\"XY\").box(70, 30, 4, centered=False)\nrecess = cq.Workplane(\"XY\").box(60, 20, 1, centered=False).translate((5, 5, 3))\nholes = (cq.Workplane(\"XY\").pushPoints([(10, 15), (60, 15)]).circle(3.4 / 2).extrude(4))\nresult = plate.cut(recess).cut(holes)"
+ },
+ {
+  "text": "A plus-shaped spacer. Two crossing bars, Z from 0 to 6: bar 1 X from 10 to 50, Y from 25 to 35; bar 2 X from 25 to 35, Y from 10 to 50. A 5 mm hole along Z through the centre of the cross at (30, 30).",
+  "code": "import cadquery as cq\n# A centred box lands on its centre point: place each bar by moving its centre to the job's centre.\nbar1 = cq.Workplane(\"XY\").box(40, 10, 6).translate((30, 30, 3))\nbar2 = cq.Workplane(\"XY\").box(10, 40, 6).translate((30, 30, 3))\nhole = cq.Workplane(\"XY\").center(30, 30).circle(2.5).extrude(6)\nresult = bar1.union(bar2).cut(hole)\n# Self-check: bounding box should be X 10..50, Y 10..50, Z 0..6."
+ },
+ {
+  "text": "A tube with a cross hole. Tube along the X axis from X = 0 to X = 40, outer diameter 16, inner diameter 10, axis at Y = 0, Z = 8. A 4 mm hole along Y through both walls at X = 20 (axis at Z = 8).",
+  "code": "import cadquery as cq\n# A YZ workplane extrudes along +X; its origin is moved to the tube axis (Y = 0, Z = 8).\ntube = (cq.Workplane(\"YZ\", origin=(0, 0, 8)).circle(8).circle(5).extrude(40))\ncross = (cq.Workplane(\"XZ\", origin=(20, 10, 8)).circle(2).extrude(20))  # XZ normal is -Y: from Y = 10 to Y = -10\nresult = tube.cut(cross)"
+ }
+]

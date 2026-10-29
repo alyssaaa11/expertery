@@ -68,6 +68,9 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
   recipe: TRL+PEFT bf16 LoRA on one H100, ~$4-5, smoke test first. Drafts: experiments/option-a/ (11 Tern/Skua rules,
   30 jobs, self-test 90/90) and b2-hint/SANDBOX_SPEC.DRAFT.md. The verifier's second review of the drafts was
   requested 00:10.
+- **2026-10-29 training smoke test done (user yes):** trains on H100 (loss 1.03 → 0.33), 8k tokens OOM, vLLM LoRA
+  crashes (bug 53254), merge fallback works; strict-referee PASS on a new job in 3 s / 84 tokens
+  ([[training-smoke-2026-10-29]]). ≈ $1.06. **Spend ≈ $18 of $30.** Next (needs user yes): factory, real training.
 - **2026-10-29 step 2 done (baseline):** plain 87%, hint 1-try **88%**, all fair fixes **95%** (79/90 answers ran) on the 30
   held-out jobs ([[bmax-baseline-2026-10-29]]). Stop rule not triggered; medium saturated, room only on hard jobs.
   Modal ≈ $4.5 (cap overshoot, user approved finishing; fixed in run_session_v2.sh). **Spend ≈ $17 of $30.** Next: user
