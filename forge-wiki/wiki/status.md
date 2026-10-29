@@ -52,7 +52,7 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 1. hypothesis: training on answer-only text (no reasoning) may teach Glimmer to skip reasoning: cheaper, maybe weaker
    on hard jobs. The fixed script logs the rendered example + learned tokens; decide after looking.
 2. Final exam must use the same runner + 0.2% referee + 16,000 tokens + k=3 + 8 workers as the baselines (verifier);
-   a short-prompt trained arm needs a small runner spec. BX's 11 missing answers are not re-run (decision, experiments/final/PLAN.md).
+   a short-prompt trained arm needs a small runner spec. BX's 11 missing answers are run in step 6a (user decision).
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Training + final exam: PREPARED, NOT RUN (user 2026-10-29: "prepare the training, not run")
@@ -62,7 +62,9 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
   (sandbox-exec, experiments/first-test/runner.py:423, forge_train.py run_train_code); the spec moves it to a Modal box.
 - verified: Spark Open = 816B (42B active), needs >= 700 GB VRAM (https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B);
   Glimmer 30B 4-bit < 20 GB (https://huggingface.co/meta-models/Muse-Glimmer-30B).
-- decision pending (user): Muse build ($2-4, fits under $35) and the budget raise to $50 for steps 1-7 (≈ $10-14 total).
+- decision (user, 2026-10-29 ~23:10): **budget raised to $50**; each paid step still needs the user's yes + verifier.
+- decision (user): BX's 11 missing answers are run ("finish until the 30 jobs"), step 6a, cap $1.
+- pending (user): yes to the Muse build (asked "what is it going to build?").
 
 ## Next step
 1. **FreeCAD gap test: DONE** ([[freecad-gap-2026-10-29]]). verified: Glimmer 28/30 (93%), Spark 30/30 (100%), Wonder 0

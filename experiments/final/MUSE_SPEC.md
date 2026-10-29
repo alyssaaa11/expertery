@@ -56,6 +56,17 @@ Same design as experiments/freecad/cloud_exec.py and cloud_grade.py (read both):
   correct part, seconds per answer (median, mean), arm wall-clock, $ per correct part = wall-clock h × $2.50 ÷ PASS.
 - Budget guard as runner_fc (money left = cap − GPU time since gpu-start × $2.50/h; stop new calls when ≤ reserve).
 
+## 3b. Arm BX on the cloud box, only for missing answers (user: "finish until the 30 jobs")
+- `runner_final.py --arms BX --fill-missing results/bmax-baseline-2026-10-29/main-B2BX`: run only the (job, rep)
+  pairs with no BX final record (expected: H12 ×2, H13-H15 ×3 = 11), endpoint GLIMMER_URL/GLIMMER_KEY (base Glimmer).
+- Same loop as the frozen runner.do_bx_call: import build_messages("BX", …), build_bx_body, bx_self_check_message,
+  BX_MAX_CALLS, BX_ERROR_HEAD, the examples and hint from the frozen files. The only change: each program runs in the
+  cloud box, which returns (run_error, measure) in the same measure format as run_code_sandboxed (xmin…zmax, volume,
+  solids), and the verdict comes from the cloud grader. Write per-round + final records like run_suite does.
+- Test: with fake model replies and a fake executor, the cloud BX loop sends exactly the same message list, round by
+  round, as runner.do_bx_call does with the same fake executor (build, run error, self-check, no-code-block end).
+- compare.py merges these records with the baseline BX records (no (job, rep) twice; refuses on a duplicate).
+
 ## 4. Exam guard on the cloud box
 forge_train.py's code check (run_train_code / default_train_meas) gets a hook to use cloud_cq's box for the training
 record's code (measurements back from the grader-side measure of the BREP). The local sandbox path is removed for
@@ -75,11 +86,10 @@ runner_final.py with app forge-trained.
 ## 7. `experiments/final/compare.py`: the pre-registered decision (PLAN step 6)
 Inputs: FT's run dir and the baseline dirs results/bmax-baseline-2026-10-29/main-B2BX and main-BR. Paired bootstrap
 over the 30 jobs (10,000 resamples, seed 20261029), per-job pass rate over that arm's answers (BX uses the answers it
-has). Jobs where an arm has no answers: `--missing-bx worst` (default; BX = 1.0 on that job) or `--missing-bx drop`
-(compare on the remaining jobs; prints a warning that this departs from rule 3). Tokens per correct part are printed
+has). If any of the 30 jobs still has no BX answer, compare.py refuses (exit 2) and names the jobs. Tokens per correct part are printed
 split into prompt and completion; bar (d) prints wall-clock and $ per correct part first. Prints each bar (a)-(d) with the numbers and PASS/FAIL, then "CLAIM HOLDS" only if all four pass. Tables for
-all/medium/hard. Tests: fake records for each bar at its boundary (−5, −15, 1.5×, ÷3) and one all-pass case, and a
-case with a job where BX has 0 answers under both `--missing-bx` modes.
+all/medium/hard. Tests: fake records for each bar at its boundary (−5, −15, 1.5×, ÷3) and one all-pass case, and the refusal
+when a job has no BX answer.
 
 ## Done when
 - `~/projects/forge/.venv/bin/python -m pytest -q experiments/final experiments/factory experiments/freecad

@@ -29,11 +29,13 @@ on the 30 held-out CadQuery jobs, and **many times cheaper and faster**, while r
 | 3 | Factory main: ~170 jobs (yield rule in experiments/factory/PLAN.md) | Baseten + Modal CPU | $5.00 (incl. step 2) | ~$4.2 |
 | 4 | Training: LoRA on H100 + merge | Modal H100 | $4.00 | ~$2-3 |
 | 5 | Dev check: trained model on the 20 dev jobs, k=3 | Modal A100 | $1.00 | ~$0.5 |
+| 6a | Finish BX: its 11 missing answers (H12 ×2, H13-H15 ×3), base Glimmer | Modal A100 | $1.00 | ~$0.5 |
 | 6 | Final exam: trained model on the 30 exam jobs, k=3 | Modal A100 | $2.00 | ~$1 |
 | 7 | (optional, free GPU) offline Mac demo with MLX | Mac + Modal CPU | $0.30 | ~$0 |
-Total ≈ **$10-14 expected; worst case caps $12.80 + Muse $2-4 = $14.8-16.8** (verifier N2) → Forge ≈ $40-44
-expected, ≈ $47 worst, of the $50 the user may approve. Within the
-current $35 only step 0 fits; steps 1-7 need the budget raise (user's decision, pending).
+Total ≈ **$10-14 expected; worst case caps $13.80 + Muse $3-5 = $16.8-18.8** (verifier N2, + step 6a) → Forge ≈ $41-45
+expected, ≈ $49 worst, of the $50 the user may approve. Within the
+current $35 only step 0 fits. decision (user, 2026-10-29): budget raised to $50; each paid step still needs the
+user's yes and the verifier.
 
 ## Step 1: comparability (why: baselines were graded on the Mac; the trained arm will be graded in the cloud)
 Re-run the code of the 199 recorded final answers (BR 30, B2 90, BX 79; results/bmax-baseline-2026-10-29) in the
@@ -74,12 +76,11 @@ the 30 jobs, 10,000 resamples, each job's pass rate over its answers:
   separately (medium is saturated: B2 100%).
 - Honest-risk note (from the baseline page): (b) will likely fail on 30 jobs even if training works; then the report
   says "as good as B-max, N× cheaper" and states that (b) failed.
-- **BX jobs with no answers (verifier F1, USER DECISION pending):** BX has 0 final answers on H13, H14, H15 (1 on H12),
-  so the paired bootstrap is undefined there. Recommended (A): count BX = 1.0 (100%) on those 3 jobs, the worst case
-  for FT, and keep all 30 jobs. Alternative (B): compare on 27 jobs, a departure from rule 3 that needs the user's
-  explicit yes.
-- BX's 11 missing hard answers (cap stop in the baseline) are NOT re-run. decision: re-running them needs BX's
-  multi-round loop on the cloud box (more build, more risk) and touches BX again; the report states BX = 75/79 answers.
+- **BX's 11 missing answers are run (user decision 2026-10-29: "finish until the 30 jobs").** BX had 0 final answers on
+  H13, H14, H15 and 1 of 3 on H12 (cap stop in the baseline). Step 6a runs only those 11 (job, rep) pairs with the
+  frozen BX prompt, settings and loop, on the cloud box, base Glimmer on the same A100-80GB. Then all 30 jobs have 3
+  BX answers and rule 3's 30-job paired bootstrap applies unchanged. Disclosed: these 11 answers ran on a later day
+  and were graded in the cloud (step 1 shows the grader gives the same verdicts).
 - Reported per arm: pass rate (all / medium / hard), pass@3, tokens per correct part, seconds per answer (median and
   mean), $ per correct part (= arm wall-clock h × $2.50 ÷ PASS), chart accuracy vs $ per correct part.
 
