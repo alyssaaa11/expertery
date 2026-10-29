@@ -15,6 +15,8 @@ import http.client
 import json
 import os
 import re
+import shlex
+import signal
 import socket
 import subprocess
 import sys
@@ -60,11 +62,24 @@ GPU_DOLLARS_PER_HOUR = 2.50  # arms A+B share one A100-80GB, counted once
 FENCE_RE = re.compile(r"```(?:python)?[ \t]*\r?\n?(.*?)```", re.DOTALL)
 
 ARMS = ("A", "B", "C")
-VALID_ARMS = ("A", "B", "C", "BR", "B2")
-GLIMMER_ARMS = ("A", "B", "BR", "B2")
+VALID_ARMS = ("A", "B", "C", "BR", "B2", "BX")
+GLIMMER_ARMS = ("A", "B", "BR", "B2", "BX")
 DEFAULT_ARMS = ("A", "B", "C")
 HINT_PATH = os.path.join(os.path.dirname(HERE), "b2-hint", "hint.txt")
+RUN_ONE_CQ = os.path.join(os.path.dirname(HERE), "b2-hint", "run_one_cq.py")
+EXAMPLES_PATH = os.path.join(
+    os.path.dirname(HERE), "bmax", "examples.py")
 _hint_cache = {}
+
+# Sandbox for model answers (experiments/b2-hint/SANDBOX_SPEC.DRAFT.md).
+SANDBOX_CPU_LIMIT = 60        # `ulimit -t` inside the sandbox, seconds
+SANDBOX_MAX_RSS_MB = 4096   # sandbox memory kill threshold, MB (4 GB)
+SANDBOX_RSS_POLL = 0.5      # RSS watchdog interval, seconds
+
+# B-max arm (experiments/bmax/BMAX_SPEC.md).
+BX_MAX_CALLS = 3
+BX_ERROR_HEAD = 2000        # chars of run error sent back to the model
+BX_EXAMPLES_HEADER = "\n\nSolved examples (same style as your job):\n\n"
 
 
 def load_hint_text(path=None):
@@ -87,20 +102,46 @@ def parse_arms(value):
         parts = str(value).split(",")
     arms = tuple(p.strip() for p in parts if p.strip())
     if not arms:
-        raise ValueError("no arms requested (expected comma list of A,B,C,BR,B2)")
+        raise ValueError(
+            "no arms requested (expected comma list of A,B,C,BR,B2,BX)")
     for arm in arms:
         if arm not in VALID_ARMS:
             raise ValueError(
-                f"unknown arm {arm!r} (expected comma list of A,B,C,BR,B2)"
+                f"unknown arm {arm!r} (expected comma list of A,B,C,BR,B2,BX)"
             )
     return arms
 
 
 def system_prompt_for_arm(arm, hint_text=None):
-    if arm == "B2":
+    if arm in ("B2", "BX"):
         hint = hint_text if hint_text is not None else get_hint_text()
         return SYSTEM_PROMPT + " " + hint
     return SYSTEM_PROMPT
+
+
+def load_examples(path=None):
+    """Read the B-max solved examples (list of dicts with text/code)."""
+    import runpy
+
+    data = runpy.run_path(path or EXAMPLES_PATH)
+    return data["EXAMPLES"]
+
+
+def get_examples():
+    if "examples" not in _hint_cache:
+        _hint_cache["examples"] = load_examples()
+    return _hint_cache["examples"]
+
+
+def format_bx_examples(examples=None):
+    """The solved-examples block inserted between the manual and the job."""
+    parts = [BX_EXAMPLES_HEADER]
+    for ex in examples if examples is not None else get_examples():
+        parts.append(
+            "Job: " + ex["text"] + "\nAnswer:\n```python\n"
+            + ex["code"] + "\n```\n\n"
+        )
+    return "".join(parts)
 
 # ---------------------------------------------------------------- arms/messages
 
@@ -122,14 +163,16 @@ def arm_endpoint(arm, glimmer_url):
 
 
 def arm_uses_manual(arm):
-    return arm in ("B", "C", "BR", "B2")
+    return arm in ("B", "C", "BR", "B2", "BX")
 
 
-def build_messages(arm, job_text, manual_text, hint_text=None):
+def build_messages(arm, job_text, manual_text, hint_text=None, examples=None):
     """Exactly the spec's messages: system + job text (arm A), or system +
     manual-as-first-user-message + job-text-as-second-user-message (B, C, BR,
     B2). Arm BR is identical to B; arm B2 appends the hint text to the system
-    message (SYSTEM text + one space + hint)."""
+    message (SYSTEM text + one space + hint). Arm BX is B2's system message
+    with the solved-examples block inserted between the manual message and
+    the job-text message."""
     if arm not in VALID_ARMS:
         raise ValueError(f"unknown arm {arm!r}")
     messages = [
@@ -137,13 +180,16 @@ def build_messages(arm, job_text, manual_text, hint_text=None):
     ]
     if arm_uses_manual(arm):
         messages.append({"role": "user", "content": MANUAL_PREFIX + manual_text})
+    if arm == "BX":
+        messages.append({"role": "user", "content": format_bx_examples(examples)})
     messages.append({"role": "user", "content": job_text})
     return messages
 
 
-def build_body(model, messages):
-    """Exactly the spec's request body keys. Nothing else."""
-    return {
+def build_body(model, messages, reasoning_strength=None):
+    """Exactly the spec's request body keys. Nothing else, except arm BX
+    which also carries chat_template_kwargs.reasoning_strength."""
+    body = {
         "model": model,
         "messages": messages,
         "max_tokens": MAX_TOKENS,
@@ -151,6 +197,14 @@ def build_body(model, messages):
         "top_p": TOP_P,
         "top_k": TOP_K,
     }
+    if reasoning_strength is not None:
+        body["chat_template_kwargs"] = {"reasoning_strength": reasoning_strength}
+    return body
+
+
+def build_bx_body(model, messages):
+    """Arm BX request body: arm B's body plus reasoning_strength high."""
+    return build_body(model, messages, reasoning_strength="high")
 
 
 # ---------------------------------------------------------------- extraction
@@ -279,10 +333,190 @@ EXPORTER_SNIPPET = (
 )
 
 
-def run_code(code, python=None, timeout=RUN_TIMEOUT):
+def pgid_rss_kb(pgid):
+    """Sum RSS (KiB) of all processes in process group `pgid`, via ps."""
+    try:
+        proc = subprocess.run(
+            ["ps", "ax", "-o", "pgid,rss"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return 0
+    if proc.returncode != 0:
+        return 0
+    total = 0
+    for line in (proc.stdout or "").splitlines()[1:]:
+        parts = line.split()
+        if len(parts) != 2:
+            continue
+        try:
+            g, rss = int(parts[0]), int(parts[1])
+        except ValueError:
+            continue
+        if g == pgid:
+            total += rss
+    return total
+
+
+def kill_pgid(pgid):
+    try:
+        os.killpg(pgid, signal.SIGKILL)
+    except (OSError, ProcessLookupError):
+        pass
+
+
+def sandbox_params(scratch):
+    """-D NAME=<path> values for sandbox_cq.sb: the venv root, the base
+    Python install it links to, the answer's scratch dir, and run_one_cq.py."""
+    exe = sys.executable
+    venv = os.path.dirname(os.path.dirname(os.path.abspath(exe)))
+    pyhome = os.path.dirname(os.path.dirname(os.path.realpath(exe)))
+    return {
+        "VENV": venv,
+        "PYHOME": pyhome,
+        "SCRATCH": scratch,
+        "RUNONE": os.path.realpath(RUN_ONE_CQ),
+    }
+
+
+def parse_measure_line(stdout):
+    """Parse run_one_cq.py's `MEASURE {...}` line. Returns the dict or None."""
+    for line in (stdout or "").splitlines():
+        line = line.strip()
+        if line.startswith("MEASURE "):
+            try:
+                data = json.loads(line[len("MEASURE "):])
+            except ValueError:
+                return None
+            return data if isinstance(data, dict) else None
+    return None
+
+
+def run_code_sandboxed(code, run_tmp, profile, python=None,
+                        timeout=RUN_TIMEOUT,
+                        max_rss_mb=SANDBOX_MAX_RSS_MB):
+    """Run `code` as answer.py in a fresh scratch dir under `run_tmp`,
+    inside the sandbox profile. Imports <scratch>/answer.step here, exactly
+    as the unsandboxed path. Returns (shape_or_None, error_or_None,
+    measure_or_None). Sandbox denials are plain run failures (FAIL, never
+    INVALID); the scratch dir is kept for the replay viewer."""
+    import cadquery as cq
+
+    python = python or sys.executable
+    scratch = os.path.realpath(tempfile.mkdtemp(prefix="ans_", dir=run_tmp))
+    with open(os.path.join(scratch, "answer.py"), "w", encoding="utf-8") as f:
+        f.write(code or "")
+    shell_cmd = "ulimit -t {}; {} -I {} {}".format(
+        SANDBOX_CPU_LIMIT,
+        shlex.quote(python),
+        shlex.quote(os.path.realpath(RUN_ONE_CQ)),
+        shlex.quote(scratch),
+    )
+    argv = [
+        "env",
+        "-i",
+        "HOME={}".format(scratch),
+        "PATH=/usr/bin:/bin",
+        "sandbox-exec",
+        "-f",
+        profile,
+    ]
+    for name, value in sandbox_params(scratch).items():
+        argv += ["-D", "{}={}".format(name, value)]
+    argv += ["/bin/sh", "-c", shell_cmd]
+    try:
+        proc = subprocess.Popen(
+            argv,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+            cwd=scratch,
+        )
+    except OSError as e:
+        return None, f"could not start answer subprocess: {e}", None
+    try:
+        pgid = os.getpgid(proc.pid)
+    except OSError:
+        pgid = proc.pid
+    timed_out = False
+    oom = False
+    t0 = time.monotonic()
+    last_rss_check = 0.0
+    while True:
+        rc = proc.poll()
+        now = time.monotonic()
+        elapsed = now - t0
+        if rc is None and elapsed - last_rss_check >= SANDBOX_RSS_POLL:
+            last_rss_check = elapsed
+            try:
+                rss_mb = pgid_rss_kb(pgid) / 1024.0
+            except Exception:  # noqa: BLE001 -- a failed poll must not kill
+                rss_mb = 0.0
+            if rss_mb > max_rss_mb:
+                kill_pgid(pgid)
+                oom = True
+                break
+        if rc is not None:
+            break
+        if elapsed >= timeout:
+            kill_pgid(pgid)
+            timed_out = True
+            break
+        time.sleep(0.05)
+    try:
+        out, err = proc.communicate(timeout=30)
+    except subprocess.TimeoutExpired:
+        kill_pgid(pgid)
+        try:
+            out, err = proc.communicate(timeout=30)
+        except Exception:  # noqa: BLE001
+            out, err = "", ""
+        timed_out = True
+    if timed_out:
+        return None, f"timeout after {timeout:g}s running answer code", None
+    if oom:
+        return None, (
+            f"answer code failed (exit {proc.returncode}): "
+            "memory limit exceeded running answer code"
+        ), None
+    if proc.returncode is not None and proc.returncode < 0:
+        # Killed by a signal (e.g. the sandbox CPU limit): same timeout
+        # string as the unsandboxed path.
+        return None, f"timeout after {timeout:g}s running answer code", None
+    step_path = ""
+    for line in (out or "").splitlines():
+        line = line.strip()
+        if line.endswith(".step") and not line.startswith("MEASURE"):
+            step_path = line
+    if proc.returncode != 0 or not step_path or not os.path.isfile(step_path):
+        err = (err or "").strip() or f"exit {proc.returncode}"
+        return None, f"answer code failed (exit {proc.returncode}): {err}", None
+    try:
+        shape = cq.importers.importStep(step_path)
+        return shape, None, parse_measure_line(out)
+    except Exception as e:  # noqa: BLE001 -- reported as FAIL, not raised
+        return None, f"could not import exported STEP: {e!r}", None
+
+
+def run_code(code, python=None, timeout=RUN_TIMEOUT, sandbox_profile=None,
+             sandbox_dir=None):
     """Run `code` in `<python> -I -c <wrapper>` with cwd /tmp and a 60 s
     limit. The wrapper exports `result` as STEP and prints the path; the
-    STEP is imported here. Returns (shape_or_None, error_or_None)."""
+    STEP is imported here. Returns (shape_or_None, error_or_None).
+
+    With sandbox_profile (a sandbox_cq.sb path), the answer instead runs
+    inside the sandbox (see run_code_sandboxed); without it this behaves
+    exactly as before."""
+    if sandbox_profile is not None:
+        run_tmp = os.path.realpath(sandbox_dir) if sandbox_dir else None
+        if run_tmp is None:
+            run_tmp = os.path.realpath(tempfile.mkdtemp(prefix="sandbox_"))
+        shape, error, _ = run_code_sandboxed(
+            code, run_tmp, sandbox_profile, python=python, timeout=timeout)
+        return shape, error
     import cadquery as cq
 
     python = python or sys.executable
@@ -320,7 +554,33 @@ def run_code(code, python=None, timeout=RUN_TIMEOUT):
             pass
 
 
-def score_content(content, finish_reason, build_ref, expected, timeout=RUN_TIMEOUT):
+def bx_error_message(run_error):
+    """Follow-up user message after a BX round that failed to build."""
+    return (
+        "Your code failed when it ran:\n"
+        + (run_error or "code error")[:BX_ERROR_HEAD]
+        + "\nFix it. Reply with the full corrected program "
+        "in one Python code block."
+    )
+
+
+def bx_self_check_message(measure):
+    """Follow-up user message after a BX round that built. Takes only the
+    part's own MEASURE values (never the reference)."""
+    return (
+        "Your part was built. Measured: bounding box X "
+        f"{measure['xmin']} to {measure['xmax']}, Y "
+        f"{measure['ymin']} to {measure['ymax']}, Z "
+        f"{measure['zmin']} to {measure['zmax']}; volume "
+        f"{measure['volume']} mm³; {measure['solids']} solid(s). "
+        "Compare this with every number in the job. If the part matches "
+        "the job, reply with exactly the word DONE. Otherwise reply with "
+        "the full corrected program in one Python code block."
+    )
+
+
+def score_content(content, finish_reason, build_ref, expected, timeout=RUN_TIMEOUT,
+                  sandbox_profile=None, sandbox_dir=None):
     """Classify one answer. Returns
     (outcome, failed_checks, measurements, code, run_error).
 
@@ -336,7 +596,9 @@ def score_content(content, finish_reason, build_ref, expected, timeout=RUN_TIMEO
     code = extract_code(content)
     if not code or not code.strip():
         return ("INVALID", [], None, code, "empty reply")
-    answer, run_error = run_code(code, timeout=timeout)
+    answer, run_error = run_code(
+        code, timeout=timeout, sandbox_profile=sandbox_profile,
+        sandbox_dir=sandbox_dir)
     if answer is None:
         return ("FAIL", [], None, code, run_error or "code error")
     try:
@@ -366,6 +628,186 @@ def scrub(text, secrets):
     return text
 
 
+def _usage_pair(usage):
+    usage = usage or {}
+    try:
+        prompt = int(usage.get("prompt_tokens", 0) or 0)
+    except (TypeError, ValueError):
+        prompt = 0
+    try:
+        completion = int(usage.get("completion_tokens", 0) or 0)
+    except (TypeError, ValueError):
+        completion = 0
+    return prompt, completion
+
+
+def do_bx_call(
+    job,
+    model,
+    endpoint,
+    secrets,
+    manual_text,
+    expected_for_job,
+    post_fn,
+    sleep_fn,
+    exec_timeout=RUN_TIMEOUT,
+    call_timeout=CALL_TIMEOUT,
+    sandbox_profile=None,
+    sandbox_dir=None,
+    examples=None,
+    hint_text=None,
+):
+    """Arm BX: up to BX_MAX_CALLS model calls in one conversation. Every
+    program runs in the sandbox. A build after an error-fix reply is final;
+    a build after the first prompt (or a self-check) gets a self-check
+    follow-up with its own measurements. Returns the final record with the
+    per-round records embedded as bx_rounds (run_suite writes those as one
+    calls.jsonl record per round plus the final record)."""
+    if sandbox_profile is None:
+        raise ValueError("arm BX requires --sandbox <profile>")
+    run_tmp = os.path.realpath(sandbox_dir) if sandbox_dir else None
+    if run_tmp is None:
+        run_tmp = os.path.realpath(tempfile.mkdtemp(prefix="sandbox_"))
+    messages = build_messages("BX", job["text"], manual_text, hint_text,
+                              examples)
+    start = utcnow_iso()
+    t0 = time.monotonic()
+    rounds = []
+    best = None
+    last_code = ""
+    last_error = None
+    content, finish_reason, usage, reasoning_len = "", None, {}, 0
+    outcome = fails = measurements = None
+    try:
+        n = 0
+        while n < BX_MAX_CALLS:
+            body = build_bx_body(model, messages)
+            t_call = time.monotonic()
+            data = post_with_retry(post_fn, endpoint, body, call_timeout,
+                                   sleep_fn)
+            latency = time.monotonic() - t_call
+            content, finish_reason, usage, reasoning_len = parse_response(data)
+            prompt_n, completion_n = _usage_pair(usage)
+            n += 1
+            rec = {
+                "job": job["id"],
+                "arm": "BX",
+                "bx_final": False,
+                "round": n,
+                "prompt_tokens": prompt_n,
+                "completion_tokens": completion_n,
+                "reasoning_len": reasoning_len,
+                "latency": round(latency, 3),
+                "finish_reason": finish_reason,
+            }
+            if finish_reason == "length":
+                rec["event"] = "cut off"
+                rounds.append(rec)
+                messages.append({"role": "assistant", "content": content})
+                if n == 1:
+                    outcome, fails, measurements = "INVALID", [], None
+                    last_code = ""
+                    last_error = run_error = "cut off by the token limit"
+                break
+            done_reply = (not FENCE_RE.search(content or "")
+                          and (content or "").strip() == "DONE")
+            if done_reply:
+                rec["event"] = "DONE"
+                rounds.append(rec)
+                messages.append({"role": "assistant", "content": content})
+                if best is None:
+                    last_error = "no code in reply"
+                break
+            code = extract_code(content)
+            shape, run_error, measure = run_code_sandboxed(
+                code, run_tmp, sandbox_profile, timeout=exec_timeout)
+            if shape is None:
+                last_code = code
+                last_error = run_error or "code error"
+                rec["event"] = "crash"
+                rec["run_error"] = scrub(last_error, secrets)[-RUN_ERROR_TAIL:]
+                rounds.append(rec)
+                messages.append({"role": "assistant", "content": content})
+                if n >= BX_MAX_CALLS:
+                    break
+                messages.append({"role": "user",
+                                 "content": bx_error_message(run_error)})
+                continue
+            best = (code, shape)
+            last_code = code
+            rec["event"] = "built"
+            rounds.append(rec)
+            messages.append({"role": "assistant", "content": content})
+            if n >= BX_MAX_CALLS:
+                break
+            if any(r["event"] == "crash" for r in rounds[:-1]):
+                break
+            messages.append({"role": "user",
+                             "content": bx_self_check_message(measure)})
+        if outcome != "INVALID":
+            if best is None:
+                outcome, fails, measurements = "FAIL", [], None
+                run_error = last_error or "code error"
+            else:
+                try:
+                    passed, fails, measurements = checks.score(
+                        best[1], job["build"](), expected_for_job)
+                except Exception as e:  # noqa: BLE001 -- broken shape is FAIL
+                    passed, fails, measurements = (
+                        False, ["scoring error"], None)
+                    last_error = f"scoring raised: {e!r}"
+                if passed:
+                    outcome, run_error = "PASS", None
+                elif fails == ["scoring error"]:
+                    outcome, run_error = "FAIL", last_error
+                else:
+                    outcome, run_error = "FAIL", None
+                last_code = best[0]
+    except Exception as e:  # noqa: BLE001 -- failed call => INVALID record
+        outcome, fails, measurements, last_code = "INVALID", [], None, ""
+        run_error = f"{type(e).__name__}: {e}"
+        content, finish_reason, usage, reasoning_len = "", None, {}, 0
+    seconds = time.monotonic() - t0
+    end = utcnow_iso()
+    run_error = scrub(run_error, secrets)
+    if run_error and len(run_error) > RUN_ERROR_TAIL:
+        run_error = run_error[-RUN_ERROR_TAIL:]
+    prompt_total = sum(r["prompt_tokens"] for r in rounds)
+    completion_total = sum(r["completion_tokens"] for r in rounds)
+    latency_total = round(sum(r["latency"] for r in rounds), 3)
+    reasoning_total = sum(r["reasoning_len"] for r in rounds)
+    return {
+        "job": job["id"],
+        "level": job.get("level"),
+        "arm": "BX",
+        "model": model,
+        "start": start,
+        "start_time": start,
+        "end": end,
+        "end_time": end,
+        "seconds": round(seconds, 3),
+        "finish_reason": finish_reason,
+        "usage": usage,
+        "content": content,
+        "reasoning_len": reasoning_total,
+        "reasoning_length": reasoning_total,
+        "code": last_code,
+        "extracted_code": last_code,
+        "outcome": outcome,
+        "fails": fails or [],
+        "failed_checks": fails or [],
+        "measurements": measurements,
+        "run_error": run_error,
+        "round": len(rounds),
+        "bx_final": True,
+        "model_calls": len(rounds),
+        "prompt_tokens_total": prompt_total,
+        "completion_tokens_total": completion_total,
+        "latency_total": latency_total,
+        "bx_rounds": rounds,
+    }
+
+
 def do_call(
     job,
     arm,
@@ -378,10 +820,19 @@ def do_call(
     sleep_fn,
     exec_timeout=RUN_TIMEOUT,
     call_timeout=CALL_TIMEOUT,
+    sandbox_profile=None,
+    sandbox_dir=None,
+    examples=None,
 ):
     """Run one (job, arm) pair exactly once: POST, retry once only on a
     network error / HTTP 5xx/429, then score. Never raises for a bad
-    answer; network/HTTP failure after the retry is INVALID, never FAIL."""
+    answer; network/HTTP failure after the retry is INVALID, never FAIL.
+    Arm BX instead runs its multi-round loop (do_bx_call)."""
+    if arm == "BX":
+        return do_bx_call(
+            job, model, endpoint, secrets, manual_text, expected_for_job,
+            post_fn, sleep_fn, exec_timeout, call_timeout, sandbox_profile,
+            sandbox_dir, examples)
     body = build_body(model, build_messages(arm, job["text"], manual_text))
     start = utcnow_iso()
     t0 = time.monotonic()
@@ -391,7 +842,8 @@ def do_call(
         data = post_with_retry(post_fn, endpoint, body, call_timeout, sleep_fn)
         content, finish_reason, usage, reasoning_len = parse_response(data)
         outcome, fails, measurements, code, run_error = score_content(
-            content, finish_reason, job["build"], expected_for_job, exec_timeout
+            content, finish_reason, job["build"], expected_for_job,
+            exec_timeout, sandbox_profile, sandbox_dir
         )
     except Exception as e:  # noqa: BLE001 -- failed call => INVALID record
         outcome, fails, measurements, code = "INVALID", [], None, ""
@@ -484,6 +936,7 @@ def run_suite(
     arms=ARMS,
     budget_c=3.0,
     gpu_start=None,
+    sandbox_profile=None,
 ):
     """Call every (job, arm) pair once with up to `max_workers` concurrent
     calls. Stop sending new calls once the cost estimate passes `budget`;
@@ -503,6 +956,11 @@ def run_suite(
     if post_fn is None:
         post_fn = _default_post_fn(arm_cfgs, key_map, call_timeout)
     os.makedirs(out_dir, exist_ok=True)
+    run_tmp = None
+    if sandbox_profile is not None:
+        run_tmp = os.path.realpath(
+            tempfile.mkdtemp(prefix="sandbox_",
+                             dir=os.path.realpath(out_dir)))
     pairs = [(job, arm) for job in jobs for arm in arms]
     records = [None] * len(pairs)
     t_start = time.monotonic()
@@ -536,6 +994,8 @@ def run_suite(
                     sleep_fn,
                     exec_timeout,
                     call_timeout,
+                    sandbox_profile,
+                    run_tmp,
                 )
                 in_flight[fut] = next_i
                 next_i += 1
@@ -625,6 +1085,8 @@ def run_suite(
     calls_path = os.path.join(out_dir, "calls.jsonl")
     with open(calls_path, "w", encoding="utf-8") as f:
         for rec in sent:
+            for round_rec in rec.get("bx_rounds", []):
+                f.write(json.dumps(round_rec) + "\n")
             f.write(json.dumps(rec) + "\n")
     with open(os.path.join(out_dir, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=1)
@@ -649,13 +1111,24 @@ def _default_post_fn(arm_cfgs, key_map, call_timeout):
 # ---------------------------------------------------------------- summary / decision
 
 
-def arm_stats(records, arm):
+def _rec_calls_tokens_latency(rec):
+    """(model calls, total tokens, summed latency) for one final record."""
+    if "model_calls" in rec:
+        tokens = (rec.get("prompt_tokens_total", 0) or 0) + \
+            (rec.get("completion_tokens_total", 0) or 0)
+        return (rec.get("model_calls", 1) or 0, tokens,
+                rec.get("latency_total", rec.get("seconds", 0) or 0) or 0)
+    prompt_n, completion_n = _usage_pair(rec.get("usage"))
+    return 1, prompt_n + completion_n, rec.get("seconds", 0) or 0
+
+
+def arm_stats(records, arm, extra=False):
     arm_recs = [r for r in records if r.get("arm") == arm]
     n_pass = sum(1 for r in arm_recs if r.get("outcome") == "PASS")
     n_fail = sum(1 for r in arm_recs if r.get("outcome") == "FAIL")
     n_inv = sum(1 for r in arm_recs if r.get("outcome") == "INVALID")
     scored = n_pass + n_fail
-    return {
+    stats = {
         "n": len(arm_recs),
         "PASS": n_pass,
         "FAIL": n_fail,
@@ -663,6 +1136,20 @@ def arm_stats(records, arm):
         "pass_rate": (n_pass / scored) if scored else None,
         "invalid_rate": (n_inv / len(arm_recs)) if arm_recs else None,
     }
+    if extra:
+        totals = [_rec_calls_tokens_latency(r) for r in arm_recs]
+        n = len(arm_recs)
+        sum_tokens = sum(t for _, t, _ in totals)
+        sum_latency = sum(s for _, _, s in totals)
+        stats.update({
+            "mean_calls_per_job": (sum(c for c, _, _ in totals) / n)
+            if n else None,
+            "mean_tokens_per_job": (sum_tokens / n) if n else None,
+            "mean_latency_per_job": (sum_latency / n) if n else None,
+            "tokens_per_pass": (sum_tokens / n_pass) if n_pass else None,
+            "latency_per_pass": (sum_latency / n_pass) if n_pass else None,
+        })
+    return stats
 
 
 def compute_decision(rate_b, rate_c, invalid_rates):
@@ -697,7 +1184,8 @@ def compute_decision(rate_b, rate_c, invalid_rates):
 def build_summary(records, c_usages, elapsed_s, budget, budget_stopped,
                   skipped, arms, budget_c=3.0, budget_c_stopped=False,
                   gpu_start=None, gpu_elapsed_s=None):
-    per_arm = {arm: arm_stats(records, arm) for arm in arms}
+    extra = "BX" in arms
+    per_arm = {arm: arm_stats(records, arm, extra=extra) for arm in arms}
     levels = sorted({r.get("level") for r in records if r.get("level")})
     by_level = {}
     for level in levels:
@@ -764,6 +1252,10 @@ def _pct(rate):
     return "n/a" if rate is None else f"{100 * rate:.1f}%"
 
 
+def _num(value):
+    return "n/a" if value is None else f"{value:.2f}"
+
+
 def build_report(summary):
     arms = [a for a in summary["arms"]]
     lines = ["# First-test report", ""]
@@ -796,6 +1288,22 @@ def build_report(summary):
             f"{_pct(s['pass_rate'])} | {_pct(s['invalid_rate'])} |"
         )
     lines.append("")
+    if any("mean_calls_per_job" in summary["arms"][a] for a in arms):
+        lines.append("## Cost and speed (all arms)")
+        lines.append("| Arm | mean calls/job | mean tokens/job | "
+                     "mean latency/job (s) | tokens/correct | "
+                     "latency/correct (s) |")
+        lines.append("|---|---|---|---|---|---|")
+        for arm in arms:
+            s = summary["arms"][arm]
+            lines.append(
+                f"| {arm} | {_num(s.get('mean_calls_per_job'))} | "
+                f"{_num(s.get('mean_tokens_per_job'))} | "
+                f"{_num(s.get('mean_latency_per_job'))} | "
+                f"{_num(s.get('tokens_per_pass'))} | "
+                f"{_num(s.get('latency_per_pass'))} |"
+            )
+        lines.append("")
     for level, per in summary["levels"].items():
         lines.append(f"## Level {level}")
         lines.append("| Arm | PASS | FAIL | INVALID | pass rate | INVALID rate |")
@@ -843,11 +1351,17 @@ def main(argv=None):
     parser.add_argument("--gpu-start", type=float, default=None)
     parser.add_argument("--arms", default=",".join(DEFAULT_ARMS),
                         help="comma list of arms (default A,B,C)")
+    parser.add_argument("--sandbox", default=None,
+                        help="sandbox profile (.sb file) for model answers")
     args = parser.parse_args(argv)
     try:
         arms = parse_arms(args.arms)
     except ValueError as e:
         parser.error(str(e))
+    if args.sandbox is not None and not os.path.isfile(args.sandbox):
+        parser.error(f"sandbox profile not found: {args.sandbox}")
+    if "BX" in arms and args.sandbox is None:
+        parser.error("arm BX requires --sandbox <profile>")
 
     glimmer_url = os.environ.get("GLIMMER_URL", "")
     glimmer_key = os.environ.get("GLIMMER_KEY", "")
@@ -860,7 +1374,7 @@ def main(argv=None):
     missing = [name for name, val in need if not val]
     if missing:
         parser.error("missing environment variables: " + ", ".join(missing))
-    if "B2" in arms:
+    if {"B2", "BX"} & set(arms):
         try:
             load_hint_text()
         except OSError as e:
@@ -889,6 +1403,7 @@ def main(argv=None):
     run_suite(
         jobs, expected, manual_text, args.out, arm_cfgs, key_map, args.budget,
         budget_c=args.budget_c, gpu_start=args.gpu_start, arms=arms,
+        sandbox_profile=args.sandbox,
     )
     return 0
 

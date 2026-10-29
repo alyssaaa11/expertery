@@ -1,0 +1,20 @@
+;; Sandbox for first-test (B2/BX) model answers. Copy of
+;; experiments/keel-exam-v2/sandbox.sb with the COMPANY read allow removed
+;; (plain CadQuery answers do not need Keel) and the RUNONE literal pointing
+;; at experiments/b2-hint/run_one_cq.py (passed with -D and `(param ...)`).
+;; `(allow default)`, no network, reads under /Users/alyssa denied except
+;; the venv, the base Python install, the answer's own scratch dir and
+;; run_one_cq.py; reads under /private/tmp, /private/var/folders, /tmp,
+;; /var/folders denied; writes only to the scratch dir and /dev/null.
+;; The scratch path passed with -D SCRATCH must be fully resolved (no
+;; symlinks such as /tmp -> /private/tmp); the runner realpaths it.
+(version 1)
+(allow default)
+(deny network*)
+(deny file-read* (subpath "/Users/alyssa"))
+(deny file-read* (subpath "/private/tmp") (subpath "/private/var/folders") (subpath "/tmp") (subpath "/var/folders"))
+(allow file-read* (subpath (param "VENV")) (subpath (param "PYHOME")) (subpath (param "SCRATCH")))
+(allow file-read* (literal (param "RUNONE")))
+(allow file-read-metadata)
+(deny file-write*)
+(allow file-write* (subpath (param "SCRATCH")) (literal "/dev/null"))
