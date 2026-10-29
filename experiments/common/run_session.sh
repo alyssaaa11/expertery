@@ -85,7 +85,7 @@ run() {
   B=$($PY -I "$COMMON/budget_left.py" "$CAP" "$GPU_START" 2>&1) || { echo "budget left for this runner call: CAP REACHED"; echo "CAP REACHED, not starting runner"; return 1; }
   echo "budget left for this runner call: \$$B"
   if [ -n "${RUN_SESSION_RUNNER_CMD:-}" ]; then
-    ${=RUN_SESSION_RUNNER_CMD} "$@" & RPID=$!
+    GLIMMER_URL="$URL" GLIMMER_KEY="$K" ${=RUN_SESSION_RUNNER_CMD} --budget "$B" --gpu-start "$GPU_START" "$@" & RPID=$!
   else
     GLIMMER_URL="$URL" GLIMMER_KEY="$K" $PY -I runner.py --budget "$B" --gpu-start "$GPU_START" --sandbox "$SBX" --workers 8 "$@" & RPID=$!
   fi

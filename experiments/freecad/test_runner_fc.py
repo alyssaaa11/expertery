@@ -74,6 +74,11 @@ def test_failure_tags():
     assert runner_fc.tag_failure(
         "stop", "```python\nr=1\n```", "refused import: cadquery",
         False, []) == "api_error"
+    # A missing `result` is an API-knowledge miss, not a wrong shape.
+    assert runner_fc.tag_failure(
+        "stop", "```python\nx=1\n```",
+        "the answer wrote no STEP: ERROR: no variable named 'result'",
+        False, []) == "api_error"
     assert runner_fc.tag_failure(
         "stop", "```python\nr=1\n```", None,
         True, ["bbox"]) == "wrong_geometry"  # built but failed the checker
@@ -227,11 +232,32 @@ def test_do_fc_call_outcomes():
     assert r["tight"] == "PASS" and r["code"].strip() == "result = 1"
 
     def boom_box(code):
-        raise TypeError("typo here")
+        raise ConnectionError("sandbox down")
 
     r = runner_fc.do_fc_call(job, "G", "m", "e", [], manual, post, no_sleep,
                              boom_box, ok_grade)
+    # A box exception is a harness failure: INVALID, error text kept.
+    assert r["outcome"] == "INVALID" and r["failure_tag"] == "harness"
+    assert "sandbox down" in r["run_error"]
+
+    def boom_grade(jid, step):
+        raise TimeoutError("grader down")
+
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], manual, post, no_sleep,
+                             ok_box, boom_grade)
+    assert r["outcome"] == "INVALID" and r["failure_tag"] == "harness"
+    assert "grader down" in r["run_error"]
+
+    def no_step_box(code):
+        return {"step_bytes": None, "measure": None, "log": "",
+                "run_error": "the answer wrote no STEP: "
+                             "ERROR: no variable named 'result'"}
+
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], manual, post, no_sleep,
+                             no_step_box, ok_grade)
+    # No STEP is the answer's failure, with run_one_fc's ERROR line kept.
     assert r["outcome"] == "FAIL" and r["failure_tag"] == "api_error"
+    assert "no variable named 'result'" in r["run_error"]
 
     bad_grade = lambda jid, step: {"verdict": "FAIL", "tight": "FAIL",
                                    "fails": ["bbox"], "fails_tight": ["bbox"],
@@ -406,12 +432,36 @@ def test_session_wrapper_uses_the_hook():
     src = open(os.path.join(HERE, "run_fc_session.sh"), encoding="utf-8").read()
     assert "RUN_SESSION_RUNNER_CMD" in src  # the existing hook, not an edit
     assert "runner_fc.py" in src
-    assert "--budget" in src and "--workers 8" in src
+    assert "--workers 8" in src
+    # No hard-coded session budget: the session cap argument (default
+    # 3.50) sets it, and the hook appends it as --budget with --gpu-start.
+    assert "--budget 3.50" not in src and "--budget 3.5" not in src
+    assert "CAP=3.50" in src
     assert "run_session.sh" in src
+    # Keys loaded without printing, refusing when empty.
+    assert "envsave get BASETEN_API_KEY" in src
+    assert "envsave get META_HERDSHOT_API_KEY" in src
+    assert "refusing to run" in src
+    assert "echo $BASETEN" not in src and "echo $META" not in src
     hook = open(os.path.join(HERE, "..", "common", "run_session.sh"),
                 encoding="utf-8").read()
-    assert "RUN_SESSION_RUNNER_CMD" in hook  # hook pre-exists; untouched
+    assert "RUN_SESSION_RUNNER_CMD" in hook
     assert "& RPID=$!" in hook and "wait $RPID" in hook
+    # The hook branch runs like the default branch: keys in env, the
+    # whole-session cap appended, so the session cap applies.
+    hook_branch = [ln for ln in hook.splitlines()
+                   if "RUN_SESSION_RUNNER_CMD" in ln and "RPID" in ln]
+    assert len(hook_branch) == 1
+    assert 'GLIMMER_URL="$URL" GLIMMER_KEY="$K"' in hook_branch[0]
+    assert '--budget "$B"' in hook_branch[0]
+    assert '--gpu-start "$GPU_START"' in hook_branch[0]
+
+
+def test_runner_reads_herdshot_key_never_meta_key():
+    src = open(os.path.join(HERE, "runner_fc.py"), encoding="utf-8").read()
+    assert "META_HERDSHOT_API_KEY" in src
+    assert 'os.environ.get("META_KEY"' not in src
+    assert '"META_KEY"' not in src
 
 
 def test_cli_refuses_without_modal(monkeypatch, tmp_path):
@@ -421,6 +471,129 @@ def test_cli_refuses_without_modal(monkeypatch, tmp_path):
     monkeypatch.setenv("GLIMMER_URL", "https://g.test")
     monkeypatch.setenv("GLIMMER_KEY", "k")
     monkeypatch.setenv("BASETEN_KEY", "k")
+    monkeypatch.setenv("META_HERDSHOT_API_KEY", "k")
     rc = runner_fc.main(["--jobs", "dry", "--out", str(tmp_path / "o"),
                          "--arms", "G"])
     assert rc == 2  # clear message, no Modal run attempted
+
+
+def test_cli_accepts_gpu_start(monkeypatch, tmp_path):
+    import cloud_exec
+
+    monkeypatch.setattr(cloud_exec, "modal", None)
+    monkeypatch.setenv("GLIMMER_URL", "https://g.test")
+    monkeypatch.setenv("GLIMMER_KEY", "k")
+    rc = runner_fc.main(["--jobs", "dry", "--out", str(tmp_path / "o"),
+                         "--arms", "G", "--gpu-start", "1700000000"])
+    assert rc == 2  # still refuses without modal, but parses --gpu-start
+
+
+def test_gpu_elapsed_uses_session_start():
+    import time
+
+    assert runner_fc.gpu_elapsed_s(time.monotonic(), None) >= 0.0
+    # A session started an hour ago bills an hour of GPU.
+    assert runner_fc.gpu_elapsed_s(
+        time.monotonic(), time.time() - 3600) == pytest.approx(3600, abs=5)
+    # Garbage falls back to the runner's own clock, never negative.
+    assert runner_fc.gpu_elapsed_s(time.monotonic(), "soon") >= 0.0
+
+
+def test_rule6_harness_over_five_percent_is_run_invalid():
+    ids = jobs()
+    records = [rec(j, "G", "PASS" if i < 15 else "FAIL",
+                   "" if i < 15 else "api_error")
+               for i, j in enumerate(ids)]
+    records += [rec(j, "S", "PASS" if i < 23 else "FAIL",
+                    "" if i < 23 else "wrong_geometry")
+                for i, j in enumerate(ids)]
+    d = runner_fc.evaluate_fc_decision(records)
+    assert d["decision"] == "FreeCAD target"  # clean run decides by rules
+    assert d["run_invalid"] is False
+    # Two harness failures in one arm's 30 answers (6.7%): the box
+    # broke, no decision.
+    bad = list(records)
+    for i in (0, 1):
+        bad[i] = {"job": "J%d" % (i + 1), "arm": "G", "outcome": "INVALID",
+                  "failure_tag": "harness", "run_error": "harness: boom",
+                  "usage": {}}
+    d = runner_fc.evaluate_fc_decision(bad)
+    assert d["decision"] == "RUN INVALID"
+    assert d["run_invalid"] is True
+    assert d["run_invalid_arms"]["G"] == pytest.approx(0.067)
+    # One INVALID in 30 (3.3%) stays under the gate.
+    ok = list(records)
+    ok[0] = {"job": "J1", "arm": "G", "outcome": "INVALID",
+             "failure_tag": "INVALID", "run_error": "cut off",
+             "usage": {}}
+    d = runner_fc.evaluate_fc_decision(ok)
+    assert d["decision"] == "FreeCAD target"
+    assert d["run_invalid"] is False
+
+
+def test_summary_counts_harness_and_invalid_per_arm(tmp_path):
+    arm_recs = [
+        {"job": "D1", "level": "dry", "arm": "G", "outcome": "PASS",
+         "failure_tag": "", "usage": {}},
+        {"job": "D2", "level": "dry", "arm": "G", "outcome": "INVALID",
+         "failure_tag": "harness", "run_error": "harness: boom",
+         "usage": {}},
+    ]
+    summary = runner_fc.build_fc_summary(
+        arm_recs, [], [], 1.0, 10.0, 3.0, 3.0, False, False, False,
+        ("G",), k=1, workers=1)
+    # Pass rate leaves INVALID out (PLAN: PASS / (PASS + FAIL)); the
+    # harness answer is counted, not folded in.
+    assert summary["arms"]["G"]["pass_rate"] == 1.0
+    assert summary["arms"]["G"]["INVALID"] == 1
+    assert summary["failure_tags"]["G"]["harness"] == 1
+    assert summary["failure_tags"]["G"]["INVALID"] == 1
+    assert summary["run_invalid"] is True  # 1/2 is over 5%
+    assert summary["decision"] == "RUN INVALID"
+
+
+def test_main_runs_suite_inside_grader_app_context(monkeypatch, tmp_path):
+    import cloud_exec
+    import cloud_grade
+
+    events = []
+
+    class _Ctx:
+        def __enter__(self):
+            events.append("enter")
+            return self
+
+        def __exit__(self, *args):
+            events.append("exit")
+            return False
+
+    class _Modal:
+        @staticmethod
+        def enable_output():
+            events.append("enable_output")
+            return _Ctx()
+
+    class _App:
+        def run(self):
+            events.append("app.run")
+            return _Ctx()
+
+    monkeypatch.setattr(cloud_exec, "modal", _Modal())
+    monkeypatch.setattr(cloud_grade, "lookup_grader_app", lambda: _App())
+    monkeypatch.setenv("GLIMMER_URL", "https://g.test")
+    monkeypatch.setenv("GLIMMER_KEY", "k")
+
+    def _fake_suite(*args, **kwargs):
+        events.append(("suite", kwargs.get("gpu_start")))
+        return [], {}
+
+    monkeypatch.setattr(runner_fc, "run_suite_fc", _fake_suite)
+    monkeypatch.setattr(runner_fc, "load_inputs_fc",
+                        lambda: ([{"id": "D1", "level": "dry",
+                                   "text": "t"}], "MANUAL"))
+    rc = runner_fc.main(["--jobs", "dry", "--out", str(tmp_path / "o"),
+                         "--arms", "G", "--gpu-start", "1700000000"])
+    assert rc == 0
+    assert events[0] == "enable_output"  # grader calls get an app context
+    assert "app.run" in events
+    assert ("suite", "1700000000") in events  # --gpu-start threaded through

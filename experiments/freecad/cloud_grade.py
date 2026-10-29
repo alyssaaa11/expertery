@@ -124,6 +124,16 @@ def build_grader_image():
     )
 
 
+GRADER_APP_NAME = "forge-freecad-grader"  # Modal app the grader runs under
+
+
+def lookup_grader_app():
+    """The Modal app handle for grader calls (created on first lookup)."""
+    if modal is None:
+        raise RuntimeError("modal is not installed; cannot look up the app")
+    return modal.App.lookup(GRADER_APP_NAME, create_if_missing=True)
+
+
 if modal is not None:
     _grader_image = None
 
@@ -171,3 +181,74 @@ if modal is not None:
             "measurements": {k: m.get(k) for k in
                              ("bbox", "volume", "area", "com", "solids", "valid")},
         }
+
+
+# ------------------------------------------------------- live check CLI
+# (Claude runs this against real Modal; never in unit tests.)
+
+
+def check_refs(build_refs_fn=None, grade_fn=None):
+    """Send the 30 CadQuery references through the grader.
+
+    Prints `REFS n/30 PASS` (the grader holds the references, so all 30
+    must PASS). `build_refs_fn(job)` returns STEP bytes for one job and
+    defaults to exporting the reference part locally (needs cadquery);
+    `grade_fn` defaults to the cloud grader (needs the grader app
+    context). Both are injected in tests. Returns (n_pass, n_jobs).
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, FIRST_TEST_DIR)
+    import jobs as _jobs  # noqa: E402  (frozen file; imported, not modified)
+
+    if build_refs_fn is None:
+        def build_refs_fn(job):
+            import tempfile as _tf
+
+            from cadquery import exporters as _exporters
+
+            with _tf.NamedTemporaryFile(suffix=".step",
+                                        delete=False) as f:
+                path = f.name
+            _exporters.export(job["build"](), path)
+            with open(path, "rb") as f:
+                return f.read()
+
+    if grade_fn is None:
+        grade_fn = grade.remote
+    n_pass, n_jobs = 0, 0
+    # The 30 main jobs (medium + hard), not the 3 dry jobs.
+    for job in [j for j in _jobs.JOBS if j.get("level") != "dry"]:
+        n_jobs += 1
+        graded = grade_fn(job["id"], build_refs_fn(job))
+        if graded.get("verdict") == "PASS":
+            n_pass += 1
+        else:
+            print("REF FAIL %s: %s" % (job["id"], graded.get("fails")))
+    print("REFS %d/%d PASS" % (n_pass, n_jobs))
+    return n_pass, n_jobs
+
+
+def main(argv=None):
+    """CLI: --check-refs sends the 30 references through the grader."""
+    import argparse as _ap
+
+    parser = _ap.ArgumentParser(description="FreeCAD cloud-grader checks.")
+    parser.add_argument("--check-refs", action="store_true")
+    args = parser.parse_args(argv)
+    if args.check_refs:
+        if modal is None:
+            raise RuntimeError(
+                "modal is not installed; cannot reach the grader")
+        with modal.enable_output():
+            with lookup_grader_app().run():
+                check_refs()
+        return 0
+    parser.error("need --check-refs")
+    return 2
+
+
+if __name__ == "__main__":
+    import sys as _sys
+
+    _sys.exit(main())

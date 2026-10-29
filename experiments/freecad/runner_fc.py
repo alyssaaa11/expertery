@@ -195,7 +195,9 @@ def tag_failure(finish_reason, content, run_error, built, fails):
 
     api_error: the answer raised during the run (AttributeError,
     TypeError, NameError, Part errors, timeout, memory limit,
-    PermissionError, refused import, no network in the box).
+    PermissionError, refused import, no network in the box) or never
+    assigned `result` (a missing variable is an API-knowledge miss, not
+    a built-but-wrong shape).
     wrong_geometry: it built but failed the checker, or `result` was not
     a Part solid. A reply cut off by the token limit is INVALID.
     """
@@ -204,7 +206,9 @@ def tag_failure(finish_reason, content, run_error, built, fails):
     if not content or not content.strip():
         return "INVALID"
     err = run_error or ""
-    if "not a Part solid" in err or "no variable named 'result'" in err:
+    if "no variable named 'result'" in err:
+        return "api_error"
+    if "not a Part solid" in err:
         return "wrong_geometry"
     if built and fails:
         return "wrong_geometry"
@@ -287,6 +291,27 @@ def api_error_share(records, arm):
     return n_api / len(fails)
 
 
+HARNESS_GATE = 0.05  # PLAN rule 6: harness/INVALID over 5% → RUN INVALID
+
+
+def harness_invalid_share(records, arm):
+    """Share of an arm's answers tagged harness or outcome INVALID."""
+    arm_recs = [r for r in records if r.get("arm") == arm]
+    if not arm_recs:
+        return 0.0
+    bad = sum(1 for r in arm_recs
+              if r.get("failure_tag") == "harness"
+              or r.get("outcome") == "INVALID")
+    return bad / len(arm_recs)
+
+
+def run_invalid_arms(records):
+    """{arm: share} for arms over the PLAN rule 6 gate (empty when clean)."""
+    arms = sorted({r.get("arm") for r in records})
+    return {arm: harness_invalid_share(records, arm) for arm in arms
+            if harness_invalid_share(records, arm) > HARNESS_GATE}
+
+
 def decide_one(rate_g, rate_x, wins_x_not_g, api_share_g):
     """PLAN rules 1-4 for one teacher rate (T or S alone).
 
@@ -335,11 +360,16 @@ def wonder_share(records):
 
 
 def evaluate_fc_decision(records):
-    """PLAN rule 5: rules 1-4 evaluated on BOTH T and S alone.
+    """PLAN rules 5+6: rules 1-4 evaluated on BOTH T and S alone, then
+    the harness gate.
 
     Returns {"decision_t", "decision_s", "agree", "decision",
-    "wonder_share"}. On disagreement the report says "FreeCAD target
-    only with Wonder escalation (closed API)" and the user decides.
+    "wonder_share", "run_invalid", "run_invalid_arms"}. On disagreement
+    the report says "FreeCAD target only with Wonder escalation (closed
+    API)" and the user decides. When harness errors or INVALID answers
+    exceed 5% of any arm's answers (rule 6), the decision is RUN INVALID
+    no matter what rules 1-4 say: a broken box must not read as a model
+    gap. The rule-5 disagreement label is unchanged (user, 2026-10-29).
     """
     g_ids = pass_job_ids(records, "G")
     s_ids = pass_job_ids(records, "S")
@@ -364,6 +394,9 @@ def evaluate_fc_decision(records):
     else:
         decision = ("FreeCAD target only with Wonder escalation "
                     "(closed API)")
+    bad_arms = run_invalid_arms(records)
+    if bad_arms:
+        decision = "RUN INVALID"
     return {
         "decision_t": decision_t,
         "decision_s": decision_s,
@@ -373,6 +406,9 @@ def evaluate_fc_decision(records):
         "rate_g": rate_g,
         "rate_t": rate_t,
         "rate_s": rate_s,
+        "run_invalid": bool(bad_arms),
+        "run_invalid_arms": {a: round(s, 3)
+                             for a, s in sorted(bad_arms.items())},
     }
 
 
@@ -397,7 +433,11 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
     """Run one (job, arm) pair exactly once: POST (one retry on network /
     HTTP 5xx/429, imported), extract the code, run it in the cloud box,
     grade the STEP. Never raises for a bad answer; a failed call after
-    the retry is INVALID, never FAIL."""
+    the retry is INVALID, never FAIL. Any exception from the box (Sandbox
+    create / exec / filesystem) or the grader is a harness failure:
+    outcome INVALID, tag `harness`, error text kept. The one exception is
+    an answer that writes no STEP: that is the answer's failure (FAIL),
+    with run_one_fc's ERROR line as run_error."""
     import datetime as _dt
 
     body = build_body_fc(model, build_messages(job["text"], manual_text))
@@ -432,33 +472,41 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
             else:
                 try:
                     boxed = exec_fn(code)
-                except Exception as e:  # noqa: BLE001 -- box error is FAIL
-                    boxed, run_error = None, "%s: %s" % (type(e).__name__, e)
-                if boxed is None:
-                    outcome, fails = "FAIL", []
-                    built = False
+                except Exception as e:  # noqa: BLE001 -- box down: harness
+                    outcome, fails = "INVALID", []
+                    run_error = "harness: %s: %s" % (type(e).__name__, e)
+                    failure_tag, built = "harness", False
                 else:
-                    try:
-                        graded = grade_fn(job["id"], boxed["step_bytes"])
-                    except Exception as e:  # noqa: BLE001 -- grader down
-                        graded = None
-                        run_error = "grader error: %s: %s" % (
-                            type(e).__name__, e)
-                    if graded is None:
+                    if boxed is None or boxed.get("step_bytes") is None:
+                        # The answer wrote no STEP: its own failure, with
+                        # run_one_fc's ERROR line as run_error.
                         outcome, fails = "FAIL", []
                         built = False
+                        run_error = (boxed or {}).get("run_error") or \
+                            "the answer wrote no STEP"
+                        failure_tag = tag_failure(finish_reason, content,
+                                                  run_error, built, fails)
                     else:
-                        built = True
-                        measurements = graded.get("measurements")
-                        grade_tight = graded.get("tight")
-                        if graded.get("verdict") == "PASS":
-                            outcome, fails = "PASS", []
+                        try:
+                            graded = grade_fn(job["id"], boxed["step_bytes"])
+                        except Exception as e:  # noqa: BLE001 -- grader down
+                            outcome, fails = "INVALID", []
+                            run_error = "harness: %s: %s" % (
+                                type(e).__name__, e)
+                            failure_tag, built = "harness", False
                         else:
-                            outcome = "FAIL"
-                            fails = list(graded.get("fails") or [])
-                if outcome != "PASS":
-                    failure_tag = tag_failure(finish_reason, content,
-                                              run_error, built, fails)
+                            built = True
+                            measurements = graded.get("measurements")
+                            grade_tight = graded.get("tight")
+                            if graded.get("verdict") == "PASS":
+                                outcome, fails = "PASS", []
+                                failure_tag = ""
+                            else:
+                                outcome = "FAIL"
+                                fails = list(graded.get("fails") or [])
+                                failure_tag = tag_failure(
+                                    finish_reason, content, run_error,
+                                    built, fails)
     except Exception as e:  # noqa: BLE001 -- failed call => INVALID record
         call_error = "%s: %s" % (type(e).__name__, e)
         outcome, fails, measurements, code = "INVALID", [], None, ""
@@ -497,6 +545,18 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
 # ------------------------------------------------------- suite + outputs
 
 
+def gpu_elapsed_s(t_start_mono, gpu_start):
+    """GPU seconds for the money estimate: since the session's GPU start
+    when given (the whole-session cap covers deploy + ready waits), else
+    the runner's own wall clock."""
+    if gpu_start is None:
+        return time.monotonic() - t_start_mono
+    try:
+        return max(0.0, time.time() - float(gpu_start))
+    except (TypeError, ValueError):
+        return time.monotonic() - t_start_mono
+
+
 def estimate_total_fc(s_usages, w_usages, elapsed_s):
     """Running estimate: S tokens (Baseten rate) + W tokens (Meta rate) +
     one shared GPU cost for the run's wall-clock time."""
@@ -528,7 +588,7 @@ def run_suite_fc(jobs, manual_text, out_dir, arm_cfgs, key_map,
                  arms=("G", "S"), k=1, workers=MAX_WORKERS,
                  post_fn=None, sleep_fn=time.sleep,
                  exec_fn=None, grade_fn=None, w_job_ids=None,
-                 call_timeout=CALL_TIMEOUT, affinity=None):
+                 call_timeout=CALL_TIMEOUT, affinity=None, gpu_start=None):
     """Call every (job, arm) pair `k` times with `workers` threads.
 
     Arms run one after another with that many workers (up to 8 sandboxes
@@ -566,7 +626,8 @@ def run_suite_fc(jobs, manual_text, out_dir, arm_cfgs, key_map,
             while next_i < len(pairs) or in_flight:
                 while next_i < len(pairs) and len(in_flight) < pool_size:
                     if over_budget_fc(s_usages, w_usages,
-                                      time.monotonic() - t_start, budget):
+                                      gpu_elapsed_s(t_start, gpu_start),
+                                      budget):
                         budget_stopped = True
                         break
                     if arm == "S" and runner.over_budget_c(s_usages, budget_c):
@@ -675,6 +736,15 @@ def build_fc_summary(records, s_usages, w_usages, elapsed_s, budget,
             "wrong_geometry": sum(1 for r in records
                                   if r.get("arm") == arm
                                   and r.get("failure_tag") == "wrong_geometry"),
+            # Harness and INVALID are counted, never folded into the
+            # pass rate (PLAN: PASS / (PASS + FAIL); rule 6 gates on
+            # their share).
+            "harness": sum(1 for r in records
+                           if r.get("arm") == arm
+                           and r.get("failure_tag") == "harness"),
+            "INVALID": sum(1 for r in records
+                           if r.get("arm") == arm
+                           and r.get("outcome") == "INVALID"),
         }
     s_pass, g_pass = pass_job_ids(records, "S"), pass_job_ids(records, "G")
     cost_s = round(sum(runner.cost_c_of_usage(u) for u in s_usages), 4)
@@ -712,6 +782,8 @@ def build_fc_summary(records, s_usages, w_usages, elapsed_s, budget,
         "decision_s": decision["decision_s"],
         "decision": decision["decision"],
         "agree_T_S": decision["agree"],
+        "run_invalid": decision["run_invalid"],
+        "run_invalid_arms": decision["run_invalid_arms"],
         "rate_g": decision["rate_g"],
         "rate_t": decision["rate_t"],
         "rate_s": decision["rate_s"],
@@ -738,17 +810,25 @@ def build_fc_report(summary):
                     100 * (summary["rate_s"] or 0)))
     lines.append("")
     lines.append("## Per arm (PASS / FAIL / INVALID, pass rate)")
+    lines.append("Pass rates are PASS / (PASS + FAIL); INVALID and harness "
+                 "are counted, never folded in.")
+    if summary.get("run_invalid"):
+        lines.append("RUN INVALID: harness/INVALID over 5%% in %s"
+                     % ", ".join(
+                         "%s (%.1f%%)" % (a, 100 * shr)
+                         for a, shr in sorted(
+                             summary["run_invalid_arms"].items())))
     lines.append("| Arm | PASS | FAIL | INVALID | pass rate | "
-                 "api_error | wrong_geometry |")
-    lines.append("|---|---|---|---|---|---|---|")
+                 "api_error | wrong_geometry | harness |")
+    lines.append("|---|---|---|---|---|---|---|---|")
     for arm in arms:
         s = summary["arms"][arm]
         t = summary["failure_tags"][arm]
         pr = "n/a" if s["pass_rate"] is None else "%.1f%%" % (100 * s["pass_rate"])
         lines.append(
-            "| %s | %s | %s | %s | %s | %s | %s |"
+            "| %s | %s | %s | %s | %s | %s | %s | %s |"
             % (arm, s["PASS"], s["FAIL"], s["INVALID"], pr,
-               t["api_error"], t["wrong_geometry"]))
+               t["api_error"], t["wrong_geometry"], t.get("harness", 0)))
     lines.append("")
     lines.append("Jobs passed by S but not G: %s"
                  % (", ".join(summary["jobs_passed_by_S_not_G"]) or "-"))
@@ -803,6 +883,10 @@ def main(argv=None):
     parser.add_argument("--k", type=int, default=1)
     parser.add_argument("--workers", type=int, default=MAX_WORKERS)
     parser.add_argument("--budget", type=float, default=3.5)
+    parser.add_argument("--gpu-start", default=None,
+                        help="unix seconds of the session's GPU start: the "
+                             "money estimate counts GPU time since then "
+                             "(the whole-session cap)")
     parser.add_argument("--budget-c", type=float, default=3.0)
     parser.add_argument("--budget-w", type=float, default=3.0,
                         help="Wonder's own cap ($20/M output, $4/M input, "
@@ -828,14 +912,14 @@ def main(argv=None):
     glimmer_url = os.environ.get("GLIMMER_URL", "")
     glimmer_key = os.environ.get("GLIMMER_KEY", "")
     baseten_key = os.environ.get("BASETEN_KEY", "")
-    meta_key = os.environ.get("META_KEY", "")
+    meta_key = os.environ.get("META_HERDSHOT_API_KEY", "")
     need = []
     if "G" in arms:
         need += [("GLIMMER_URL", glimmer_url), ("GLIMMER_KEY", glimmer_key)]
     if "S" in arms:
         need += [("BASETEN_KEY", baseten_key)]
     if "W" in arms or args.w_smoke:
-        need += [("META_KEY", meta_key)]
+        need += [("META_HERDSHOT_API_KEY", meta_key)]
     missing = [name for name, val in need if not val]
     if missing:
         parser.error("missing environment variables: " + ", ".join(missing))
@@ -901,10 +985,17 @@ def main(argv=None):
         if not w_job_ids:
             print("no S failures to escalate; W has nothing to run")
 
-    run_suite_fc(jobs, manual_text, args.out, arm_cfgs, key_map,
-                 budget=args.budget, budget_c=args.budget_c,
-                 budget_w=args.budget_w, arms=arms, k=args.k,
-                 workers=args.workers, w_job_ids=w_job_ids)
+    import cloud_grade as _cloud_grade  # noqa: E402
+
+    # The runner's remote work (grader calls) needs an app context, so
+    # cloud_grade.grade.remote() runs inside it.
+    with _modal.enable_output():
+        with _cloud_grade.lookup_grader_app().run():
+            run_suite_fc(jobs, manual_text, args.out, arm_cfgs, key_map,
+                         budget=args.budget, budget_c=args.budget_c,
+                         budget_w=args.budget_w, arms=arms, k=args.k,
+                         workers=args.workers, w_job_ids=w_job_ids,
+                         gpu_start=args.gpu_start)
     return 0
 
 

@@ -36,8 +36,10 @@ APPIMAGE_URL = (
     "https://github.com/FreeCAD/FreeCAD/releases/download/1.1.4/"
     + APPIMAGE_ASSET
 )
+APPIMAGE_SHA_NAME = APPIMAGE_ASSET + "-SHA256.txt"
 APPIMAGE_SHA_URL = (
-    "https://github.com/FreeCAD/FreeCAD/releases/download/1.1.4/SHA256.txt"
+    "https://github.com/FreeCAD/FreeCAD/releases/download/1.1.4/"
+    + APPIMAGE_SHA_NAME
 )
 
 CPU = 1
@@ -77,25 +79,40 @@ def image_files():
     return list(IMAGE_FILES)
 
 
+EXEC_APP_NAME = "forge-freecad"  # Modal app the boxes run under
+
+
+def lookup_exec_app():
+    """The Modal app handle for boxes (created on first lookup)."""
+    if modal is None:
+        raise RuntimeError("modal is not installed; cannot look up the app")
+    return modal.App.lookup(EXEC_APP_NAME, create_if_missing=True)
+
+
 def build_image():
     """Modal image: download the AppImage, verify SHA256, unpack with
-    --appimage-extract, and print `freecadcmd` version 1.1.4. Lazy: no
-    network or Modal call until the image builds remotely."""
+    --appimage-extract, link freecadcmd on PATH, and print `freecadcmd`
+    version 1.1.4. Lazy: no network or Modal call until the image builds
+    remotely. `curl -fL` fails the build on an HTTP error (a 404 is not a
+    checksum mismatch later)."""
     if modal is None:
         raise RuntimeError("modal is not installed; cannot build the box image")
     return (
         modal.Image.from_registry("debian:bookworm-slim")
         .run_commands(
             "apt-get update && apt-get install -y --no-install-recommends "
-            "ca-certificates curl file libgl1 libx11-6 libxext6 libxrender1 "
-            "libxt6 libsm6 libice6 libfuse2-t 2>/dev/null || true",
+            "ca-certificates curl libgl1 libglib2.0-0 libx11-6 libxext6 "
+            "libxrender1 libsm6 libice6",
         )
         .run_commands(
-            "curl -L -o /opt/%s %s" % (APPIMAGE_ASSET, APPIMAGE_URL),
-            "curl -L -o /opt/SHA256.txt %s" % APPIMAGE_SHA_URL,
-            "cd /opt && grep %s SHA256.txt | sha256sum -c -" % APPIMAGE_ASSET,
+            "curl -fL -o /opt/%s %s" % (APPIMAGE_ASSET, APPIMAGE_URL),
+            "curl -fL -o /opt/%s %s" % (APPIMAGE_SHA_NAME, APPIMAGE_SHA_URL),
+            "cd /opt && grep %s %s | sha256sum -c -"
+            % (APPIMAGE_ASSET, APPIMAGE_SHA_NAME),
             "cd /opt && ./%s --appimage-extract >/dev/null" % APPIMAGE_ASSET,
-            "/opt/squashfs-root/usr/bin/freecadcmd --version",
+            "ln -s /opt/squashfs-root/usr/bin/freecadcmd "
+            "/usr/local/bin/freecadcmd",
+            "freecadcmd --version",
         )
         .add_local_file(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), RUN_SCRIPT),
@@ -105,19 +122,41 @@ def build_image():
 
 
 def build_sandbox(image=None):
-    """Create one fresh sandbox for one answer (terminated after use)."""
+    """Create one fresh sandbox for one answer (terminated after use).
+
+    Modal requires the app, so the box is created under the forge-freecad
+    app handle, not ad hoc."""
     if modal is None:
         raise RuntimeError("modal is not installed; cannot create a sandbox")
-    return modal.Sandbox.create(image=image or build_image(), **sandbox_kwargs())
+    app = lookup_exec_app()
+    return modal.Sandbox.create(
+        app=app, image=image or build_image(), **sandbox_kwargs())
+
+
+NO_STEP_PREFIX = "the answer wrote no STEP"
+
+
+def _read_stream(stream):
+    """Best-effort text from a box process stream (stdout or stderr)."""
+    try:
+        if stream is not None and hasattr(stream, "read"):
+            return stream.read() or ""
+    except Exception:  # noqa: BLE001 -- logs are best-effort
+        pass
+    return ""
 
 
 def run_answer_in_box(answer_code, sandbox=None, sandbox_factory=None):
     """Run one answer string in the box. Returns {"step_bytes",
-    "measure", "log"}; measure is logs-only, the grader decides.
+    "measure", "log", "run_error"}; measure is logs-only, the grader
+    decides.
 
     `sandbox` (a live or fake sandbox) or `sandbox_factory` (called with
     no args) is injected in tests; without either, a real Modal sandbox
-    is created. STEP output over 20 MB raises ValueError.
+    is created. STEP output over 20 MB raises ValueError. When the answer
+    writes no STEP (run_one_fc exits 2 with its ERROR line on stderr),
+    nothing raises: step_bytes/measure come back None and run_error holds
+    run_one_fc's stderr (its ERROR line), for the runner's run_error.
     """
     own = False
     if sandbox is None:
@@ -130,16 +169,19 @@ def run_answer_in_box(answer_code, sandbox=None, sandbox_factory=None):
         sandbox.filesystem.write_text(
             WORK_DIR + "/" + ANSWER_NAME, answer_code or "")
         proc = sandbox.exec(
-            ["freecadcmd", WORK_DIR + "/" + RUN_SCRIPT],
+            "freecadcmd", WORK_DIR + "/" + RUN_SCRIPT,
             env={"FC_SCRATCH": WORK_DIR},
             timeout=EXEC_TIMEOUT_S,
         )
-        log = ""
+        log = _read_stream(getattr(proc, "stdout", None))
+        err_text = _read_stream(getattr(proc, "stderr", None)).strip()
         try:
-            log = proc.stdout.read() if hasattr(proc.stdout, "read") else ""
-        except Exception:  # noqa: BLE001 -- logs are best-effort
-            log = ""
-        step_bytes = sandbox.filesystem.read_bytes(STEP_PATH)
+            step_bytes = sandbox.filesystem.read_bytes(STEP_PATH)
+        except (FileNotFoundError, KeyError):  # KeyError: test fakes
+            detail = err_text or log.strip()
+            run_error = NO_STEP_PREFIX + (": %s" % detail if detail else "")
+            return {"step_bytes": None, "measure": None, "log": log,
+                    "run_error": run_error}
         if len(step_bytes) > MAX_STEP_BYTES:
             raise ValueError(
                 "STEP is %d bytes (over the %d-byte limit); refusing"
@@ -147,10 +189,120 @@ def run_answer_in_box(answer_code, sandbox=None, sandbox_factory=None):
         import json as _json
 
         measure = _json.loads(sandbox.filesystem.read_text(MEASURE_PATH))
-        return {"step_bytes": step_bytes, "measure": measure, "log": log}
+        return {"step_bytes": step_bytes, "measure": measure, "log": log,
+                "run_error": None}
     finally:
         if own:
             try:
                 sandbox.terminate()
             except Exception:  # noqa: BLE001 -- terminate is best-effort
                 pass
+
+
+# ------------------------------------------------------- live check CLIs
+# (Claude runs these against real Modal; never in unit tests.)
+
+
+def check_image():
+    """Build the box image, run `freecadcmd --version` in it, print that."""
+    if modal is None:
+        raise RuntimeError("modal is not installed; cannot check the image")
+    sb = modal.Sandbox.create(
+        app=lookup_exec_app(), image=build_image(), **sandbox_kwargs())
+    try:
+        proc = sb.exec("freecadcmd", "--version", timeout=60)
+        out = (_read_stream(proc.stdout) + _read_stream(proc.stderr)).strip()
+        print(out)
+        return out
+    finally:
+        sb.terminate()
+
+
+def rel_diff(a, b):
+    """Relative difference |a-b|/|b| (None when b is 0)."""
+    try:
+        return abs(float(a) - float(b)) / abs(float(b)) if float(b) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def check_hand(answer_paths, exec_fn=None, grade_fn=None, expected=None):
+    """Run hand-written answers in the box and grade each STEP.
+
+    Prints one line per answer: `<name>: PASS` (or FAIL) plus the
+    bbox/volume relative difference vs the Mac-made parts when `expected`
+    ({name: {"bbox": [...], "volume": ...}}) is given. Returns the lines.
+    `exec_fn`/`grade_fn` are injected in tests; by default the real box
+    and the cloud grader (needs the grader app context) are used.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import cloud_grade as _cloud_grade  # noqa: E402
+
+    lines = []
+    for path in answer_paths:
+        name = os.path.splitext(os.path.basename(path))[0]
+        with open(path, encoding="utf-8") as f:
+            source = f.read()
+        boxed = (exec_fn or run_answer_in_box)(source)
+        verdict, extra = "FAIL", ""
+        if boxed.get("step_bytes") is not None:
+            graded = (grade_fn or _cloud_grade.grade.remote)(
+                name, boxed["step_bytes"])
+            verdict = graded.get("verdict", "FAIL")
+            exp = (expected or {}).get(name)
+            got = graded.get("measurements") or {}
+            if exp and got:
+                parts = []
+                for key in ("bbox", "volume"):
+                    if key in exp and key in got:
+                        vals_e = exp[key] if isinstance(
+                            exp[key], list) else [exp[key]]
+                        vals_g = got[key] if isinstance(
+                            got[key], list) else [got[key]]
+                        diffs = [rel_diff(g, e) for g, e in
+                                 zip(vals_g, vals_e)]
+                        diffs = [d for d in diffs if d is not None]
+                        if diffs:
+                            parts.append("%s rel-diff %.2e" % (
+                                key, max(diffs)))
+                if parts:
+                    extra = " (" + ", ".join(parts) + ")"
+        else:
+            extra = " (%s)" % (boxed.get("run_error") or NO_STEP_PREFIX)
+        line = "%s: %s%s" % (name, verdict, extra)
+        print(line)
+        lines.append(line)
+    return lines
+
+
+def main(argv=None):
+    """CLI: --check-image prints freecadcmd --version from the built image;
+    --check-hand <answers...> grades hand answers in the box."""
+    import argparse as _ap
+
+    parser = _ap.ArgumentParser(description="FreeCAD cloud-box checks.")
+    parser.add_argument("--check-image", action="store_true")
+    parser.add_argument("--check-hand", nargs="*", default=None,
+                        help="hand answer files to run in the box and grade")
+    args = parser.parse_args(argv)
+    if args.check_image:
+        check_image()
+        return 0
+    if args.check_hand is not None:
+        check_hand(args.check_hand or sorted(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "hand", n)
+            for n in sorted(os.listdir(os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "hand")))
+            if n.endswith(".py")))
+        return 0
+    parser.error("need --check-image or --check-hand")
+    return 2
+
+
+if __name__ == "__main__":
+    import sys as _sys
+
+    _sys.exit(main())

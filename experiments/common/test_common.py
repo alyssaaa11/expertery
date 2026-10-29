@@ -101,6 +101,46 @@ def _alive(pid):
     return True
 
 
+def test_run_session_hook_gets_keys_and_session_budget(tmp_path):
+    import shutil
+    import time
+    if not shutil.which("zsh"):
+        pytest.skip("zsh is not installed")
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    stub = bindir / "modal"
+    stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    stub.chmod(0o755)
+    out = tmp_path / "out"
+    record = tmp_path / "hook.env"
+    wrap = tmp_path / "dummy_hook.sh"
+    # The hook appends --budget/--gpu-start after the command; the dummy
+    # records the keys from its env and all its arguments, then stops.
+    wrap.write_text(
+        "#!/bin/sh\n"
+        "echo \"GLIMMER_URL=$GLIMMER_URL\" > %s\n"
+        "echo \"GLIMMER_KEY_SET=${GLIMMER_KEY:+yes}\" >> %s\n"
+        "printf '%%s\\n' \"$@\" >> %s\n" % (record, record, record),
+        encoding="utf-8")
+    wrap.chmod(0o755)
+    env = dict(os.environ, RUN_SESSION_SKIP_DEPLOY="1",
+               RUN_SESSION_RUNNER_CMD="sh %s" % wrap, MODAL_BIN=str(stub))
+    p = subprocess.run(
+        ["zsh", os.path.join(HERE, "run_session.sh"), str(out),
+         "--pilot", "", "--run", "dummy:sub:BR:1"],
+        capture_output=True, text=True, env=env, timeout=120)
+    assert p.returncode == 0, p.stdout + p.stderr
+    lines = record.read_text(encoding="utf-8").splitlines()
+    assert "GLIMMER_URL=skip" in lines  # the session key reaches the hook
+    assert "GLIMMER_KEY_SET=yes" in lines
+    args = lines[2:]
+    assert "--jobs" in args and "dummy" in args  # the spec still flows
+    b = args[args.index("--budget") + 1]  # the whole-session cap
+    g = args[args.index("--gpu-start") + 1]
+    assert float(b) == budget_left.budget_left(
+        3.0, int(g), now=time.time(), rate_per_hour=2.50)
+
+
 def test_run_session_term_kills_dummy_runner(tmp_path):
     import shutil
     import signal

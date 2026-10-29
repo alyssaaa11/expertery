@@ -41,24 +41,45 @@ class FakeFS:
         return data if isinstance(data, str) else data.decode("utf-8")
 
 
+class FakeStream:
+    def __init__(self, text=""):
+        self._text = text
+
+    def read(self):
+        return self._text
+
+
 class FakeProc:
+    def __init__(self, stdout="", stderr=""):
+        self.stdout = FakeStream(stdout)
+        self.stderr = FakeStream(stderr)
+
+
+class NoStdoutProc:
+    """A proc without readable streams: logs fall back to ""."""
+
     def __init__(self):
-        self.stdout = object()  # no .read(): log falls back to ""
+        self.stdout = object()
+        # No stderr attribute at all.
 
 
 class FakeSandbox:
-    def __init__(self, step_bytes=b"STEP", measure=None):
+    def __init__(self, step_bytes=b"STEP", measure=None, stdout="",
+                 stderr="", proc=None):
         self.filesystem = FakeFS()
-        self.filesystem.files["/work/answer.step"] = step_bytes
+        if step_bytes is not None:
+            self.filesystem.files["/work/answer.step"] = step_bytes
         self.filesystem.files["/work/measure.json"] = json.dumps(
             measure or {"bbox": [0, 0, 0, 1, 1, 1], "volume": 1.0,
                         "solids": 1, "valid": True})
+        self._proc = proc or FakeProc(stdout, stderr)
         self.exec_calls = []
         self.terminated = False
 
-    def exec(self, cmd, env=None, timeout=None):
-        self.exec_calls.append({"cmd": cmd, "env": env, "timeout": timeout})
-        return FakeProc()
+    def exec(self, *args, env=None, timeout=None):
+        self.exec_calls.append({"args": args, "env": env,
+                                "timeout": timeout})
+        return self._proc
 
     def terminate(self):
         self.terminated = True
@@ -89,11 +110,37 @@ def test_box_protocol_write_run_read_terminate():
     out = cloud_exec.run_answer_in_box("result = 1", sandbox=box)
     assert out["step_bytes"] == b"STEP-BYTES"
     assert out["measure"]["solids"] == 1  # logs only; grader decides
+    assert out["run_error"] is None
     assert box.filesystem.files["/work/answer.py"] == "result = 1"
     call = box.exec_calls[0]
-    assert call["cmd"] == ["freecadcmd", "/work/run_one_fc.py"]
+    # Separate string arguments (Modal: app is required; exec takes args).
+    assert call["args"] == ("freecadcmd", "/work/run_one_fc.py")
     assert call["env"] == {"FC_SCRATCH": "/work"}  # baseline speed limit box
     assert call["timeout"] == 60
+
+
+def test_box_without_step_returns_run_one_fc_stderr():
+    err = "ERROR: no variable named 'result'"
+    box = FakeSandbox(step_bytes=None, stderr=err + "\n")
+    out = cloud_exec.run_answer_in_box("x = 1", sandbox=box)
+    assert out["step_bytes"] is None and out["measure"] is None
+    # run_one_fc's ERROR line is handed back (not raised: this is the
+    # answer's failure, not a harness failure).
+    assert cloud_exec.NO_STEP_PREFIX in out["run_error"]
+    assert err in out["run_error"]
+
+
+def test_box_without_step_and_empty_stderr():
+    box = FakeSandbox(step_bytes=None)
+    out = cloud_exec.run_answer_in_box("x = 1", sandbox=box)
+    assert out["step_bytes"] is None
+    assert cloud_exec.NO_STEP_PREFIX in out["run_error"]
+
+
+def test_box_streams_best_effort():
+    box = FakeSandbox(proc=NoStdoutProc())
+    out = cloud_exec.run_answer_in_box("result = 1", sandbox=box)
+    assert out["log"] == "" and out["step_bytes"] == b"STEP"
 
 
 def test_box_refuses_oversize_step():
@@ -118,9 +165,10 @@ def test_real_modal_sandbox_is_never_created(monkeypatch):
     import modal
 
     def _boom(*args, **kwargs):
-        raise AssertionError("a real Modal sandbox would start here")
+        raise AssertionError("a real Modal call would start here")
 
     monkeypatch.setattr(modal.Sandbox, "create", _boom)
+    monkeypatch.setattr(modal.App, "lookup", _boom)
     with pytest.raises(AssertionError):
         cloud_exec.run_answer_in_box("result = 1")  # no factory: must raise
     monkeypatch.setattr(cloud_exec, "modal", None)
@@ -128,6 +176,8 @@ def test_real_modal_sandbox_is_never_created(monkeypatch):
         cloud_exec.build_sandbox()
     with pytest.raises(RuntimeError):
         cloud_exec.build_image()
+    with pytest.raises(RuntimeError):
+        cloud_exec.lookup_exec_app()
 
 
 # ------------------------------------------------------- fake Part
@@ -253,3 +303,161 @@ def test_grader_compare_mirrors_baseline():
 def test_grader_tolerances():
     assert cloud_grade.TOL_VERDICT == 0.002  # 0.2% is the verdict
     assert cloud_grade.TOL_TIGHT == 1e-6  # 1e-6 also recorded
+
+
+# ------------------------------------------------------- image recipe (B1)
+
+
+class _FakeImage:
+    def __init__(self):
+        self.commands = []
+        self.files = []
+
+    def run_commands(self, *cmds):
+        self.commands.extend(cmds)
+        return self
+
+    def add_local_file(self, local, remote):
+        self.files.append((local, remote))
+        return self
+
+
+def _stub_modal_with_image():
+    """A modal stand-in recording Image builds + Sandbox.create calls."""
+    made = {}
+
+    class _ImageNS:
+        @staticmethod
+        def from_registry(base):
+            made["base"] = base
+            made["image"] = _FakeImage()
+            return made["image"]
+
+    class _AppNS:
+        @staticmethod
+        def lookup(name, create_if_missing=False):
+            made.setdefault("lookups", []).append((name, create_if_missing))
+            return ("app:%s" % name, create_if_missing)
+
+    class _SandboxNS:
+        @staticmethod
+        def create(*args, **kwargs):
+            made.setdefault("creates", []).append((args, kwargs))
+            return ("sandbox", kwargs)
+
+    return types.SimpleNamespace(Image=_ImageNS, App=_AppNS,
+                                 Sandbox=_SandboxNS), made
+
+
+def test_image_recipe_downloads_verified_release(monkeypatch):
+    stub, made = _stub_modal_with_image()
+    monkeypatch.setattr(cloud_exec, "modal", stub)
+    cloud_exec.build_image()
+    blob = "\n".join(made["image"].commands)
+    # The per-asset SHA file (the old SHA256.txt is 404).
+    assert cloud_exec.APPIMAGE_SHA_URL.endswith(
+        "FreeCAD_1.1.4-Linux-x86_64-py311.AppImage-SHA256.txt")
+    assert cloud_exec.APPIMAGE_SHA_URL in blob
+    assert cloud_exec.APPIMAGE_URL in blob
+    # -fL: an HTTP error fails the build instead of checksumming a 404.
+    assert "curl -fL" in blob and "curl -L " not in blob.replace(
+        "curl -fL", "")
+    # Exact apt line: no || true, no libfuse (extract needs no FUSE).
+    assert "apt-get install -y --no-install-recommends ca-certificates " \
+        "curl libgl1 libglib2.0-0 libx11-6 libxext6 libxrender1 libsm6 " \
+        "libice6" in blob
+    assert "|| true" not in blob and "fuse" not in blob.lower()
+    assert "--appimage-extract" in blob
+    # freecadcmd on PATH + version printed.
+    assert "ln -s /opt/squashfs-root/usr/bin/freecadcmd " \
+        "/usr/local/bin/freecadcmd" in blob
+    assert "freecadcmd --version" in blob
+    assert made["image"].files == [
+        (os.path.join(HERE, "run_one_fc.py"), "/work/run_one_fc.py")]
+
+
+def test_sandbox_create_uses_the_app(monkeypatch):
+    stub, made = _stub_modal_with_image()
+    monkeypatch.setattr(cloud_exec, "modal", stub)
+    monkeypatch.setattr(cloud_exec, "build_image", lambda: "img")
+    sb = cloud_exec.build_sandbox()
+    assert ("forge-freecad", True) in made["lookups"]
+    args, kwargs = made["creates"][0]
+    assert args == ()  # Modal: app is required; exec takes the args
+    assert kwargs["app"] == ("app:forge-freecad", True)
+    assert kwargs["image"] == "img"
+    assert kwargs["block_network"] is True and sb == ("sandbox", kwargs)
+
+
+def test_lookup_exec_app_name(monkeypatch):
+    stub, made = _stub_modal_with_image()
+    monkeypatch.setattr(cloud_exec, "modal", stub)
+    cloud_exec.lookup_exec_app()
+    assert made["lookups"] == [("forge-freecad", True)]
+
+
+# ------------------------------------------------------- live check CLIs
+
+
+def test_check_hand_reports_pass_fail_and_rel_diff(tmp_path, capsys):
+    a = tmp_path / "M1.py"
+    a.write_text("result = 1", encoding="utf-8")
+    b = tmp_path / "M1_wrong.py"
+    b.write_text("result = 2", encoding="utf-8")
+    c = tmp_path / "M6.py"
+    c.write_text("x = 1", encoding="utf-8")
+
+    def fake_exec(source):
+        if source == "x = 1":
+            return {"step_bytes": None, "measure": None, "log": "",
+                    "run_error": "the answer wrote no STEP: ERROR: boom"}
+        return {"step_bytes": b"S", "measure": {}, "log": "",
+                "run_error": None}
+
+    def fake_grade(job_id, step):
+        if job_id == "M1":
+            return {"verdict": "PASS", "tight": "PASS", "fails": [],
+                    "measurements": {"bbox": [0, 0, 0, 10, 5, 2],
+                                     "volume": 100.0}}
+        return {"verdict": "FAIL", "tight": "FAIL", "fails": ["bbox"],
+                "measurements": {"bbox": [0, 0, 0, 10, 5, 3],
+                                 "volume": 150.0}}
+
+    expected = {"M1": {"bbox": [0, 0, 0, 10, 5, 2], "volume": 100.0},
+                "M1_wrong": {"bbox": [0, 0, 0, 10, 5, 2], "volume": 100.0}}
+    lines = cloud_exec.check_hand([str(a), str(b), str(c)],
+                                  exec_fn=fake_exec, grade_fn=fake_grade,
+                                  expected=expected)
+    assert lines[0].startswith("M1: PASS") and "rel-diff 0.00e+00" in lines[0]
+    assert lines[1].startswith("M1_wrong: FAIL") and "rel-diff" in lines[1]
+    assert lines[2].startswith("M6: FAIL") and "no STEP" in lines[2]
+    out = capsys.readouterr().out
+    assert "M1: PASS" in out and "M1_wrong: FAIL" in out
+
+
+def test_check_refs_prints_refs_line(capsys):
+    n, total = cloud_grade.check_refs(
+        build_refs_fn=lambda job: b"STEP",
+        grade_fn=lambda jid, step: {"verdict": "PASS", "fails": []})
+    assert (n, total) == (30, 30)
+    assert "REFS 30/30 PASS" in capsys.readouterr().out
+
+
+def test_check_refs_names_failures(capsys):
+    n, total = cloud_grade.check_refs(
+        build_refs_fn=lambda job: b"STEP",
+        grade_fn=lambda jid, step: {"verdict": "PASS", "fails": []}
+        if jid != "M1" else {"verdict": "FAIL", "fails": ["bbox"]})
+    assert (n, total) == (29, 30)
+    out = capsys.readouterr().out
+    assert "REF FAIL M1" in out and "REFS 29/30 PASS" in out
+
+
+def test_grader_app_lookup_name(monkeypatch):
+    stub, made = _stub_modal_with_image()
+    monkeypatch.setattr(cloud_grade, "modal", stub)
+    cloud_grade.lookup_grader_app()
+    assert made["lookups"] == [("forge-freecad-grader", True)]
+    monkeypatch.setattr(cloud_grade, "modal", None)
+    with pytest.raises(RuntimeError):
+        cloud_grade.lookup_grader_app()
