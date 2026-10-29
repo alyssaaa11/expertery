@@ -68,6 +68,10 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
   recipe: TRL+PEFT bf16 LoRA on one H100, ~$4-5, smoke test first. Drafts: experiments/option-a/ (11 Tern/Skua rules,
   30 jobs, self-test 90/90) and b2-hint/SANDBOX_SPEC.DRAFT.md. The verifier's second review of the drafts was
   requested 00:10.
+- **2026-10-29 morning, decision (user):** all 6 = yes, but cheapest kill tests first. verified: the free coverage audit
+  [[coverage-audit-2026-10-29]] gives 83% of jobs fully covered by the top 5 (≥ 80%) → **Option A skipped**. Next:
+  B2 sandbox (Muse Code, ~$0.3-0.5), then the B2 hint test (~$1); both need the user's yes. B2 best ≤ 75 → Plan B
+  (train on CadQuery, LoRA recipe, smoke test first); both fail → honest result + pipeline demo.
 - **Morning:** the user answers the 6 decisions in [[night-prep-2026-10-28]] section 7, then Claude writes the
   library-generator spec.
 - New session? Start with: "Forge: read ~/projects/forge/forge-wiki/wiki/status.md and continue".

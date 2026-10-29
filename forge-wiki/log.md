@@ -39,3 +39,4 @@
 - 2026-10-28 23:30 verified: Keel v2 main run: B Glimmer+manual 97.8%, C Spark 100% → rule 2 NO ROOM. Clean (0 harness/PermissionError). See [[keel-v2-baseline-2026-10-28]].
 - 2026-10-28 23:39 filed: findings/quillon-keel-build-2026-10-28 (build method), 8 new lessons, tools-and-services evening facts.
 - 2026-10-29 00:15 filed: decisions/night-prep-2026-10-28 (5 free night tasks: Spark context 1M from catalog, training recipe, verifier pre-review READY WITH FIXES, Tern/Skua drafts self-test 90/90, B2 sandbox spec), raw/training-recipe-research-2026-10-28.
+- 2026-10-29 verified: coverage audit 83% (k=5) → Option A skipped by the user's noon rule. Page findings/coverage-audit-2026-10-29.

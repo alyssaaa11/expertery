@@ -19,6 +19,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 ## decisions
 - [option-a-plan-2026-10-29](wiki/decisions/option-a-plan-2026-10-29.md): plan for Oct 29: hidden standards in ~300 past designs, arms B / B-search / C, Spark context check, blind rule check, B2 CadQuery test in parallel
 - [night-prep-2026-10-28](wiki/decisions/night-prep-2026-10-28.md): night prep for Oct 29: Spark context, training recipe, verifier pre-review, drafts, risks and second plans, morning decisions
+- [coverage-audit-2026-10-29](wiki/findings/coverage-audit-2026-10-29.md): free retrieval-coverage audit: 83% of exam jobs covered by top-5 → Option A skipped
 - [factory-plan-2026-10-29](wiki/decisions/factory-plan-2026-10-29.md): next stage: B2 → recipe research → generator → teacher run → training → final exam; rules; ~$13–16
 - [forge-plan-2026-10-28](wiki/decisions/forge-plan-2026-10-28.md): history of Oct 28 decisions: $30 budget, CadQuery, Spark Open on Baseten, own folder/app, spend log
 
