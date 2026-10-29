@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-10-29 ~17:21
+**Last updated**: 2026-10-29 ~18:15
 
 ---
 
@@ -56,8 +56,13 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 5. Budget: ≈ $11 left for factory (~$3) + training (~$3) + final (~$1.5) + fixes; no money for a training retry.
 
 ## Next step
-1. Verifier checks experiments/train/FIX_SPEC.md (requested 2026-10-29); then the user's yes → Muse Code fix session.
-2. Then: factory spec → verifier → user yes → Muse Code builds the generator → teacher run (Spark Open, Baseten).
+1. **FreeCAD gap test** (decision, user 2026-10-29: test FreeCAD before the factory; budget up to ~$35 only if FreeCAD
+   shows a big gap). FreeCAD 1.1.4 installed; all free checks pass (experiments/freecad/PLAN.md); manual frozen; Muse
+   spec experiments/freecad/SPEC.md (392323e) **with the verifier**; then the user's yes → Muse Code (~$1.2) → paid run
+   G + S on 30 jobs (~$1.4).
+2. Training pipeline: GO WITH 2 FIXES (round 2 in experiments/train/FIX_SPEC.md) — bundle with the next Muse session.
+   Needs the user's yes to install modal into the forge venv.
+3. Factory: plan READY (verifier); its target tool (FreeCAD or CadQuery hard jobs) follows from the gap test.
 
 ## Where things are
 - Project `~/projects/forge` (README routes; "How this was built" table + correction on Claude-written scripts).
