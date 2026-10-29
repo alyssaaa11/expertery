@@ -3,7 +3,7 @@
 **Summary**: The one page to read first in a new session. Goal, what is proven, what is open, and the next step. Each
 claim links to the page that holds its evidence. Update this page at the end of every work session.
 
-**Last updated**: 2026-10-28 ~23:35
+**Last updated**: 2026-10-29 ~00:15
 
 ---
 
@@ -61,10 +61,15 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
   a B-search arm (Glimmer + manual + 5 most similar designs), Spark context check, blind check of the hidden rules,
   and the B2 CadQuery hint test in parallel as the fallback check. Plan: [[option-a-plan-2026-10-29]].
 - Tonight: no builds, no Muse Code, no paid calls. Tomorrow: every paid step waits for the user's yes.
-- Proposed free night tasks (2026-10-28 23:40), **waiting for the user's pick**: (1) Spark Open context limit from
-  Baseten docs/model page (reading only); (2) training-recipe research for a Glimmer LoRA on one GPU (memory, tool,
-  serving the adapter with vLLM, cost); (3) verifier pre-review of [[option-a-plan-2026-10-29]]; (4) draft the hidden
-  standards + 30 exam requests (writing only); (5) sandbox spec for the B2 CadQuery runner. Recommended: 1 + 2 + 3.
+- **Night prep done (2026-10-29 ~00:15), all free:** [[night-prep-2026-10-28]]. Biggest finding: the ~300-design
+  library is only ~27-47k tokens, so "Glimmer can't hold it" is false at Glimmer's native 131k. The verifier's
+  pre-review says READY WITH FIXES (must: B-full arm or a bigger library, C-search arm, freeze retrieval and the
+  rule-key mix, a "standards exist" sentence). Spark Open's catalog limit is 1,048,576 (probe not needed). Training
+  recipe: TRL+PEFT bf16 LoRA on one H100, ~$4-5, smoke test first. Drafts: experiments/option-a/ (11 Tern/Skua rules,
+  30 jobs, self-test 90/90) and b2-hint/SANDBOX_SPEC.DRAFT.md. The verifier's second review of the drafts was
+  requested 00:10.
+- **Morning:** the user answers the 6 decisions in [[night-prep-2026-10-28]] section 7, then Claude writes the
+  library-generator spec.
 - New session? Start with: "Forge: read ~/projects/forge/forge-wiki/wiki/status.md and continue".
 
 ## Where things are
