@@ -54,3 +54,16 @@ files changed, the pytest line, anything not followed.
 Also (cheap, same session): LR schedule and logs per optimizer step, the partial last group scaled by its real size (A2);
 epochs = 2 in the max_steps test (A1); `--spent-dollars` to carry earlier spend (A8); upload data to the volume when it
 is over 5 MB (A9); the smoke entrypoint uses the same loader (A11).
+
+## Round 2 (verifier re-check forge-train-pipeline-recheck-2026-10-29, GO WITH 2 FIXES) — binding
+1. **Launchable (WRONG finding):** the local entrypoints call `.remote()` outside a running app. Wrap the remote part of
+   each entrypoint in `with modal.enable_output(): with app.run():`, so `python experiments/train/forge_train.py smoke
+   --cap-dollars X` works from the forge venv (modal will be installed there, user's call). Why: without it the paid
+   smoke/full runs cannot start at all. Add a free test: `smoke --cap-dollars 3.0` prints CAP REFUSED without any remote
+   call.
+2. **Minimum cap:** set `STARTUP_TIMEOUT_S = 300` (minimum total cap ≈ $2.89 instead of $3.77). Why: with 600 s a $3
+   training cap is refused (train gets only 206 s).
+3. **Fail closed:** if the exam guard cannot build an exam reference, raise (no silent pass). Why: a fail-open guard could
+   let an exam copy into training and invalidate the final exam.
+4. **serve_merged:** its wait (ready ≤ 3 min) + one prompt must fit inside its timeout; make the request timeout ≤ 120 s.
+5. Docstring + README line: "never `modal run forge_train.py::train`; it bypasses the exam guard and the money cap".
