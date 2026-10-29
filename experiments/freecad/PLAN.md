@@ -77,7 +77,7 @@ Revised after the verifier's check (forge-freecad-2026-10-29, READY WITH 3 EDITS
    answers → RUN INVALID** (fix the harness, re-run; no decision). Why: a broken box must not read as "Glimmer is weak
    at FreeCAD", and it would skew rule 4's api_error share, the branch that decides going above $30.
 Pass rates are PASS ÷ (PASS + FAIL), as in the baseline; INVALID and harness answers are left out and counted.
-Failure tags: api_error = the answer raised, timed out, hit the memory limit or a PermissionError; wrong_geometry =
+Failure tags: api_error = the answer raised, defined no `result` variable (pre-registered, verifier B4), timed out, hit the memory limit or a PermissionError; wrong_geometry =
 built but failed the checker, or `result` was not a Part solid; cut off by the token limit = INVALID (as the baseline).
 Honest caveat for the report: FreeCAD's Part API has no counterbore/slot/polar-pattern helpers (CadQuery has them), so
 part of a G-vs-S gap measures that the tool is harder to use, which is exactly the kind of difficulty a company tool has.
