@@ -35,3 +35,22 @@ experiments/first-test/expected.json through code, without printing it; no netwo
    call, because the runner's guard stops only NEW calls and in-flight answers still cost money.
 Run `~/projects/forge/.venv/bin/python -m pytest -q experiments/train experiments/common` until all pass. Short report:
 files changed, the pytest line, anything not followed.
+
+## Spec edits from the verifier's spec check (forge-train-fixspec-2026-10-29, READY WITH 5 SPEC EDITS) — binding
+1. **Deadline inside train (item 4, A6):** train() gets `deadline_s` = its timeout minus 240 s. When the time left falls
+   below that margin, it stops after the current optimizer step and saves the adapter and train_log.json (marked
+   `stopped_at_deadline`). It also saves the adapter every 25 optimizer steps. Split the cap as: merge 12 min H100 +
+   serve 6 min A100 reserved first, the rest to train. Refuse if train gets under 15 min.
+2. **Exam guard refusals (item 3a, A3):** refuse a record only if (i) its exact-number text ratio is ≥ 0.9 to an exam
+   text, or (ii) its built part matches an exam part. Number-collapsed ratios ≥ 0.8 are counted in exam_guard.json as
+   warnings, not refusals. Drop refused records, and abort only if more than 5% are refused.
+3. **Exam guard building (item 3b, A4):** build the 33 references in-process with jobs.py (trusted code); run only the
+   training record's code in the sandbox. Compare bbox and volume first (1e-6) and run the full score only on a match.
+4. **Startup in the cost (item 4, A7):** set `startup_timeout` explicitly (e.g. 600 s) on each function and include it in
+   the worst-case cost: (startup + timeout) × rate ≤ cap.
+5. **Trap that really fires (item 7, A10):** start each runner call in the background (`cmd & RPID=$!; wait $RPID`) so
+   the trap can run. In the trap, kill the runner and its children (`kill -TERM $RPID; pkill -TERM -P $RPID`; macOS has
+   no setsid). Then run `modal app stop`. The TERM test must show the dummy runner dead and "app stopped" printed.
+Also (cheap, same session): LR schedule and logs per optimizer step, the partial last group scaled by its real size (A2);
+epochs = 2 in the max_steps test (A1); `--spent-dollars` to carry earlier spend (A8); upload data to the volume when it
+is over 5 MB (A9); the smoke entrypoint uses the same loader (A11).
