@@ -65,8 +65,10 @@ Revised after the verifier's check (forge-freecad-2026-10-29, READY WITH 3 EDITS
    in T but not in G. No re-run of only the differing jobs (selecting on the outcome shrinks the gap by regression).
    Why: the grey zone also decides whether to go above the $30 cap, so it must be a fixed rule, not a judgement call.
 5. **Rules 1-4 are evaluated twice: on T and on S alone, and both are reported** (verifier edit A2,
-   forge-freecad-escalation-2026-10-29). If they disagree, the report says "FreeCAD target only with Wonder escalation
-   (closed API)" and the user decides. The report also gives Wonder's share of T's passes. S's INVALID (cut-off) jobs
+   forge-freecad-escalation-2026-10-29). **If they disagree (FreeCAD target only on T, not on S) → stay on CadQuery**
+   (decision, user 2026-10-29, fixed before any result); the report says "FreeCAD target only with Wonder escalation
+   (closed API) → stay on CadQuery". Why: choosing after seeing the numbers is the bias this plan avoids elsewhere, and
+   if Wonder is needed to pass at all it is no longer "Wonder only on the hardest jobs" (the privacy headline). The report also gives Wonder's share of T's passes. S's INVALID (cut-off) jobs
    are NOT escalated; they stay INVALID. Why: T gives each job two tries by two models against G's one (a pass@2 effect
    that leans towards "FreeCAD target"), and every Wonder rescue sends the job to a closed API, which weakens the
    "private" claim; the user must see when the decision rests on that.

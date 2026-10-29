@@ -56,11 +56,12 @@ guard, k and workers handling. Replace only:
   coordinates and writes logs. Run up to 8 sandboxes in parallel.
 - arms: `G` = Glimmer (same body as arm B: max_tokens 16000, temperature 1.0, top_p 0.95, top_k 64); `S` = Spark Open
   on Baseten (meta-models/muse-spark-open-1026, same sampling, header x-session-affinity, log cached_tokens); `W` = Muse
-  Wonder (`muse-wonder-1.0`, https://api.meta.ai/v1 chat completions, key from env META_KEY, same messages, max_tokens
+  Wonder (`muse-wonder-1.0`, https://api.meta.ai/v1 chat completions, key from env META_HERDSHOT_API_KEY (the only Meta key in the vault; never META_KEY), same messages, max_tokens
   16000; reasoning tokens are billed as output) run only on job ids that FAILED in S's calls.jsonl (`--escalate-from <S
   run dir>`), with its own budget guard (`--budget-w`, $20/M output, $4/M input, $0.20/M cached). k = 1. Summary adds
   T = S ∪ W-rescues per job and evaluates the PLAN rules 1-4 on BOTH T and S alone (PLAN rule 5); if they disagree,
-  report.md says "FreeCAD target only with Wonder escalation (closed API)"; it also gives Wonder's share of T's passes.
+  the decision is "stay on CadQuery" and report.md says "FreeCAD target only with Wonder escalation (closed API) → stay on
+  CadQuery" (PLAN rule 5); it also gives Wonder's share of T's passes.
   S's INVALID (cut-off) jobs are not escalated. Before the W arm runs on failures, `--w-smoke` sends ONE call (dry job
   D1), logs the endpoint and the usage fields, and stops; if `/v1/chat/completions` is refused, use `/v1/responses`
   (configurable `--w-endpoint`). Why: Meta's post does not state the endpoint path or whether reasoning tokens are
