@@ -104,3 +104,9 @@
 - **Muse Code cost grows with session length, mostly cached re-reads** (Oct 28). How learned: run.usage of 7 sessions:
   small fix ~$0.17–0.33, library build ~$0.40–0.80, the 1,400-line runner (65 calls, 7.4M cached tokens) ~$1.7.
   Check: cap `--max-model-steps`, keep specs precise, split big jobs.
+- **A per-call budget is not a session budget** (Oct 29). How learned: the step-2 baseline passed `--budget 3.0` to
+  each runner call in one GPU session; the runner's guard counts only from its own start (runner.py ~1182, `t_start`;
+  `gpu_start` is used only for reporting), so the session ran ~10:45-12:28 ≈ $4.3 instead of stopping at $3. Neither
+  Claude nor the verifier caught it (both read the flag, not the guard code). Check: before a multi-call session, read
+  where the guard's clock starts; pass each call the budget LEFT (experiments/bmax/run_session_v2.sh), and leave margin
+  for in-flight answers (up to ~400 s each ≈ $0.3).
