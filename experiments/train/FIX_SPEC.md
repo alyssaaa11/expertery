@@ -59,8 +59,10 @@ is over 5 MB (A9); the smoke entrypoint uses the same loader (A11).
 1. **Launchable (WRONG finding):** the local entrypoints call `.remote()` outside a running app. Wrap the remote part of
    each entrypoint in `with modal.enable_output(): with app.run():`, so `python experiments/train/forge_train.py smoke
    --cap-dollars X` works from the forge venv (modal will be installed there, user's call). Why: without it the paid
-   smoke/full runs cannot start at all. Add a free test: `smoke --cap-dollars 3.0` prints CAP REFUSED without any remote
-   call.
+   smoke/full runs cannot start at all. Add a free test: `smoke --cap-dollars 2.0` prints CAP REFUSED without any remote
+   call. The test must monkeypatch `app.run`, `modal.enable_output` and every `.remote()` to raise if called, so a wrong
+   cap check fails the test instead of starting a paid H100 job. Why: with item 2 the minimum cap is ≈ $2.89, so $3.0
+   would NOT be refused, and with modal now installed an unguarded test could really launch (verifier, urgent note).
 2. **Minimum cap:** set `STARTUP_TIMEOUT_S = 300` (minimum total cap ≈ $2.89 instead of $3.77). Why: with 600 s a $3
    training cap is refused (train gets only 206 s).
 3. **Fail closed:** if the exam guard cannot build an exam reference, raise (no silent pass). Why: a fail-open guard could
