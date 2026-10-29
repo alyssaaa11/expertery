@@ -13,11 +13,15 @@ free-check evidence: experiments/freecad/PLAN.md. Every item says why it matters
 ## 1. Cloud safety box: `cloud_exec.py` (decision, user 2026-10-29: nothing Glimmer writes may run on the Mac)
 Every answer runs in a **fresh Modal Sandbox** (`modal.Sandbox.create`, https://modal.com/docs/sdk/py/latest/Sandbox):
 `block_network=True`, no secrets, no volumes, cpu 1, memory (1024, 4096) MiB, `timeout` 90 s, one sandbox per answer,
-terminated after use. Image: FreeCAD **1.1.4** for Linux (conda-forge `freecad=1.1.4` via a micromamba base image, or the
-official 1.1.4 AppImage extracted; the build must print `freecadcmd` version 1.1.4, the same as the Mac manual's
-version). The image contains ONLY FreeCAD + `run_one_fc.py`: no references, no jobs file, no expected.json, no cadquery.
+terminated after use. Image: FreeCAD **1.1.4** for Linux from the official release asset `FreeCAD_1.1.4-Linux-x86_64-py311.AppImage` (GitHub
+release 2026-09-28): download it in the image build, verify its SHA256 against the release's SHA256 file, unpack with
+`--appimage-extract` (no FUSE needed), and the build must print `freecadcmd` version 1.1.4 (the Mac manual's version).
+No conda route: conda-forge has no 1.1.4 build (verifier, anaconda.org API: 1.1.0, 1.1.3, 2026.09.16). Why: a different
+FreeCAD version could make the manual inaccurate and change the result. The image contains ONLY FreeCAD + `run_one_fc.py`: no references, no jobs file, no expected.json, no cadquery.
 Steps: write `answer.py` with `sb.filesystem.write_text`, run `freecadcmd /work/run_one_fc.py` with `sb.exec`
-(env FC_SCRATCH=/work), read back `/work/answer.step` (bytes) and `/work/measure.json`, then `sb.terminate()`.
+(env FC_SCRATCH=/work), read back `/work/answer.step` (bytes) and `/work/measure.json`, then `sb.terminate()`. Run the answer with `sb.exec(..., timeout=60)` inside the 90 s box (the baseline's 60 s
+limit, so speed limits stay the same); refuse a STEP larger than 20 MB. The verdict and failure tags come only from the
+grader; the box's measure.json is for logs only (why: the box runs untrusted code and must not decide its own score).
 Why: the box never holds the answers, has no internet and is new for each answer, so an answer cannot read the
 answer key, other jobs' results, or anything on the user's Mac.
 `run_one_fc.py` (inside the box): exec answer.py with `ns = {"__name__": "__main__"}`; require `result` to be a
@@ -28,8 +32,15 @@ answer key, other jobs' results, or anything on the user's Mac.
 A separate Modal Function (CPU, our own trusted code) with CadQuery 2.8 + experiments/first-test/{jobs.py,checks.py,
 expected.json} baked into its image. Input: job id + STEP bytes; output: verdict at 0.2% (the verdict) and at 1e-6,
 the failed checks, measurements. It never runs model code. Why: the reference parts live only here, never in the box.
-**Consistency check before any paid run (free-ish, CPU only, < $0.05):** re-grade the 30 Mac-made STEP files of
-experiments/freecad/hand/ and the 30 CadQuery references through the cloud grader → same verdicts as on the Mac.
+**Consistency check before any paid run (CPU only, cents):** (a) run all 7 hand answers of experiments/freecad/hand/
+IN the cloud box → 5 PASS + 2 FAIL through the cloud grader, exactly as on the Mac, with bbox and volume within 1e-9
+relative of the Mac-made parts; (b) the 30 CadQuery references through the cloud grader → 30/30 PASS. Why: (a) tests
+the Linux FreeCAD box itself, (b) tests the grader; together they show the cloud gives the same verdicts as the Mac.
+
+## 2b. Mac side
+runner_fc.py imports `modal` to create sandboxes and call the grader, so modal must be installed in the forge venv
+(`~/projects/forge/.venv`); this is the user's decision (the same one as the training fix). Muse Code must not install
+anything; if modal is missing, tests that need it skip and the CLI exits with a clear message.
 
 ## 3. `runner_fc.py` (reuses the frozen first-test runner; do not copy-paste its logic)
 Import from experiments/first-test/runner.py: the Glimmer/Baseten request code and retry, code extraction, the budget
