@@ -55,6 +55,8 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
    a short-prompt trained arm needs a small runner spec. BX's 11 missing answers are run in step 6a (user decision).
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
+**Morning Oct 30: read [[morning-brief-2026-10-30]] first (3 yes/no questions).**
+
 ## Training + final exam: PREPARED, NOT RUN (user 2026-10-29: "prepare the training, not run")
 - Plan experiments/final/PLAN.md, Muse spec experiments/final/MUSE_SPEC.md (commit 19c261d), diagram
   forge-wiki/attachments/final-plan-diagram.html (ffa6fcd). Sent to the verifier (pre-build check, waiting).

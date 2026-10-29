@@ -6,8 +6,10 @@ gets its own add-on file, running offline on its own servers.
 
 Meta Global AI Developer Hackathon 2026 (Indie track, Push the Frontier). Submission due Nov 4, 18:00 CET.
 
-Status (2026-10-28 evening): first test done. Real gap: Spark Open 30/30 vs Glimmer + manual 20/30 (grey zone by the
-rule, user decided **GO**). Spent ≈ $3.5 of $30. Next: factory (see `forge-wiki/wiki/status.md`, read it first each day).
+Status (2026-10-30): four honest gap tests showed untrained Glimmer is already 87-97% correct when the rules are in
+the prompt, but slow and token-heavy (B-max: 21,314 tokens and 295 s of model time per correct part). The goal is now
+a trained Glimmer that is as correct, many times cheaper and faster, on one private GPU. Plan: `experiments/final/PLAN.md`;
+all numbers: `forge-wiki/wiki/findings/scoreboard.md`; current state: `forge-wiki/wiki/status.md`.
 
 ## Folders
 | Folder | What goes in it |
