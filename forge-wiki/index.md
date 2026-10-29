@@ -5,6 +5,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
 
 ## findings
+- [learn-training-and-verifiers-2026-10-29](wiki/findings/learn-training-and-verifiers-2026-10-29.md): learning guide: 5 levels (prompting → SFT on verified teacher → data tricks → DPO → GRPO), what research says on data, LoRA, RL cost, referee design (mutants, spec-based CADTests), reward hacking, SAM 3.1 verdict, Forge checklist, reading list, exercises
 - [quillon-keel-build-2026-10-28](wiki/findings/quillon-keel-build-2026-10-28.md): how the private-tool experiment was built: company, Keel v1→2.1, dashboard, exam method, tolerance 1e-6, sandbox, freeze by hash, verifier rounds, user plan rules
 - [keel-v2-baseline-2026-10-28](wiki/findings/keel-v2-baseline-2026-10-28.md): private tool Keel v2: Glimmer + manual 97.8%, Spark 100% → NO ROOM; a short complete manual is enough
 - [first-test-2026-10-28](wiki/findings/first-test-2026-10-28.md): the main experiment: how the exam was built; Spark Open 30/30, Glimmer+manual 20/30, Glimmer 16/30 → grey zone → user GO; 3 of 10 failures position-only; B2 proposed
@@ -21,6 +22,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [night-prep-2026-10-28](wiki/decisions/night-prep-2026-10-28.md): night prep for Oct 29: Spark context, training recipe, verifier pre-review, drafts, risks and second plans, morning decisions
 - [coverage-audit-2026-10-29](wiki/findings/coverage-audit-2026-10-29.md): free retrieval-coverage audit: 83% of exam jobs covered by top-5 → Option A skipped
 - [new-goal-2026-10-29](wiki/decisions/new-goal-2026-10-29.md): new goal: same quality, many times cheaper and faster, private; B-max baseline; kill rule
+- [glimmer-dashboard-2026-10-29](wiki/findings/glimmer-dashboard-2026-10-29.md): live Chrome dashboard of the baseline run (how Glimmer is doing)
 - [factory-plan-2026-10-29](wiki/decisions/factory-plan-2026-10-29.md): next stage: B2 → recipe research → generator → teacher run → training → final exam; rules; ~$13–16
 - [forge-plan-2026-10-28](wiki/decisions/forge-plan-2026-10-28.md): history of Oct 28 decisions: $30 budget, CadQuery, Spark Open on Baseten, own folder/app, spend log
 
