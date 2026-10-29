@@ -46,13 +46,13 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Modal smoke test | ≈ 1.06 | 6.76 → 7.82 |
 | Muse Code training fix | ≈ 1.11 | run.usage |
 | Muse Code Oct 29 evening (build 1.35 + fixes 1.14, 0.61, 0.44, 0.46) | ≈ 4.0 | run.usage |
-| **Total** | **≈ 25.5 of 30** (FreeCAD run ≈ $1.6 incl. checks) | |
+| **Total** | **≈ 30.4 of 35** (incl. FreeCAD run ≈ $1.6, thinking exam + Muse rounds ≈ $4.9) | |
 
 ## Open questions
 1. hypothesis: training on answer-only text (no reasoning) may teach Glimmer to skip reasoning: cheaper, maybe weaker
    on hard jobs. The fixed script logs the rendered example + learned tokens; decide after looking.
 2. Final exam must use the same runner + 0.2% referee + 16,000 tokens + k=3 + 8 workers as the baselines (verifier);
-   a short-prompt trained arm needs a small runner spec. Finish BX's 11 missing hard answers in that session.
+   a short-prompt trained arm needs a small runner spec. BX's 11 missing answers are not re-run (decision, experiments/final/PLAN.md).
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Training + final exam: PREPARED, NOT RUN (user 2026-10-29: "prepare the training, not run")

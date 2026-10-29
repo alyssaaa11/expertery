@@ -17,8 +17,8 @@ Plan: experiments/final/PLAN.md. Factory details: experiments/factory/SPEC.md (b
 ## 1. `experiments/final/cloud_cq.py`: cloud CadQuery box + grader
 Same design as experiments/freecad/cloud_exec.py and cloud_grade.py (read both):
 - Box: a fresh Modal Sandbox per answer (block_network=True, no secrets, no volumes, cpu 1, memory 1024-4096 MiB,
-  90 s box, 60 s run = runner.RUN_TIMEOUT). Image: python:3.12-slim + the libGL apt line + `cadquery==2.8` (the Mac's
-  version, 2.8.0) + a small run script. It holds no references, jobs or expected files.
+  90 s box, 60 s run = runner.RUN_TIMEOUT). Image: python:3.12-slim + the libGL apt line + `cadquery==2.8.0 cadquery-ocp==7.9.3.1` (the
+  Mac's versions; the grader pins the same) + a small run script. It holds no references, jobs or expected files.
 - The run script executes answer.py, takes the `result` variable (same rule as runner.run_code: Workplane → its
   solid), and writes the part as **BREP** (exact; not STEP) plus a run-error text if it failed.
 - Grader: a Modal function (app `forge-cq-grader`, cpu 1) with CadQuery 2.8 and checks.py baked in, plus
@@ -28,7 +28,8 @@ Same design as experiments/freecad/cloud_exec.py and cloud_grade.py (read both):
 - `--check-refs --exam first-test|factory`: each reference built in the box → BREP → grader must PASS at 1e-6.
   Prints `REFS n/n PASS`.
 - `--regrade <baseline results dir>`: re-run each recorded answer's code (from calls.jsonl) in the box, grade it, and
-  write regrade.json with old verdict, new verdict, per answer; print `REGRADE same=X changed=Y`. (PLAN step 1.)
+  write regrade.json with old verdict, new verdict (0.2%) and new tight (1e-6), per answer (the 199 final
+  answers: BR 30, B2 90, BX 79); print `REGRADE same=X changed=Y`. (PLAN step 1.)
 - Tests: BREP round trip of a simple part keeps volume and bbox at 1e-9; a fake sandbox returns bytes → grader
   verdict path; image file list has no references; regrade counts with fake records.
 
@@ -74,8 +75,11 @@ runner_final.py with app forge-trained.
 ## 7. `experiments/final/compare.py`: the pre-registered decision (PLAN step 6)
 Inputs: FT's run dir and the baseline dirs results/bmax-baseline-2026-10-29/main-B2BX and main-BR. Paired bootstrap
 over the 30 jobs (10,000 resamples, seed 20261029), per-job pass rate over that arm's answers (BX uses the answers it
-has). Prints each bar (a)-(d) with the numbers and PASS/FAIL, then "CLAIM HOLDS" only if all four pass. Tables for
-all/medium/hard. Tests: fake records for each bar at its boundary (−5, −15, 1.5×, ÷3) and one all-pass case.
+has). Jobs where an arm has no answers: `--missing-bx worst` (default; BX = 1.0 on that job) or `--missing-bx drop`
+(compare on the remaining jobs; prints a warning that this departs from rule 3). Tokens per correct part are printed
+split into prompt and completion; bar (d) prints wall-clock and $ per correct part first. Prints each bar (a)-(d) with the numbers and PASS/FAIL, then "CLAIM HOLDS" only if all four pass. Tables for
+all/medium/hard. Tests: fake records for each bar at its boundary (−5, −15, 1.5×, ÷3) and one all-pass case, and a
+case with a job where BX has 0 answers under both `--missing-bx` modes.
 
 ## Done when
 - `~/projects/forge/.venv/bin/python -m pytest -q experiments/final experiments/factory experiments/freecad

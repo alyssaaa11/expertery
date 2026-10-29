@@ -13,6 +13,9 @@ on the 30 held-out CadQuery jobs, and **many times cheaper and faster**, while r
   of 8 H200). Source: https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B and
   https://huggingface.co/blog/meta-muse-spark-open. Glimmer 30B is dense ~29.6B; its 4-bit build is < 20 GB (fits a
   24-32 GB GPU). Source: https://huggingface.co/meta-models/Muse-Glimmer-30B.
+- Fair note (verifier F4): the Spark Open model card also says it is "optimized to run on two Mac Studios with M5
+  Ultra using MLX". So private Spark is possible, but needs ~700 GB of memory (two top Mac Studios or a B200 node);
+  Glimmer needs < 20 GB.
 - decision: the headline compares trained vs untrained Glimmer **on the same A100-80GB**. We never claim "cheaper than
   Spark via an API" (it is not: Spark on Baseten ≈ $0.017 per answer, 18 s). Spark appears only as the teacher and in a
   "why not run Spark privately" line with the hardware figures above.
@@ -28,12 +31,14 @@ on the 30 held-out CadQuery jobs, and **many times cheaper and faster**, while r
 | 5 | Dev check: trained model on the 20 dev jobs, k=3 | Modal A100 | $1.00 | ~$0.5 |
 | 6 | Final exam: trained model on the 30 exam jobs, k=3 | Modal A100 | $2.00 | ~$1 |
 | 7 | (optional, free GPU) offline Mac demo with MLX | Mac + Modal CPU | $0.30 | ~$0 |
-Total ≈ **$10-14 expected, ≤ $13.5 in caps + Muse** → Forge ≈ $41-45 of the $50 the user may approve. Within the
+Total ≈ **$10-14 expected; worst case caps $12.80 + Muse $2-4 = $14.8-16.8** (verifier N2) → Forge ≈ $40-44
+expected, ≈ $47 worst, of the $50 the user may approve. Within the
 current $35 only step 0 fits; steps 1-7 need the budget raise (user's decision, pending).
 
 ## Step 1: comparability (why: baselines were graded on the Mac; the trained arm will be graded in the cloud)
-Re-run the code of every recorded B2/BX/BR answer (results/bmax-baseline-2026-10-29) in the cloud box and grade it in
-the cloud grader. Pass = 0 verdict changes at 0.2%. Any change → STOP and explain before step 6 (a grader difference
+Re-run the code of the 199 recorded final answers (BR 30, B2 90, BX 79; results/bmax-baseline-2026-10-29) in the
+cloud box and grade it in the cloud grader, recording both 0.2% and 1e-6. Box and grader pin the Mac's versions:
+cadquery==2.8.0, cadquery-ocp==7.9.3.1. Pass = 0 verdict changes at 0.2%. Any change → STOP and explain before step 6 (a grader difference
 would make the comparison unfair).
 
 ## Steps 2-3: factory (frozen plan: experiments/factory/PLAN.md, spec experiments/factory/SPEC.md)
@@ -62,10 +67,17 @@ the 30 jobs, 10,000 resamples, each job's pass rate over its answers:
 - (b) **clearly beats the one-try arm**: 95% CI of FT − B2 entirely above 0;
 - (c) **about the same cost as B2**: FT tokens per correct part ≤ 1.5 × B2's (≤ 15,993);
 - (d) **much cheaper than B-max**: FT tokens per correct part ≤ BX ÷ 3 (≤ 7,105), or wall-clock per correct part ≤ BX ÷ 3.
+  Reported first as wall-clock and $ per correct part, then tokens split into prompt and completion (verifier F2):
+  B2 = 6,458 prompt + 4,205 completion per correct part, BX = 14,101 + 7,213. Most of the token saving comes from
+  dropping the 5.7k-token manual (the knowledge moved into the weights); the report says so.
 - The full claim holds only if all four hold. "Within 5 points" is never called "better". Medium and hard are reported
   separately (medium is saturated: B2 100%).
 - Honest-risk note (from the baseline page): (b) will likely fail on 30 jobs even if training works; then the report
   says "as good as B-max, N× cheaper" and states that (b) failed.
+- **BX jobs with no answers (verifier F1, USER DECISION pending):** BX has 0 final answers on H13, H14, H15 (1 on H12),
+  so the paired bootstrap is undefined there. Recommended (A): count BX = 1.0 (100%) on those 3 jobs, the worst case
+  for FT, and keep all 30 jobs. Alternative (B): compare on 27 jobs, a departure from rule 3 that needs the user's
+  explicit yes.
 - BX's 11 missing hard answers (cap stop in the baseline) are NOT re-run. decision: re-running them needs BX's
   multi-round loop on the cloud box (more build, more risk) and touches BX again; the report states BX = 75/79 answers.
 - Reported per arm: pass rate (all / medium / hard), pass@3, tokens per correct part, seconds per answer (median and
@@ -79,6 +91,9 @@ answer one exam-style job offline. The model only writes text on the Mac; its co
 ## Not in this plan
 - Thinking jobs without the standard (optional idea): later, only if money is left.
 - No defence or war examples anywhere (user rule).
+
+## Before step 6
+Check that the merged model's generation_config.json equals the base model's (same sampling defaults).
 
 ## Freeze (sha256 recorded here before step 6)
 runner_final.py, cloud_cq.py, the grader, deploy/modal_forge.py, the merged model's file list, this PLAN.
