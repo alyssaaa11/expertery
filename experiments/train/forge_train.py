@@ -20,6 +20,11 @@ forge-wiki/wiki/findings/training-smoke-2026-10-29.md):
 The module imports without modal/torch/transformers so the pure helpers
 (prompt building, cap math, plain-JSON scrub) are unit-testable offline.
 Heavy imports live inside the Modal functions.
+
+Never `modal run forge_train.py::train`; it bypasses the exam guard and
+the money cap. Launch only via the local entrypoints below (`smoke` /
+`full`), which run the guard first, derive every timeout from the cap,
+and wrap the remote calls in `app.run()`.
 """
 
 import argparse
@@ -56,7 +61,7 @@ A100_RATE = 2.50  # $/h
 MERGE_RESERVE_S = 12 * 60  # H100
 SERVE_RESERVE_S = 6 * 60  # A100-80GB
 MIN_TRAIN_S = 15 * 60
-STARTUP_TIMEOUT_S = 600  # Modal startup allowance, included in worst-case cost
+STARTUP_TIMEOUT_S = 300  # Modal startup allowance, included in worst-case cost
 DEADLINE_MARGIN_S = 240  # train() stops this far before its timeout
 CHECKPOINT_EVERY_STEPS = 25  # save the adapter this often
 EXAM_REFUSE_RATIO = 0.9  # exact-number text ratio that refuses a record
@@ -65,6 +70,7 @@ EXAM_REFUSE_FRAC = 0.05  # abort only when more than this share is refused
 EXAM_TOL = 1e-6  # bbox/volume match tolerance for the code guard
 DATA_UPLOAD_MB = 5.0  # put the training data on the volume above this size
 SERVE_READY_S = 3 * 60  # format check: at most one prompt, this long after ready
+SERVE_REQUEST_TIMEOUT_S = 120  # one-prompt request budget; ready + prompt fits the timeout
 
 # Smoke-test job (the TEST_JOB in experiments/smoke/train_smoke.py).
 SMOKE_JOB = (
@@ -467,6 +473,9 @@ def guard_records(records, exam_texts=None, ref_meases=None,
     if exam_texts is None:
         exam_texts = exam_job_texts()
     if ref_meases is None and train_meas_fn is None:
+        # Fail closed: when the exam references cannot be built, refuse to
+        # train rather than silently passing the code guard. An explicit
+        # ref_meases=[] (tests) still skips the code side.
         try:
             ft = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
@@ -476,8 +485,10 @@ def guard_records(records, exam_texts=None, ref_meases=None,
             import checks as _checks
             ref_meases = [_checks.measure(shape)
                           for _jid, shape in build_exam_shapes()]
-        except Exception:
-            ref_meases = []
+        except Exception as e:
+            raise RuntimeError(
+                "exam guard cannot build the exam references (%r); "
+                "refusing to train" % (e,))
     if train_meas_fn is None and ref_meases:
         train_meas_fn = default_train_meas
     kept, refused = [], []
@@ -826,7 +837,10 @@ if modal is not None:
             stderr=subprocess.STDOUT,
         )
         ready = False
-        while time.time() - t0 < 8 * 60:
+        # Ready wait and the single prompt both fit inside the function's
+        # timeout: at most SERVE_READY_S to come up, then one request of at
+        # most SERVE_REQUEST_TIMEOUT_S.
+        while time.time() - t0 < SERVE_READY_S:
             if proc.poll() is not None:
                 break
             try:
@@ -867,7 +881,8 @@ if modal is not None:
                 )
                 ts = time.time()
                 try:
-                    r = json.load(urllib.request.urlopen(req, timeout=300))
+                    r = json.load(urllib.request.urlopen(
+                        req, timeout=SERVE_REQUEST_TIMEOUT_S))
                     msg = r["choices"][0]["message"]
                     answers.append(
                         {
@@ -978,33 +993,46 @@ def guard_or_abort(records, res_dir, exam_texts=None, ref_meases=None,
 
 def _pipeline(data_arg, out_name, split, res_dir, train_kwargs,
               serve_prompts, spent_dollars=0.0):
-    """Shared train -> merge -> format-check pipeline. Returns the split."""
+    """Shared train -> merge -> format-check pipeline. Returns the split.
+
+    The remote calls run inside `app.run()` (with output enabled), so the
+    entrypoints work from the forge venv: `.remote()` needs a running app.
+    """
+    if modal is None or globals().get("app") is None:
+        raise RuntimeError("modal is not installed; cannot run remotely")
     startup = split["startup_s"]
-    t = train.with_options(timeout=split["train"]).remote(
-        data_arg, out_name, timeout_s=split["train"], **train_kwargs)
-    json.dump(t, open(os.path.join(res_dir, "train.json"), "w"), indent=1)
-    print("TRAIN", json.dumps({k: v for k, v in t.items() if k != "steps"})[:1500])
-    if t.get("error") or t.get("mem_stop"):
-        print("SKIP MERGE/SERVE: training stopped")
-        return split
-    spent = spent_dollars + dollars_for_seconds(
-        startup + float(t.get("train_total_s") or split["train"]), H100_RATE)
-    # Re-derive merge/serve from the money left (train -> merge -> serve
-    # share one cap); refuses when the remainder no longer fits them.
-    plan_timeouts(float(split["cap_dollars"]), [
-        ("merge", H100_RATE, split["merge"]),
-        ("serve", A100_RATE, split["serve"]),
-    ], startup_s=startup, spent_dollars=spent)
-    m = merge.with_options(timeout=split["merge"]).remote(out_name)
-    json.dump(m, open(os.path.join(res_dir, "merge.json"), "w"), indent=1)
-    print("MERGE", m)
-    if serve_prompts:
-        s = serve_merged.with_options(timeout=split["serve"]).remote(
-            out_name, list(serve_prompts)[:1])  # format check: one prompt
-        json.dump(s, open(os.path.join(res_dir, "serve.json"), "w"), indent=1)
-        print("SERVE", json.dumps(s)[:2000])
-    else:
-        print("SKIP SERVE: no format-check prompt given")
+    # Launchable from the forge venv: remote calls need a running app.
+    with modal.enable_output():
+        with app.run():
+            t = train.with_options(timeout=split["train"]).remote(
+                data_arg, out_name, timeout_s=split["train"], **train_kwargs)
+            json.dump(t, open(os.path.join(res_dir, "train.json"), "w"), indent=1)
+            print("TRAIN", json.dumps(
+                {k: v for k, v in t.items() if k != "steps"})[:1500])
+            if t.get("error") or t.get("mem_stop"):
+                print("SKIP MERGE/SERVE: training stopped")
+                return split
+            spent = spent_dollars + dollars_for_seconds(
+                startup + float(t.get("train_total_s") or split["train"]),
+                H100_RATE)
+            # Re-derive merge/serve from the money left (train -> merge ->
+            # serve share one cap); refuses when the remainder no longer
+            # fits them.
+            plan_timeouts(float(split["cap_dollars"]), [
+                ("merge", H100_RATE, split["merge"]),
+                ("serve", A100_RATE, split["serve"]),
+            ], startup_s=startup, spent_dollars=spent)
+            m = merge.with_options(timeout=split["merge"]).remote(out_name)
+            json.dump(m, open(os.path.join(res_dir, "merge.json"), "w"), indent=1)
+            print("MERGE", m)
+            if serve_prompts:
+                s = serve_merged.with_options(timeout=split["serve"]).remote(
+                    out_name, list(serve_prompts)[:1])  # one prompt only
+                json.dump(s, open(os.path.join(res_dir, "serve.json"), "w"),
+                          indent=1)
+                print("SERVE", json.dumps(s)[:2000])
+            else:
+                print("SKIP SERVE: no format-check prompt given")
     return split
 
 

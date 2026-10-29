@@ -1,0 +1,426 @@
+"""Offline tests for runner_fc.py (no Modal, no network: fake HTTP/box/grader).
+
+Any test that could reach a real Modal call injects a fake or
+monkeypatches the real entry to raise. Never opens blind/ folders or
+expected*.json: decisions run on synthetic records, grading on synthetic
+grades.
+"""
+import io
+import json
+import os
+import sys
+import urllib.error
+
+import pytest
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+
+import runner_fc
+
+
+# ------------------------------------------------------- prompt + manual
+
+
+def test_prompt_is_system_plus_manual_plus_job():
+    manual = runner_fc.load_manual()  # the frozen manual loads fine
+    assert len(manual) == 21640
+    msgs = runner_fc.build_messages("make a box", manual)
+    assert msgs[0] == {"role": "system",
+                       "content": runner_fc.FC_SYSTEM_PROMPT}
+    assert "Part" in msgs[0]["content"] and "result" in msgs[0]["content"]
+    assert msgs[1]["content"].startswith(runner_fc.FC_MANUAL_PREFIX)
+    assert manual in msgs[1]["content"]  # manual carried, CadQuery-free here
+    assert msgs[2] == {"role": "user", "content": "make a box"}
+    body = runner_fc.build_body_fc("m", msgs)
+    assert body["max_tokens"] == 16000 and body["temperature"] == 1.0
+    assert body["top_p"] == 0.95 and body["top_k"] == 64  # arm-B sampling
+
+
+def test_changed_manual_is_refused(tmp_path):
+    good = tmp_path / "manual.md"
+    good.write_text(runner_fc.load_manual(), encoding="utf-8")
+    assert runner_fc.load_manual(str(good)) == runner_fc.load_manual()
+    bad = tmp_path / "manual2.md"
+    bad.write_text(runner_fc.load_manual() + " ", encoding="utf-8")
+    with pytest.raises(runner_fc.ManualChanged):
+        runner_fc.load_manual(str(bad))
+
+
+def test_runner_reuses_frozen_helpers():
+    src = open(os.path.join(HERE, "runner_fc.py"), encoding="utf-8").read()
+    assert "import runner" in src  # the frozen runner, not a copy
+    for helper in ("post_with_retry", "extract_code", "over_budget",
+                   "over_budget_c", "arm_stats", "build_body"):
+        assert helper in src
+
+
+# ------------------------------------------------------- failure tags
+
+
+def test_failure_tags():
+    assert runner_fc.tag_failure("length", "```x```", "", False, []) == "INVALID"
+    assert runner_fc.tag_failure(None, "", "empty reply", False, []) == "INVALID"
+    assert runner_fc.tag_failure(
+        "stop", "```python\nr=1\n```",
+        "TypeError: typo here", False, []) == "api_error"  # raised: tool gap
+    assert runner_fc.tag_failure(
+        "stop", "```python\nr=1\n```",
+        "timeout after 60s running answer code", False, []) == "api_error"
+    assert runner_fc.tag_failure(
+        "stop", "```python\nr=1\n```",
+        "PermissionError: denied", False, []) == "api_error"
+    assert runner_fc.tag_failure(
+        "stop", "```python\nr=1\n```", "refused import: cadquery",
+        False, []) == "api_error"
+    assert runner_fc.tag_failure(
+        "stop", "```python\nr=1\n```", None,
+        True, ["bbox"]) == "wrong_geometry"  # built but failed the checker
+    assert runner_fc.tag_failure(
+        "stop", "```python\nr=1\n```",
+        "ERROR: result is not a Part solid",
+        False, []) == "wrong_geometry"
+
+
+# ------------------------------------------------------- decision rules
+
+
+def rec(job, arm, outcome, tag=""):
+    return {"job": job, "arm": arm, "outcome": outcome, "failure_tag": tag,
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50}}
+
+
+def jobs(n=30):
+    return ["J%d" % (i + 1) for i in range(n)]
+
+
+def test_rule1_teacher_under_70_is_invalid():
+    ids = jobs()
+    records = [rec(j, "G", "PASS" if i < 10 else "FAIL",
+                   "" if i < 10 else "api_error")
+               for i, j in enumerate(ids)]
+    records += [rec(j, "S", "PASS" if i < 12 else "FAIL",
+                    "" if i < 12 else "wrong_geometry")
+                for i, j in enumerate(ids)]
+    d = runner_fc.evaluate_fc_decision(records)
+    assert d["decision_t"] == "stay on CadQuery " \
+        "(RUN INVALID for FreeCAD: teacher < 70%)"
+    assert d["decision"] == d["decision_t"]  # S agrees: no escalation line
+
+
+def test_rule2_clear_gap_is_freecad_target():
+    ids = jobs()
+    records = [rec(j, "G", "PASS" if i < 15 else "FAIL",
+                   "" if i < 15 else "api_error")
+               for i, j in enumerate(ids)]
+    # S 23/30 (77%), 8 wins over G, gap 27: target on S alone too.
+    records += [rec(j, "S", "PASS" if i < 23 else "FAIL",
+                    "" if i < 23 else "wrong_geometry")
+                for i, j in enumerate(ids)]
+    d = runner_fc.evaluate_fc_decision(records)
+    assert d["decision_t"] == "FreeCAD target"
+    assert d["decision_s"] == "FreeCAD target" and d["agree"] is True
+    assert d["decision"] == "FreeCAD target"
+    assert d["wonder_share"] == 0.0  # no Wonder needed
+
+
+def test_rule3_strong_glimmer_stays_on_cadquery():
+    ids = jobs()
+    records = [rec(j, "G", "PASS" if i < 24 else "FAIL",
+                   "" if i < 24 else "api_error")
+               for i, j in enumerate(ids)]
+    records += [rec(j, "S", "PASS" if i < 25 else "FAIL",
+                    "" if i < 25 else "wrong_geometry")
+                for i, j in enumerate(ids)]
+    d = runner_fc.evaluate_fc_decision(records)
+    assert d["decision"] == "stay on hard CadQuery jobs"
+
+
+def test_rule4_grey_defaults_to_cadquery():
+    ids = jobs()
+    records = [rec(j, "G", "PASS" if i < 20 else "FAIL",
+                   "" if i < 20 else
+                   ("api_error" if i < 22 else "wrong_geometry"))
+               for i, j in enumerate(ids)]
+    records += [rec(j, "S", "PASS" if i < 22 else "FAIL",
+                    "" if i < 22 else "wrong_geometry")
+                for i, j in enumerate(ids)]
+    d = runner_fc.evaluate_fc_decision(records)
+    assert d["decision"] == "stay on CadQuery (grey zone)"
+
+
+def test_rule4_api_error_rescue_needs_six_wins():
+    ids = jobs()
+    # G 18/30 with 10/12 FAILs api_error; S 24/30, 6 wins: grey rescue.
+    records = [rec(j, "G", "PASS" if i < 18 else "FAIL",
+                   "" if i < 18 else
+                   ("api_error" if i < 28 else "wrong_geometry"))
+               for i, j in enumerate(ids)]
+    records += [rec(j, "S", "PASS" if i < 24 else "FAIL",
+                    "" if i < 24 else "wrong_geometry")
+                for i, j in enumerate(ids)]
+    d = runner_fc.evaluate_fc_decision(records)
+    assert d["decision"] == "FreeCAD target"
+    assert d["decision_s"] == "FreeCAD target"
+
+
+def test_rule5_disagreement_names_wonder_escalation():
+    ids = jobs()
+    records = [rec(j, "G", "PASS" if i < 15 else "FAIL",
+                   "" if i < 15 else "api_error")
+               for i, j in enumerate(ids)]
+    # S 18/30 (60%): INVALID on its own. W rescues 6 failed jobs...
+    records += [rec(j, "S", "PASS" if i < 18 else
+                    ("INVALID" if j == "J30" else "FAIL"),
+                    "" if i < 18 else "")
+                for i, j in enumerate(ids)]
+    for j in ["J19", "J20", "J21", "J22", "J23", "J24"]:
+        records.append(rec(j, "W", "PASS"))
+    # ...but a W PASS on an S-INVALID job does not count toward T.
+    records.append(rec("J30", "W", "PASS"))
+    d = runner_fc.evaluate_fc_decision(records)
+    assert d["decision_t"] == "FreeCAD target"  # T 24/30, 9 wins, gap 30
+    assert "INVALID" in d["decision_s"]
+    assert d["agree"] is False
+    assert d["decision"] == "FreeCAD target only with Wonder escalation " \
+        "(closed API)"
+    assert d["wonder_share"] == pytest.approx(0.25)  # 6 rescues / 24 T passes
+
+
+# ------------------------------------------------------- calls (fake HTTP/box/grader)
+
+
+def fake_chat(content, finish="stop", prompt=100, completion=50, **extra):
+    usage = {"prompt_tokens": prompt, "completion_tokens": completion}
+    usage.update(extra)
+    return {"choices": [{"message": {"content": content},
+                         "finish_reason": finish}],
+            "usage": usage}
+
+
+def fake_post_for(content_map):
+    """post_fn(endpoint, body, timeout) serving canned replies per job."""
+
+    def _post(endpoint, body, timeout):
+        job_text = body["messages"][-1]["content"]
+        content = content_map.get(job_text, "```python\nresult = 1\n```")
+        return fake_chat(content)
+
+    return _post
+
+
+PASS_GRADE = {"verdict": "PASS", "tight": "PASS", "fails": [],
+              "fails_tight": [], "measurements": {"solids": 1}}
+
+
+def test_do_fc_call_outcomes():
+    job = {"id": "D1", "level": "dry", "text": "make a box"}
+    manual = "MANUAL"
+    post = fake_post_for({})
+    no_sleep = lambda s: None  # noqa: E731
+    ok_box = lambda code: {"step_bytes": b"S", "measure": {}, "log": ""}
+    ok_grade = lambda jid, step: dict(PASS_GRADE)
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], manual, post, no_sleep,
+                             ok_box, ok_grade)
+    assert r["outcome"] == "PASS" and r["failure_tag"] == ""
+    assert r["tight"] == "PASS" and r["code"].strip() == "result = 1"
+
+    def boom_box(code):
+        raise TypeError("typo here")
+
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], manual, post, no_sleep,
+                             boom_box, ok_grade)
+    assert r["outcome"] == "FAIL" and r["failure_tag"] == "api_error"
+
+    bad_grade = lambda jid, step: {"verdict": "FAIL", "tight": "FAIL",
+                                   "fails": ["bbox"], "fails_tight": ["bbox"],
+                                   "measurements": {"solids": 1}}
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], manual, post, no_sleep,
+                             ok_box, bad_grade)
+    assert r["outcome"] == "FAIL" and r["failure_tag"] == "wrong_geometry"
+    assert r["fails"] == ["bbox"]
+
+    cut = fake_post_for({"make a box": "```python\nx\n```"})
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], manual,
+                             lambda e, b, t: fake_chat("```x", finish="length"),
+                             no_sleep, ok_box, ok_grade)
+    assert r["outcome"] == "INVALID" and r["failure_tag"] == "INVALID"
+    assert cut is not None
+
+    def boom_post(endpoint, body, timeout):
+        raise ConnectionError("down")
+
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], manual, boom_post,
+                             no_sleep, ok_box, ok_grade)
+    assert r["outcome"] == "INVALID"  # failed call is never FAIL
+
+
+def test_do_fc_call_never_touches_modal(monkeypatch):
+    import modal
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("a real Modal call would start here")
+
+    monkeypatch.setattr(modal.Sandbox, "create", _boom)
+    job = {"id": "D1", "level": "dry", "text": "make a box"}
+    post = fake_post_for({})
+    r = runner_fc.do_fc_call(
+        job, "G", "m", "e", [], "MANUAL", post, lambda s: None,
+        lambda code: {"step_bytes": b"S", "measure": {}, "log": ""},
+        lambda jid, step: dict(PASS_GRADE))
+    assert r["outcome"] == "PASS"
+
+
+def test_suite_offline_end_to_end(tmp_path):
+    jobs = [{"id": "D1", "level": "dry", "text": "job one"},
+            {"id": "D2", "level": "dry", "text": "job two"}]
+    post = fake_post_for({})
+    box = lambda code: {"step_bytes": b"S", "measure": {}, "log": ""}
+
+    def grade(jid, step):
+        if jid == "D1":
+            return dict(PASS_GRADE)
+        return {"verdict": "FAIL", "tight": "FAIL", "fails": ["bbox"],
+                "fails_tight": ["bbox"], "measurements": {"solids": 1}}
+
+    cfgs = {"G": {"endpoint": "g", "model": "gm"},
+            "S": {"endpoint": "s", "model": "sm"}}
+    out = str(tmp_path / "run")
+    sent, summary = runner_fc.run_suite_fc(
+        jobs, "MANUAL", out, cfgs, {}, budget=10.0, arms=("G", "S"),
+        k=1, workers=2, post_fn=post, sleep_fn=lambda s: None,
+        exec_fn=box, grade_fn=grade)
+    assert len(sent) == 4  # 2 jobs x 2 arms, k = 1
+    assert summary["arms"]["G"]["PASS"] == 1
+    assert summary["failure_tags"]["S"]["wrong_geometry"] == 1
+    assert summary["jobs_passed_by_S_not_G"] == []
+    assert summary["decision_t"] and summary["decision_s"]
+    for name in ("calls.jsonl", "summary.json", "report.md"):
+        assert os.path.isfile(os.path.join(out, name))
+    report = open(os.path.join(out, "report.md"), encoding="utf-8").read()
+    assert "Decision on T:" in report and "Wonder's share" in report
+
+
+def test_suite_budget_guard_stops_new_calls(tmp_path):
+    jobs = [{"id": "D1", "level": "dry", "text": "job one"}]
+    cfgs = {"G": {"endpoint": "g", "model": "gm"}}
+    sent, summary = runner_fc.run_suite_fc(
+        jobs, "MANUAL", str(tmp_path / "run"), cfgs, {}, budget=0.0,
+        arms=("G",), k=1, workers=1, post_fn=fake_post_for({}),
+        sleep_fn=lambda s: None,
+        exec_fn=lambda code: {"step_bytes": b"S", "measure": {}, "log": ""},
+        grade_fn=lambda jid, step: dict(PASS_GRADE))
+    assert sent == [] and summary["budget_stopped"] is True
+
+
+def test_s_failed_ids_skip_invalid(tmp_path):
+    calls = tmp_path / "calls.jsonl"
+    calls.write_text("\n".join([
+        json.dumps({"arm": "S", "job": "J1", "outcome": "FAIL"}),
+        json.dumps({"arm": "S", "job": "J2", "outcome": "INVALID"}),
+        json.dumps({"arm": "S", "job": "J3", "outcome": "PASS"}),
+        json.dumps({"arm": "G", "job": "J4", "outcome": "FAIL"}),
+    ]), encoding="utf-8")
+    assert runner_fc.s_failed_job_ids(str(tmp_path)) == ["J1"]
+
+
+def test_wonder_money():
+    u = {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000,
+         "cached_tokens": 1_000_000}
+    assert runner_fc.cost_w_of_usage(u) == pytest.approx(20.0 + 4.0 + 0.2)
+    assert runner_fc.over_budget_w([u] * 10, 1.0) is True
+    assert runner_fc.over_budget_w([], 3.0) is False
+
+
+# ------------------------------------------------------- HTTP headers
+
+
+class FakeResp:
+    def __init__(self, payload):
+        self._buf = io.BytesIO(json.dumps(payload).encode())
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self, *args):
+        return self._buf.read()
+
+
+def test_s_carries_affinity_and_logs_cached(monkeypatch):
+    import urllib.request
+
+    seen = {}
+
+    def _open(req, timeout=None):
+        seen["headers"] = {k.lower(): v for k, v in req.header_items()}
+        seen["url"] = req.full_url
+        return FakeResp(fake_chat("```python\nresult = 1\n```",
+                                  **{"cached_tokens": 7}))
+
+    monkeypatch.setattr(urllib.request, "urlopen", _open)
+    cfgs = {"S": {"endpoint": "https://x.test/v1/chat/completions",
+                  "model": "sm"}}
+    post = runner_fc.default_post_fns(cfgs, {"S": "k"}, "aff-123")
+    data = post("https://x.test/v1/chat/completions",
+                {"model": "sm", "messages": []}, 10)
+    assert seen["headers"].get("x-session-affinity") == "aff-123"
+    assert data["usage"]["cached_tokens"] == 7
+    job = {"id": "D1", "level": "dry", "text": "t"}
+    r = runner_fc.do_fc_call(
+        job, "S", "sm", cfgs["S"]["endpoint"], [], "MANUAL", post,
+        lambda s: None,
+        lambda code: {"step_bytes": b"S", "measure": {}, "log": ""},
+        lambda jid, step: dict(PASS_GRADE))
+    assert r["cached_tokens"] == 7 and r["outcome"] == "PASS"
+
+
+def test_w_falls_back_to_responses(monkeypatch):
+    import urllib.request
+
+    urls = []
+
+    def _open(req, timeout=None):
+        urls.append(req.full_url)
+        if req.full_url.endswith("/v1/chat/completions"):
+            raise urllib.error.HTTPError(req.full_url, 404, "nope", {}, None)
+        return FakeResp(fake_chat("```python\nresult = 1\n```"))
+
+    monkeypatch.setattr(urllib.request, "urlopen", _open)
+    cfgs = {"W": {"endpoint": "https://w.test/v1/chat/completions",
+                  "model": "muse-wonder-1.0"}}
+    post = runner_fc.default_post_fns(cfgs, {"W": "k"}, "a")
+    data = post("https://w.test/v1/chat/completions",
+                {"model": "m", "messages": []}, 10)
+    assert urls[-1].endswith("/v1/responses")  # refused -> responses path
+    assert data["choices"][0]["finish_reason"] == "stop"
+
+
+# ------------------------------------------------------- wrapper + CLI seams
+
+
+def test_session_wrapper_uses_the_hook():
+    src = open(os.path.join(HERE, "run_fc_session.sh"), encoding="utf-8").read()
+    assert "RUN_SESSION_RUNNER_CMD" in src  # the existing hook, not an edit
+    assert "runner_fc.py" in src
+    assert "--budget" in src and "--workers 8" in src
+    assert "run_session.sh" in src
+    hook = open(os.path.join(HERE, "..", "common", "run_session.sh"),
+                encoding="utf-8").read()
+    assert "RUN_SESSION_RUNNER_CMD" in hook  # hook pre-exists; untouched
+    assert "& RPID=$!" in hook and "wait $RPID" in hook
+
+
+def test_cli_refuses_without_modal(monkeypatch, tmp_path):
+    import cloud_exec
+
+    monkeypatch.setattr(cloud_exec, "modal", None)
+    monkeypatch.setenv("GLIMMER_URL", "https://g.test")
+    monkeypatch.setenv("GLIMMER_KEY", "k")
+    monkeypatch.setenv("BASETEN_KEY", "k")
+    rc = runner_fc.main(["--jobs", "dry", "--out", str(tmp_path / "o"),
+                         "--arms", "G"])
+    assert rc == 2  # clear message, no Modal run attempted

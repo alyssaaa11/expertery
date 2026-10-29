@@ -104,6 +104,61 @@ def test_smoke_entrypoint_refuses_tiny_cap_offline():
     assert forge_train.main(["smoke", "--cap-dollars", "0.01"]) == 2
 
 
+def test_smoke_cap_2_refused_without_any_remote_call(monkeypatch, capsys):
+    """Round 2 item 1: `smoke --cap-dollars 2.0` is CAP REFUSED before Modal.
+
+    With the 300 s startup allowance the minimum total cap is ~$2.89, so
+    $2.0 must refuse. Every remote path raises if touched, so a wrong cap
+    check would fail the test instead of starting a paid H100 job.
+    """
+    import modal
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("a remote call was attempted")
+
+    monkeypatch.setattr(modal, "enable_output", _boom)
+    monkeypatch.setattr(forge_train.app, "run", _boom)
+    for fn in (forge_train.train, forge_train.merge,
+               forge_train.serve_merged):
+        monkeypatch.setattr(fn, "remote", _boom)
+    assert forge_train.main(["smoke", "--cap-dollars", "2.0"]) == 2
+    assert "CAP REFUSED" in capsys.readouterr().out
+
+
+def test_startup_allowance_is_300s():
+    """Round 2 item 2: STARTUP_TIMEOUT_S = 300, so a $3 cap still trains."""
+    assert forge_train.STARTUP_TIMEOUT_S == 300
+    with pytest.raises(forge_train.CapExceeded):
+        forge_train.split_cap(2.0)  # under the ~$2.89 minimum: refuse
+    split = forge_train.split_cap(3.0)  # $3 still buys >= 15 min of train
+    assert split["train"] >= 15 * 60
+
+
+def test_guard_fails_closed_when_references_unbuildable(monkeypatch):
+    """Round 2 item 3: an unbuildable exam reference raises, never passes."""
+    def _broken():
+        raise RuntimeError("no cadquery here")
+    monkeypatch.setattr(forge_train, "build_exam_shapes", _broken)
+    with pytest.raises(RuntimeError):
+        forge_train.guard_records([{"text": "a widget", "code": "result = 1"}])
+
+
+def test_serve_wait_and_prompt_fit_inside_timeout():
+    """Round 2 item 4: ready wait (<= 3 min) + one prompt fit the timeout."""
+    assert forge_train.SERVE_REQUEST_TIMEOUT_S <= 120
+    assert (forge_train.SERVE_READY_S + forge_train.SERVE_REQUEST_TIMEOUT_S
+            <= forge_train.SERVE_RESERVE_S)
+    src = open(os.path.join(HERE, "forge_train.py"), encoding="utf-8").read()
+    assert "8 * 60" not in src  # no 8-minute ready wait anymore
+    assert "SERVE_REQUEST_TIMEOUT_S" in src
+
+
+def test_never_modal_run_docstring():
+    """Round 2 item 5: the never-modal-run warning is in the docstring."""
+    assert "`modal run forge_train.py::train`" in forge_train.__doc__
+    assert "bypasses the exam guard" in forge_train.__doc__
+
+
 def test_schedule_counts_micro_and_optimizer_steps():
     s = forge_train.plan_optimizer_steps(400, 2, 8)
     assert s["optimizer_steps"] == 100  # ceil(800 / 8)

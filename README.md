@@ -94,3 +94,4 @@ happened; their results stand. Muse Code rebuilds the ones still needed from `ex
 `experiments/train/` and `experiments/common/`), and from now on all code is written by Muse Code.
 
 Commits made with Claude carry a "Co-Authored-By: Claude" line. Muse Code published this repository.
+Training rule: never `modal run forge_train.py::train`; it bypasses the exam guard and the money cap.
