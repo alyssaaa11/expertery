@@ -142,8 +142,34 @@ def outcome_cell(r, arm, multi):
     return cls, sym, tip
 
 
-def page(recs, log, arms, run_dir="results", cap=3.0, title=None):
+def fc_status(recs, gpu_start=None, exam=None):
+    """One-line status for runner_fc runs: the exam name, answers with
+    a box result, answers with a grade, and GPU minutes since
+    --gpu-start. Records without the runner_fc fields count as zero."""
+    n_box = sum(1 for r in recs if r.get("box_ok"))
+    n_grade = sum(1 for r in recs if r.get("graded"))
+    name = exam or next(
+        (r.get("exam") for r in recs if r.get("exam")), None) or "–"
+    mins = None
+    if gpu_start is not None:
+        try:
+            mins = (time.time() - float(gpu_start)) / 60.0
+        except (TypeError, ValueError):
+            mins = None
+    return {"exam": name, "box": n_box, "graded": n_grade, "gpu_min": mins}
+
+
+def page(recs, log, arms, run_dir="results", cap=3.0, title=None, fc=None):
     st = stats(recs, arms)
+    if fc is not None:
+        fc_line = (
+            '<div class="muted">Exam: %s · %d answers through the safety '
+            "box, %d graded · GPU time %s.</div>\n"
+            % (html.escape(str(fc["exam"])), fc["box"], fc["graded"],
+               "–" if fc["gpu_min"] is None else "%.0f min" % fc["gpu_min"])
+        )
+    else:
+        fc_line = ""
     now = time.strftime("%H:%M:%S")
     gpu_h = 0.0
     tiles = ""
@@ -231,6 +257,7 @@ def page(recs, log, arms, run_dir="results", cap=3.0, title=None):
         '<div class="muted">Live counter: %d answers have gone through the '
         "safety box so far (results appear in the tiles when that part of the run "
         "finishes).</div>\n"
+        "%s"
         '<div class="row">%s</div>\n'
         "<h3>Every answer, job by job</h3>"
         '<div class="muted">✓ correct · ✗ wrong · ! invalid · · not run yet. '
@@ -243,18 +270,26 @@ def page(recs, log, arms, run_dir="results", cap=3.0, title=None):
         "Data: %s.</p></body></html>"
         % (REFRESH_S, html.escape(title or "Forge · live run"),
            html.escape(title or "Forge · live run"), phase(log), now, REFRESH_S,
-           gpu_h * 60, gpu_h * RATE, cap, RATE, 0, tiles, head, rows, recent,
-           html.escape(run_dir))
+           gpu_h * 60, gpu_h * RATE, cap, RATE, 0, fc_line, tiles, head,
+           rows, recent, html.escape(run_dir))
     )
 
 
-def write_page(run_dir, arms, out_path, cap=3.0, title=None):
-    """Render the dashboard; returns the session log text."""
+def write_page(run_dir, arms, out_path, cap=3.0, title=None, fc=False,
+               gpu_start=None, exam=None):
+    """Render the dashboard; returns the session log text.
+
+    `fc` enables the runner_fc line (exam name, box/grade counts, GPU
+    minutes since `gpu_start`); without it the page is unchanged.
+    calls.jsonl is re-read on every call, so --loop follows a live run.
+    """
     recs = load_calls(run_dir)
     log = load_log(run_dir)
+    info = fc_status(recs, gpu_start=gpu_start, exam=exam) if fc else None
     tmp = out_path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
-        f.write(page(recs, log, arms, run_dir=run_dir, cap=cap, title=title))
+        f.write(page(recs, log, arms, run_dir=run_dir, cap=cap, title=title,
+                     fc=info))
     os.replace(tmp, out_path)
     return log
 
@@ -275,17 +310,27 @@ def main(argv=None):
                         help="rewrite every 20 s until the session log says stopped")
     parser.add_argument("--cap", type=float, default=3.0)
     parser.add_argument("--title", default=None)
+    parser.add_argument("--fc", action="store_true",
+                        help="runner_fc run: show the exam name, box/grade "
+                             "counts and GPU minutes since --gpu-start")
+    parser.add_argument("--gpu-start", default=None,
+                        help="unix seconds of the session's GPU start")
+    parser.add_argument("--exam", default=None,
+                        help="exam name to show (defaults to the records')")
     args = parser.parse_args(argv)
     out_path = args.out or args.output
     if not out_path:
         parser.error("an output path is required (--out or positional)")
     arms = load_arms(args.config) if args.config else default_arms()
     while True:
-        log = write_page(args.run, arms, out_path, cap=args.cap, title=args.title)
+        log = write_page(args.run, arms, out_path, cap=args.cap,
+                         title=args.title, fc=args.fc,
+                         gpu_start=args.gpu_start, exam=args.exam)
         if not args.loop or stopped(log):
             break
         time.sleep(REFRESH_S)
-    write_page(args.run, arms, out_path, cap=args.cap, title=args.title)
+    write_page(args.run, arms, out_path, cap=args.cap, title=args.title,
+               fc=args.fc, gpu_start=args.gpu_start, exam=args.exam)
     return 0
 
 

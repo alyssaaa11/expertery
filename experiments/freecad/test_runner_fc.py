@@ -52,8 +52,12 @@ def test_runner_reuses_frozen_helpers():
     src = open(os.path.join(HERE, "runner_fc.py"), encoding="utf-8").read()
     assert "import runner" in src  # the frozen runner, not a copy
     for helper in ("post_with_retry", "extract_code", "over_budget",
-                   "over_budget_c", "arm_stats", "build_body"):
+                   "over_budget_s", "arm_stats", "build_body"):
         assert helper in src
+    # S's own cap is cached-aware (MUSE_SPEC nit 4) but still prices
+    # from the frozen runner's Baseten rates, not a copy.
+    assert "runner.COST_C_IN_PER_M" in src
+    assert "runner.COST_C_OUT_PER_M" in src
 
 
 # ------------------------------------------------------- failure tags
@@ -721,11 +725,476 @@ def test_main_runs_suite_inside_grader_app_context(monkeypatch, tmp_path):
 
     monkeypatch.setattr(runner_fc, "run_suite_fc", _fake_suite)
     monkeypatch.setattr(runner_fc, "load_inputs_fc",
-                        lambda: ([{"id": "D1", "level": "dry",
-                                   "text": "t"}], "MANUAL"))
+                        lambda exam="first-test": (
+                            [{"id": "D1", "level": "dry", "text": "t"}],
+                            "MANUAL", None))
     rc = runner_fc.main(["--jobs", "dry", "--out", str(tmp_path / "o"),
                          "--arms", "G", "--gpu-start", "1700000000"])
     assert rc == 0
     assert events[0] == "enable_output"  # grader calls get an app context
     assert "app.run" in events
     assert ("suite", "1700000000") in events  # --gpu-start threaded through
+
+
+# ------------------------------------------------------- thinking exam
+
+
+def test_thinking_prompt_order_is_manual_standard_job():
+    manual, standards = "MANUAL-TEXT", "STANDARD-TEXT"
+    msgs = runner_fc.build_messages_thinking("JOB-TEXT", manual, standards)
+    assert msgs[0] == {"role": "system",
+                       "content": runner_fc.FC_SYSTEM_PROMPT}
+    body = msgs[1]["content"]
+    assert body.startswith(runner_fc.FC_MANUAL_PREFIX)
+    i_manual = body.index(manual)
+    i_standard = body.index(standards)
+    i_job = body.index("JOB-TEXT")
+    assert i_manual < i_standard < i_job  # manual, standard, job: in order
+    assert "Here is the company design standard. Apply it." in body
+    # The first-test path is untouched.
+    first = runner_fc.build_messages("JOB-TEXT", manual)
+    assert len(first) == 3 and standards not in first[1]["content"]
+
+
+def test_standards_freeze_refuses_a_changed_file(tmp_path):
+    text = runner_fc.load_standards()  # the frozen standard loads fine
+    assert "NDS-1" in text
+    good = tmp_path / "STANDARDS.md"
+    good.write_text(text, encoding="utf-8")
+    assert runner_fc.load_standards(str(good)) == text
+    bad = tmp_path / "STANDARDS2.md"
+    bad.write_text(text + " ", encoding="utf-8")
+    with pytest.raises(runner_fc.StandardsChanged):
+        runner_fc.load_standards(str(bad))
+
+
+def test_thinking_jobs_selected_by_level_never_by_id():
+    jobs, manual, standards = runner_fc.load_inputs_fc("thinking")
+    assert manual and standards  # manual + standard both frozen-loaded
+    for job in jobs:
+        assert set(("id", "level", "text", "build")) <= set(job)
+    dry = [j for j in jobs if j.get("level") == "dry"]
+    main = [j for j in jobs if j.get("level") in ("medium", "hard")]
+    assert sorted(j["id"] for j in dry) == ["C1", "C2", "C3", "D1", "D2"]
+    assert len(main) == 13  # T2, T5-T10, E1-E6
+    assert "T1" not in {j["id"] for j in main}  # dropped: near-dictation
+    # Both exams use the ids D1 and D2: the thinking D1 is not the
+    # first-test D1, so the exam folder must decide, never the id.
+    _ft = os.path.join(os.path.dirname(HERE), "first-test")
+    sys.path.insert(0, _ft)
+    try:
+        import jobs as _first_jobs
+    finally:
+        sys.path.remove(_ft)
+    first_d1 = next(j for j in _first_jobs.JOBS if j["id"] == "D1")
+    think_d1 = next(j for j in jobs if j["id"] == "D1")
+    assert think_d1["text"] != first_d1["text"]
+    first, _, no_standard = runner_fc.load_inputs_fc("first-test")
+    assert no_standard is None  # first-test loads no standard
+    assert first is _first_jobs.JOBS
+
+
+def test_cli_thinking_needs_keys_not_modal(monkeypatch, tmp_path):
+    for var in ("GLIMMER_URL", "GLIMMER_KEY", "BASETEN_KEY",
+                "META_HERDSHOT_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    with pytest.raises(SystemExit) as exc:
+        runner_fc.main(["--exam", "thinking", "--jobs", "dry",
+                        "--out", str(tmp_path / "o"), "--arms", "G"])
+    assert exc.value.code == 2  # missing variables, no network/Modal call
+
+
+def test_runner_fc_imports_under_python_I():
+    """`python -I` (no script dir, no cwd on sys.path) still imports:
+    the runner adds its own folder before importing cloud_exec."""
+    import subprocess
+
+    p = subprocess.run(
+        [sys.executable, "-I",
+         os.path.join(HERE, "runner_fc.py"), "--help"],
+        capture_output=True, text=True, timeout=120, cwd="/tmp")
+    assert p.returncode == 0, p.stderr
+    assert "FreeCAD" in p.stdout
+    assert "--exam" in p.stdout
+
+
+# ------------------------------------------------------- thinking decision
+
+
+def trec(job, arm, sample, outcome, tag=""):
+    return {"job": job, "arm": arm, "sample": sample, "outcome": outcome,
+            "failure_tag": tag,
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50}}
+
+
+def think_grid(s_pass, g_pass, jobs=("J1", "J2", "J3", "J4", "J5"), k=3,
+               w_rescues=(), harness=()):
+    """Fake k=3 thinking records: per-job pass counts per arm, W
+    rescues of (job, sample) pairs, harness INVALIDs of (arm, job)."""
+    records = []
+    for job in jobs:
+        for rep in range(k):
+            records.append(trec(
+                job, "S", rep,
+                "PASS" if rep < s_pass.get(job, 0) else "FAIL"))
+            records.append(trec(
+                job, "G", rep,
+                "PASS" if rep < g_pass.get(job, 0) else "FAIL"))
+    for job, rep in w_rescues:
+        records.append(trec(job, "W", rep, "PASS"))
+    for arm, job in harness:
+        records.append({"job": job, "arm": arm, "sample": 0,
+                        "outcome": "INVALID", "failure_tag": "harness",
+                        "run_error": "harness: boom", "usage": {}})
+    return records
+
+
+GAP_S = {"J1": 3, "J2": 3, "J3": 3, "J4": 3, "J5": 0}  # S 12/15 = 80%
+GAP_G = {"J1": 1, "J2": 1, "J3": 1, "J4": 1, "J5": 2}  # G 6/15 = 40%
+
+
+def test_thinking_rule0_harness_over_five_percent_is_run_invalid():
+    records = think_grid(GAP_S, GAP_G)  # clean: gap found
+    assert runner_fc.evaluate_thinking_decision(records)["decision"] == \
+        "gap found: factory target = company-standard thinking jobs " \
+        "in FreeCAD"
+    bad = think_grid(GAP_S, GAP_G, harness=[("G", "J1"), ("G", "J2")])
+    d = runner_fc.evaluate_thinking_decision(bad)
+    assert d["decision"] == "RUN INVALID" and d["run_invalid"] is True
+
+
+def test_thinking_rule1_teacher_under_60_is_invalid():
+    records = think_grid({"J1": 3, "J2": 2, "J3": 2},
+                         {"J1": 1, "J2": 1, "J3": 1})  # S 7/15
+    d = runner_fc.evaluate_thinking_decision(records)
+    assert d["rate_s"] == pytest.approx(7 / 15)
+    assert d["decision_s"] == \
+        "INVALID: exam too hard or ambiguous; write new jobs"
+    assert d["decision"] == d["decision_s"]  # S agrees: no governing line
+
+
+def test_thinking_rule2_gap_found():
+    d = runner_fc.evaluate_thinking_decision(think_grid(GAP_S, GAP_G))
+    assert d["rate_s"] == pytest.approx(0.8)
+    assert d["rate_g"] == pytest.approx(0.4)
+    assert d["wins_s"] == 4  # J1-J4: S 3/3, G <= 1/3
+    assert d["decision"] == \
+        "gap found: factory target = company-standard thinking jobs " \
+        "in FreeCAD"
+    assert d["wonder_share"] == 0.0
+
+
+def test_thinking_rule3_strong_glimmer_is_no_gap():
+    records = think_grid({"J1": 3, "J2": 3, "J3": 3},  # S 9/15 = 60%
+                         {"J1": 3, "J2": 3, "J3": 3, "J4": 2})  # G 11/15
+    d = runner_fc.evaluate_thinking_decision(records)
+    assert d["decision"] == "no gap: next test = same jobs without " \
+        "the standard"
+
+
+def test_thinking_rule4_grey_defers_to_the_user():
+    records = think_grid({"J1": 3, "J2": 3, "J3": 3, "J4": 1},  # S 10/15
+                         {"J1": 3, "J2": 3, "J3": 3})  # G 9/15
+    d = runner_fc.evaluate_thinking_decision(records)
+    assert d["decision"] == "grey: decide with the user"
+
+
+def test_thinking_exactly_60_is_not_invalid():
+    records = think_grid({"J1": 3, "J2": 3, "J3": 3},  # S 9/15 = 60%
+                         {"J1": 1, "J2": 1, "J3": 1})  # G 3/15 = 20%
+    d = runner_fc.evaluate_thinking_decision(records)
+    assert d["decision_s"] == "grey: decide with the user"
+
+
+def test_thinking_exactly_70_and_25_is_gap_found():
+    # S 14/20 = 70%, G 9/20 = 45%: the gap is exactly 25 points.
+    s = {"J1": 4, "J2": 4, "J3": 3, "J4": 2, "J5": 1}
+    g = {"J1": 1, "J2": 1, "J3": 1, "J4": 1, "J5": 5}
+    records = think_grid(s, g, k=4)
+    d = runner_fc.evaluate_thinking_decision(records)
+    assert d["rate_s"] == pytest.approx(0.7)
+    assert d["wins_s"] == 4
+    assert d["decision"] == \
+        "gap found: factory target = company-standard thinking jobs " \
+        "in FreeCAD"
+
+
+def test_thinking_exactly_70_glimmer_is_no_gap():
+    records = think_grid({"J1": 2, "J2": 2, "J3": 2},  # S 6/10
+                         {"J1": 3, "J2": 3, "J3": 1},  # G 7/10 = 70%
+                         jobs=("J1", "J2", "J3"))
+    d = runner_fc.evaluate_thinking_decision(records)
+    assert d["decision"] == "no gap: next test = same jobs without " \
+        "the standard"
+
+
+def test_thinking_disagreement_s_governs_and_prints_governing_rule():
+    # S 8/15 (rule 1); W rescues 4 samples -> T 12/15 = 80%, gap 60,
+    # 4 win jobs -> T alone is gap found.
+    records = think_grid({"J1": 3, "J2": 3, "J3": 2, "J4": 0, "J5": 0},
+                         {"J1": 1, "J2": 1, "J3": 0, "J4": 0, "J5": 1},
+                         w_rescues=[("J4", 0), ("J4", 1), ("J4", 2),
+                                    ("J5", 0)])
+    d = runner_fc.evaluate_thinking_decision(records)
+    assert d["rate_s"] == pytest.approx(8 / 15)
+    assert d["rate_t"] == pytest.approx(12 / 15)
+    assert d["decision_t"].startswith("gap found")
+    assert d["decision_s"].startswith("INVALID")
+    assert d["agree"] is False
+    assert d["decision"] == d["decision_s"]  # S governs
+    assert d["wonder_share"] == 0.333  # 4 rescues / 12 T passes
+    summary = runner_fc.build_thinking_summary(
+        records, [], [], 1.0, 10.0, 3.0, 3.0, False, False, False,
+        ("G", "S", "W"), k=3, workers=1)
+    report = runner_fc.build_thinking_report(summary)
+    assert "Governing rule" in report
+    assert "Wonder's share" in report
+    # Agreement prints no governing line.
+    agree = runner_fc.build_thinking_summary(
+        think_grid(GAP_S, GAP_G), [], [], 1.0, 10.0, 3.0, 3.0,
+        False, False, False, ("G", "S"), k=3, workers=1)
+    assert "Governing rule" not in \
+        runner_fc.build_thinking_report(agree)
+
+
+# ------------------------------------------------------- per-sample escalation
+
+
+def test_s_failed_samples_returns_job_rep_pairs(tmp_path):
+    calls = tmp_path / "calls.jsonl"
+    calls.write_text("\n".join([
+        json.dumps({"arm": "S", "job": "J1", "sample": 2,
+                    "outcome": "FAIL"}),
+        json.dumps({"arm": "S", "job": "J1", "sample": 0,
+                    "outcome": "PASS"}),
+        json.dumps({"arm": "S", "job": "J2", "outcome": "INVALID"}),
+        json.dumps({"arm": "S", "job": "J3", "sample": 1,
+                    "outcome": "FAIL"}),
+        json.dumps({"arm": "G", "job": "J4", "sample": 0,
+                    "outcome": "FAIL"}),
+    ]), encoding="utf-8")
+    # Failed (job, rep) pairs only: INVALID and other arms excluded,
+    # and a missing sample means the old k = 1 rep 0.
+    assert runner_fc.s_failed_samples(str(tmp_path)) == [
+        ("J1", 2), ("J3", 1)]
+
+
+def test_w_runs_one_try_per_failed_sample_with_the_same_rep(tmp_path):
+    jobs = [{"id": "D1", "level": "dry", "text": "job one"}]
+    seen = []
+
+    def grade(jid, step):
+        seen.append((jid, step))
+        return dict(PASS_GRADE)
+
+    cfgs = {"W": {"endpoint": "w", "model": "wm"}}
+    sent, _ = runner_fc.run_suite_fc(
+        jobs, "MANUAL", str(tmp_path / "run"), cfgs, {}, budget=10.0,
+        arms=("W",), k=3, workers=1, post_fn=fake_post_for({}),
+        sleep_fn=lambda s: None,
+        exec_fn=lambda code: {"step_bytes": b"S", "measure": {},
+                              "log": ""},
+        grade_fn=grade, w_samples=[("D1", 2), ("NOPE", 0)])
+    assert len(sent) == 1  # unknown ids skipped, no k-fold repeat
+    assert sent[0]["job"] == "D1" and sent[0]["sample"] == 2
+    assert sent[0]["exam"] == "first-test"
+
+
+def test_suite_default_grade_fn_forwards_the_exam(monkeypatch, tmp_path):
+    seen = {}
+
+    def _fake_default(job_id, step_bytes, exam="first-test"):
+        seen["exam"] = exam
+        return dict(PASS_GRADE)
+
+    monkeypatch.setattr(runner_fc, "default_grade_fn", _fake_default)
+    jobs = [{"id": "D1", "level": "dry", "text": "job one"}]
+    cfgs = {"G": {"endpoint": "g", "model": "gm"}}
+    sent, summary = runner_fc.run_suite_fc(
+        jobs, "MANUAL", str(tmp_path / "run"), cfgs, {}, budget=10.0,
+        arms=("G",), k=1, workers=1, post_fn=fake_post_for({}),
+        sleep_fn=lambda s: None,
+        exec_fn=lambda code: {"step_bytes": b"S", "measure": {},
+                              "log": ""},
+        grade_fn=None, exam="thinking", standards_text="STD")
+    assert seen["exam"] == "thinking"  # the grader grades the right exam
+    assert sent[0]["exam"] == "thinking"
+    assert summary["exam"] == "thinking"  # exam lands in summary.json too
+
+
+def test_thinking_suite_offline_end_to_end(tmp_path):
+    jobs = [{"id": "D1", "level": "dry", "text": "make a plate"},
+            {"id": "D2", "level": "dry", "text": "make a box"}]
+    bodies = []
+
+    def post(endpoint, body, timeout):
+        bodies.append(body["messages"][-1]["content"])
+        return fake_chat("```python\nresult = 1\n```")
+
+    box = lambda code: {"step_bytes": b"S", "measure": {}, "log": ""}
+    cfgs = {"G": {"endpoint": "g", "model": "gm"},
+            "S": {"endpoint": "s", "model": "sm"}}
+    out = str(tmp_path / "run")
+    sent, summary = runner_fc.run_suite_fc(
+        jobs, "MANUAL", out, cfgs, {}, budget=10.0, arms=("G", "S"),
+        k=1, workers=1, post_fn=post, sleep_fn=lambda s: None,
+        exec_fn=box, grade_fn=lambda jid, step: dict(PASS_GRADE),
+        exam="thinking", standards_text="STD")
+    assert len(sent) == 4 and summary["exam"] == "thinking"
+    assert all(r["exam"] == "thinking" for r in sent)
+    # Every thinking prompt carries manual, standard and job in order.
+    assert len(bodies) == 4
+    for content, job in zip(bodies, ["make a plate", "make a box"] * 2):
+        assert content.index("MANUAL") < content.index("STD") \
+            < content.index(job)
+    assert summary["decision"] and summary["decision_s"]
+    report = open(os.path.join(out, "report.md"), encoding="utf-8").read()
+    assert "Thinking-jobs" in report and "Governing rule" not in report
+
+
+def test_calls_jsonl_is_written_live(tmp_path):
+    """calls.jsonl already holds graded records while the suite runs."""
+    calls_path = os.path.join(str(tmp_path / "run"), "calls.jsonl")
+
+    def box(code):
+        assert os.path.isfile(calls_path)  # open before any grade
+        with open(calls_path, encoding="utf-8") as f:
+            assert len(f.readlines()) >= 0
+        return {"step_bytes": b"S", "measure": {}, "log": ""}
+
+    jobs = [{"id": "D1", "level": "dry", "text": "one"},
+            {"id": "D2", "level": "dry", "text": "two"}]
+    cfgs = {"G": {"endpoint": "g", "model": "gm"}}
+    sent, _ = runner_fc.run_suite_fc(
+        jobs, "MANUAL", str(tmp_path / "run"), cfgs, {}, budget=10.0,
+        arms=("G",), k=1, workers=1, post_fn=fake_post_for({}),
+        sleep_fn=lambda s: None, exec_fn=box,
+        grade_fn=lambda jid, step: dict(PASS_GRADE))
+    final = open(calls_path, encoding="utf-8").read().splitlines()
+    assert len(final) == len(sent) == 2  # same records as now
+    assert [json.loads(line)["job"] for line in final] == ["D1", "D2"]
+
+
+def test_live_write_then_reread_matches_final(tmp_path):
+    """A mid-run reader sees a prefix of the final file (flush works)."""
+    seen_counts = []
+
+    def box(code):
+        with open(os.path.join(
+                str(tmp_path / "run"), "calls.jsonl"),
+                encoding="utf-8") as f:
+            seen_counts.append(len(f.readlines()))
+        return {"step_bytes": b"S", "measure": {}, "log": ""}
+
+    jobs = [{"id": "D%d" % i, "level": "dry", "text": "t%d" % i}
+            for i in range(3)]
+    cfgs = {"G": {"endpoint": "g", "model": "gm"}}
+    sent, _ = runner_fc.run_suite_fc(
+        jobs, "MANUAL", str(tmp_path / "run"), cfgs, {}, budget=10.0,
+        arms=("G",), k=1, workers=1, post_fn=fake_post_for({}),
+        sleep_fn=lambda s: None, exec_fn=box,
+        grade_fn=lambda jid, step: dict(PASS_GRADE))
+    assert seen_counts == [0, 1, 2]  # each grade flushed before the next
+    assert len(sent) == 3
+
+
+# ------------------------------------------------------- money + flags
+
+
+def test_spark_cached_input_charged_at_the_cached_price():
+    u = {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000,
+         "cached_tokens": 1_000_000}
+    assert runner_fc.cost_s_of_usage(u) == pytest.approx(4.25 + 0.20)
+    # No cached tokens: the old uncached charge, to the cent.
+    plain = {"prompt_tokens": 1000, "completion_tokens": 500}
+    assert runner_fc.cost_s_of_usage(plain) == pytest.approx(
+        runner_fc.runner.cost_c_of_usage(plain))
+    assert runner_fc.over_budget_s([u], 1.0) is True
+    assert runner_fc.over_budget_s([], 3.0) is False
+
+
+def test_do_fc_call_flags_box_and_grade():
+    job = {"id": "D1", "level": "dry", "text": "make a box"}
+    post, no_sleep = fake_post_for({}), lambda s: None
+    ok_box = lambda code: {"step_bytes": b"S", "measure": {}, "log": ""}
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], "MANUAL", post,
+                             no_sleep, ok_box, lambda j, s: dict(PASS_GRADE))
+    assert r["box_ok"] is True and r["graded"] is True
+
+    def no_step(code):
+        return {"step_bytes": None, "measure": None, "log": "",
+                "run_error": "the answer wrote no STEP: boom"}
+
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], "MANUAL", post,
+                             no_sleep, no_step, lambda j, s: dict(PASS_GRADE))
+    assert r["outcome"] == "FAIL"
+    assert r["box_ok"] is False and r["graded"] is False
+
+    def boom_grade(jid, step):
+        raise TimeoutError("grader down")
+
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], "MANUAL", post,
+                             no_sleep, ok_box, boom_grade)
+    assert r["outcome"] == "INVALID"  # STEP came back, grade did not
+    assert r["box_ok"] is True and r["graded"] is False
+
+    def boom_box(code):
+        raise ConnectionError("sandbox down")
+
+    r = runner_fc.do_fc_call(job, "G", "m", "e", [], "MANUAL", post,
+                             no_sleep, boom_box, lambda j, s: dict(PASS_GRADE))
+    assert r["box_ok"] is False and r["graded"] is False
+
+
+def test_summarize_keeps_both_runs_costs_and_tokens(tmp_path):
+    gs_dir, w_dir = tmp_path / "main-GS", tmp_path / "main-W"
+    gs_dir.mkdir()
+    w_dir.mkdir()
+    _write_calls_jsonl(str(gs_dir / "calls.jsonl"), [
+        rec("J1", "G", "PASS"), rec("J1", "S", "PASS"),
+        rec("J2", "G", "FAIL", "api_error"),
+        rec("J2", "S", "FAIL", "wrong_geometry")])
+    _write_calls_jsonl(str(w_dir / "calls.jsonl"),
+                       [rec("J2", "W", "PASS")])
+    for d, costs, tokens in (
+            (gs_dir, {"S_tokens": 0.5, "W_tokens": 0.0, "gpu": 1.0,
+                      "total": 1.5},
+             {"G": {"input": 1, "output": 2, "total": 3}}),
+            (w_dir, {"S_tokens": 0.0, "W_tokens": 0.7, "gpu": 0.5,
+                     "total": 1.2},
+             {"W": {"input": 4, "output": 5, "total": 9}})):
+        with open(d / "summary.json", "w", encoding="utf-8") as f:
+            json.dump({"costs": costs, "tokens": tokens}, f)
+    out = str(tmp_path / "decision")
+    _, summary = runner_fc.summarize_runs(str(gs_dir), str(w_dir), out)
+    assert summary["costs"] == {"S_tokens": 0.5, "W_tokens": 0.7,
+                                "gpu": 1.5, "total": 2.7}
+    assert summary["tokens"]["G"]["total"] == 3  # GS arms kept
+    assert summary["tokens"]["W"]["total"] == 9  # W arm kept
+
+
+def test_summarize_prints_no_empty_w_heading(tmp_path):
+    gs_dir, w_dir = tmp_path / "main-GS", tmp_path / "main-W"
+    gs_dir.mkdir()
+    w_dir.mkdir()
+    _write_calls_jsonl(str(gs_dir / "calls.jsonl"), [
+        rec("J1", "G", "PASS"), rec("J1", "S", "PASS")])
+    _write_calls_jsonl(str(w_dir / "calls.jsonl"), [])
+    out = str(tmp_path / "decision")
+    _, summary = runner_fc.summarize_runs(str(gs_dir), str(w_dir), out)
+    assert "W" not in summary["arms"]
+    report = open(os.path.join(out, "report.md"), encoding="utf-8").read()
+    assert "| W |" not in report
+
+
+def test_session_wrapper_passes_exam_through():
+    src = open(os.path.join(HERE, "run_fc_session.sh"), encoding="utf-8").read()
+    assert "--exam" in src  # the exam reaches the runner
+    assert "<exam>:<jobs>:<subdir>:<arms>:<k>" in src  # the 5-field form
+    assert "first-test" in src  # the old 4-field form means first-test
+    assert "one exam per session" in src  # mixed exams refused, not mixed
+    # The hook line still carries the fixed flags (run_session.sh appends
+    # --budget with --gpu-start, so no session budget is hard-coded).
+    assert "RUN_SESSION_RUNNER_CMD" in src and "runner_fc.py" in src
+    assert "--workers 8" in src
+    assert "--budget 3.50" not in src and "--budget 3.5" not in src

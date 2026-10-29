@@ -36,8 +36,16 @@ if _FT not in sys.path:
     sys.path.insert(0, _FT)
 import runner  # noqa: E402  (frozen file; imported, not modified)
 
+# Own folder first: under `python -I` the script dir is not prepended
+# (-P), so `from cloud_exec import ...` needs it here. The session
+# wrapper's command is unchanged.
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
 from cloud_exec import run_answer_in_box  # noqa: E402
 from cloud_grade import grade_result  # noqa: E402
+
+_THINKING_DIR = os.path.join(os.path.dirname(HERE), "thinking")
+VALID_EXAMS = ("first-test", "thinking")
 
 FC_SYSTEM_PROMPT = (
     "You write FreeCAD Python code using the Part module "
@@ -102,6 +110,44 @@ def build_messages(job_text, manual_text):
         {"role": "system", "content": FC_SYSTEM_PROMPT},
         {"role": "user", "content": FC_MANUAL_PREFIX + manual_text},
         {"role": "user", "content": job_text},
+    ]
+
+
+STANDARDS_PREFIX = "\n\nHere is the company design standard. Apply it.\n\n"
+FROZEN_STANDARDS_SHA256 = (
+    "f9aa341e6224fdfbf0770900b9404fbf3146577e0640b91b5cc1e6b31784877c"
+)
+STANDARDS_PATH = os.path.join(_THINKING_DIR, "STANDARDS.md")
+
+
+class StandardsChanged(RuntimeError):
+    """Raised when the standard's sha256 differs from the frozen value."""
+
+
+def load_standards(path=None):
+    """Read NDS-1; refuse it when its sha256 changed.
+
+    A changed standard changes the result, so the run stops instead
+    (same freeze as the manual).
+    """
+    with open(path or STANDARDS_PATH, encoding="utf-8") as f:
+        text = f.read()
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    if digest != FROZEN_STANDARDS_SHA256:
+        raise StandardsChanged(
+            "standards sha256 %s != frozen %s; refusing to run"
+            % (digest, FROZEN_STANDARDS_SHA256))
+    return text
+
+
+def build_messages_thinking(job_text, manual_text, standards_text):
+    """System + one user message: manual, then the standard, then the
+    job (the thinking exam applies rules; the system prompt is
+    unchanged)."""
+    return [
+        {"role": "system", "content": FC_SYSTEM_PROMPT},
+        {"role": "user", "content": FC_MANUAL_PREFIX + manual_text
+         + STANDARDS_PREFIX + standards_text + "\n\n" + job_text},
     ]
 
 
@@ -270,6 +316,34 @@ def cached_tokens_of(usage):
         return 0
 
 
+# Spark cached input $/M (the cached-input rate on record; update if
+# Baseten prices it differently from Wonder's cached rate).
+COST_S_CACHED_PER_M = 0.20
+
+
+def cost_s_of_usage(usage):
+    """Spark $: cached input at the cached price (prompt_tokens covers
+    cached_tokens, so the cached part is not charged as uncached)."""
+    usage = usage or {}
+    try:
+        prompt = float(usage.get("prompt_tokens", 0) or 0)
+    except (TypeError, ValueError):
+        prompt = 0.0
+    try:
+        completion = float(usage.get("completion_tokens", 0) or 0)
+    except (TypeError, ValueError):
+        completion = 0.0
+    cached = float(cached_tokens_of(usage))
+    uncached = max(0.0, prompt - cached)
+    return (uncached * runner.COST_C_IN_PER_M
+            + completion * runner.COST_C_OUT_PER_M
+            + cached * COST_S_CACHED_PER_M) / 1e6
+
+
+def cost_s_total(s_usages):
+    return sum(cost_s_of_usage(u) for u in s_usages)
+
+
 # ------------------------------------------------------- PLAN decision
 
 
@@ -422,6 +496,200 @@ def evaluate_fc_decision(records):
     }
 
 
+# ------------------------------------------------------- thinking decision
+
+
+def _thinking_scored(records, arm):
+    """Scored (PASS/FAIL) samples of one arm as {(job, sample)} sets."""
+    passed, failed = set(), set()
+    for r in records:
+        if r.get("arm") != arm or r.get("outcome") not in ("PASS", "FAIL"):
+            continue
+        key = (r.get("job"), r.get("sample", 0))
+        (passed if r.get("outcome") == "PASS" else failed).add(key)
+    return passed, failed
+
+
+def thinking_teacher_passes(records):
+    """T = S passes plus W rescues per (job, rep) sample: a sample
+    passes for T when S passed it or W rescued it (an S FAIL)."""
+    s_pass, s_fail = _thinking_scored(records, "S")
+    t = set(s_pass)
+    for r in records:
+        if (r.get("arm") == "W" and r.get("outcome") == "PASS"
+                and (r.get("job"), r.get("sample", 0)) in s_fail):
+            t.add((r.get("job"), r.get("sample", 0)))
+    return t
+
+
+def thinking_wins(records, x_pass_samples):
+    """Jobs where X passes >= 2 of 3 samples and G passes <= 1 of 3."""
+    g_pass, _ = _thinking_scored(records, "G")
+    wins = 0
+    for job in {j for j, _ in x_pass_samples}:
+        n_x = sum(1 for (j, _) in x_pass_samples if j == job)
+        n_g = sum(1 for (j, _) in g_pass if j == job)
+        if n_x >= 2 and n_g <= 1:
+            wins += 1
+    return wins
+
+
+def thinking_wonder_share(records):
+    """Share of T's passed samples that needed a Wonder rescue."""
+    s_pass, _ = _thinking_scored(records, "S")
+    t = thinking_teacher_passes(records)
+    if not t:
+        return 0.0
+    return len(t - s_pass) / len(t)
+
+
+def decide_thinking_one(rate_g, rate_x, wins_x):
+    """PLAN decision rules 1-4 for one rate (S or T alone).
+
+    Exact boundaries (Fraction): rule 1 fires below 60%; rule 2 needs
+    >= 70%, a gap >= 25 points and >= 4 wins.
+    """
+    from fractions import Fraction as _F
+
+    if rate_x is None:
+        return "INVALID (no scored calls)"
+    if _F(rate_x).limit_denominator(1000000) < _F(3, 5):
+        return "INVALID: exam too hard or ambiguous; write new jobs"
+    if (rate_g is not None
+            and _F(rate_x).limit_denominator(1000000) >= _F(7, 10)
+            and (_F(rate_x).limit_denominator(1000000)
+                 - _F(rate_g).limit_denominator(1000000)) >= _F(1, 4)
+            and wins_x >= 4):
+        return ("gap found: factory target = company-standard thinking "
+                "jobs in FreeCAD")
+    if rate_g is not None and _F(rate_g).limit_denominator(1000000) >= _F(7, 10):
+        return "no gap: next test = same jobs without the standard"
+    return "grey: decide with the user"
+
+
+def evaluate_thinking_decision(records):
+    """PLAN rules 0-4 for the thinking exam (rates = PASS / (PASS +
+    FAIL) over all answers of an arm; wins per job as above).
+
+    Rules 1-4 run on S and on T; on disagreement the S result governs
+    (PLAN: a result that needs Wonder is not "Wonder only on the
+    hardest jobs"). Returns decisions, rates, wins, Wonder's share and
+    the rule-0 gate.
+    """
+    g_pass, g_fail = _thinking_scored(records, "G")
+    s_pass, s_fail = _thinking_scored(records, "S")
+    t_pass = thinking_teacher_passes(records)
+    n_g = len(g_pass) + len(g_fail)
+    n_s = len(s_pass) + len(s_fail)
+    rate_g = (len(g_pass) / n_g) if n_g else None
+    rate_s = (len(s_pass) / n_s) if n_s else None
+    rate_t = (len(t_pass) / n_s) if n_s else None
+    wins_s = thinking_wins(records, s_pass)
+    wins_t = thinking_wins(records, t_pass)
+    decision_s = decide_thinking_one(rate_g, rate_s, wins_s)
+    decision_t = decide_thinking_one(rate_g, rate_t, wins_t)
+    agree = decision_s == decision_t
+    decision = decision_s if not agree else decision_t
+    bad_arms = run_invalid_arms(records)
+    if bad_arms:
+        decision = "RUN INVALID"
+    return {
+        "decision_s": decision_s,
+        "decision_t": decision_t,
+        "agree": agree,
+        "decision": decision,
+        "rate_g": rate_g,
+        "rate_s": rate_s,
+        "rate_t": rate_t,
+        "wins_s": wins_s,
+        "wins_t": wins_t,
+        "wonder_share": round(thinking_wonder_share(records), 3),
+        "run_invalid": bool(bad_arms),
+        "run_invalid_arms": {a: round(s, 3)
+                             for a, s in sorted(bad_arms.items())},
+    }
+
+
+def build_thinking_summary(records, s_usages, w_usages, elapsed_s, budget,
+                           budget_c, budget_w, budget_stopped,
+                           budget_c_stopped, budget_w_stopped, arms, k=3,
+                           workers=None, arm_timing=None, exam="thinking"):
+    arm_timing = arm_timing or {}
+    per_arm = {arm: runner.arm_stats(records, arm, extra=True, k=k)
+               for arm in arms}
+    cost_s = round(cost_s_total(s_usages), 4)
+    cost_w = round(cost_w_total(w_usages), 4)
+    gpu = round(runner.gpu_cost_of_elapsed(elapsed_s), 4)
+    t = evaluate_thinking_decision(records)
+    table = {}
+    for rec in records:
+        table.setdefault(rec["job"], {}).setdefault(
+            rec.get("arm"), {})[rec.get("sample", 0)] = rec.get("outcome")
+    return {
+        "exam": exam,
+        "arms": per_arm,
+        "n_calls": len(records),
+        "budget": budget,
+        "budget_stopped": budget_stopped,
+        "budget_c": budget_c,
+        "budget_c_stopped": budget_c_stopped,
+        "budget_w": budget_w,
+        "budget_w_stopped": budget_w_stopped,
+        "elapsed_seconds": round(elapsed_s, 3),
+        "costs": {"S_tokens": cost_s, "W_tokens": cost_w, "gpu": gpu,
+                  "total": round(cost_s + cost_w + gpu, 4)},
+        "tokens": {
+            arm: {"input": per_arm[arm]["input_tokens"],
+                  "output": per_arm[arm]["output_tokens"],
+                  "total": per_arm[arm]["total_tokens"]}
+            for arm in arms
+        },
+        "wonder_share": t["wonder_share"],
+        "decision_t": t["decision_t"],
+        "decision_s": t["decision_s"],
+        "decision": t["decision"],
+        "agree_T_S": t["agree"],
+        "run_invalid": t["run_invalid"],
+        "run_invalid_arms": t["run_invalid_arms"],
+        "rate_g": t["rate_g"],
+        "rate_t": t["rate_t"],
+        "rate_s": t["rate_s"],
+        "wins_s": t["wins_s"],
+        "wins_t": t["wins_t"],
+        "table": table,
+        "k": k,
+        "workers": workers,
+        "arm_timing": arm_timing,
+    }
+
+
+def build_thinking_report(summary):
+    lines = ["# Thinking-jobs gap-test report", ""]
+    lines.append("Teacher T = S ∪ W-rescues per (job, rep) sample.")
+    lines.append("Decision on T: **%s**" % summary["decision_t"])
+    lines.append("Decision on S alone: **%s**" % summary["decision_s"])
+    lines.append("Report decision: **%s**" % summary["decision"])
+    if not summary["agree_T_S"]:
+        lines.append("Governing rule: S governs (T disagrees: %s)"
+                     % summary["decision_t"])
+    lines.append("Wonder's share of T's passes: %.1f%%"
+                 % (100.0 * summary["wonder_share"]))
+    lines.append("Rates: G %.1f%%, T %.1f%%, S %.1f%%"
+                 % (100 * (summary["rate_g"] or 0),
+                    100 * (summary["rate_t"] or 0),
+                    100 * (summary["rate_s"] or 0)))
+    lines.append("Win jobs (X >= 2/3, G <= 1/3): S %d, T %d"
+                 % (summary["wins_s"], summary["wins_t"]))
+    if summary.get("run_invalid"):
+        lines.append("RUN INVALID: harness/INVALID over 5%% in %s"
+                     % ", ".join(
+                         "%s (%.1f%%)" % (a, 100 * shr)
+                         for a, shr in sorted(
+                             summary["run_invalid_arms"].items())))
+    lines.append("")
+    return "\n".join(lines)
+
+
 # ------------------------------------------------------- one (job, arm)
 
 
@@ -430,16 +698,23 @@ def default_exec_fn(answer_code):
     return run_answer_in_box(answer_code)
 
 
-def default_grade_fn(job_id, step_bytes):
+def default_grade_fn(job_id, step_bytes, exam="first-test"):
     """Real grader call (needs modal). Tests inject a fake instead."""
     from cloud_grade import grade as _grade  # noqa: E402
 
-    return _grade.remote(job_id, bytes(step_bytes))
+    return _grade.remote(job_id, bytes(step_bytes), exam)
+
+
+def over_budget_s(s_usages, budget_s):
+    """S's own cap on the cached-aware Spark cost (same value as the
+    old guard when nothing was cached)."""
+    return cost_s_total(s_usages) > budget_s
 
 
 def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
                sleep_fn, exec_fn, grade_fn,
-               call_timeout=CALL_TIMEOUT, affinity=None):
+               call_timeout=CALL_TIMEOUT, affinity=None, exam="first-test",
+               standards_text=None):
     """Run one (job, arm) pair exactly once: POST (one retry on network /
     HTTP 5xx/429, imported), extract the code, run it in the cloud box,
     grade the STEP. Never raises for a bad answer; a failed call after
@@ -450,7 +725,12 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
     with run_one_fc's ERROR line as run_error."""
     import datetime as _dt
 
-    body = build_body_fc(model, build_messages(job["text"], manual_text))
+    if exam == "thinking":
+        messages = build_messages_thinking(job["text"], manual_text,
+                                           standards_text or "")
+    else:
+        messages = build_messages(job["text"], manual_text)
+    body = build_body_fc(model, messages)
     start = (_dt.datetime.now(_dt.timezone.utc)
              .isoformat(timespec="milliseconds").replace("+00:00", "Z"))
     t0 = time.monotonic()
@@ -459,6 +739,7 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
     outcome = fails = measurements = code = run_error = None
     failure_tag, grade_tight = "", None
     call_error, built = None, False
+    box_ok, was_graded = False, False  # the live dashboard counts these
     latency = 0.0
     try:
         t_call = time.monotonic()
@@ -497,6 +778,7 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
                         failure_tag = tag_failure(finish_reason, content,
                                                   run_error, built, fails)
                     else:
+                        box_ok = True  # the box handed back a STEP
                         try:
                             graded = grade_fn(job["id"], boxed["step_bytes"])
                         except Exception as e:  # noqa: BLE001 -- grader down
@@ -506,6 +788,7 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
                             failure_tag, built = "harness", False
                         else:
                             built = True
+                            was_graded = True
                             measurements = graded.get("measurements")
                             grade_tight = graded.get("tight")
                             if graded.get("verdict") == "PASS":
@@ -529,8 +812,11 @@ def do_fc_call(job, arm, model, endpoint, secrets, manual_text, post_fn,
     return {
         "job": job["id"],
         "level": job.get("level"),
+        "exam": exam,
         "arm": arm,
         "model": model,
+        "box_ok": box_ok,
+        "graded": was_graded,
         "start": start,
         "end": end,
         "seconds": round(seconds, 3),
@@ -568,9 +854,10 @@ def gpu_elapsed_s(t_start_mono, gpu_start):
 
 
 def estimate_total_fc(s_usages, w_usages, elapsed_s):
-    """Running estimate: S tokens (Baseten rate) + W tokens (Meta rate) +
-    one shared GPU cost for the run's wall-clock time."""
-    return (sum(runner.cost_c_of_usage(u) for u in s_usages)
+    """Running estimate: S tokens (Baseten rate, cached input at the
+    cached price) + W tokens (Meta rate) + one shared GPU cost for the
+    run's wall-clock time."""
+    return (cost_s_total(s_usages)
             + cost_w_total(w_usages)
             + runner.gpu_cost_of_elapsed(elapsed_s))
 
@@ -593,6 +880,21 @@ def s_failed_job_ids(s_run_dir):
     return ids
 
 
+def s_failed_samples(s_run_dir):
+    """(job, rep) samples that FAILED in S's calls.jsonl (INVALID is
+    not escalated; reps default to 0 for old k = 1 records)."""
+    pairs = []
+    with open(os.path.join(s_run_dir, "calls.jsonl"), encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            rec = json.loads(line)
+            if rec.get("arm") == "S" and rec.get("outcome") == "FAIL":
+                pairs.append((rec.get("job"), rec.get("sample", 0)))
+    return pairs
+
+
 def read_calls_jsonl(run_dir):
     """Records from one run dir's calls.jsonl (blank lines skipped)."""
     records = []
@@ -604,47 +906,111 @@ def read_calls_jsonl(run_dir):
     return records
 
 
+def _load_run_summary(run_dir):
+    """One run's own summary.json (None when it was never written)."""
+    try:
+        with open(os.path.join(run_dir, "summary.json"),
+                  encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def merge_run_costs(summary, gs_dir, w_dir):
+    """Keep the per-arm costs and token counts from the two runs' own
+    summaries: S/gpu from the GS run, W from the W run (missing files
+    count as zero). The union summary keeps them under costs/tokens."""
+    gs, w = _load_run_summary(gs_dir), _load_run_summary(w_dir)
+    if gs is None and w is None:
+        return summary
+    gs_costs, w_costs = (gs or {}).get("costs", {}), (w or {}).get("costs", {})
+    cost_s = float(gs_costs.get("S_tokens", 0) or 0)
+    cost_w = float(w_costs.get("W_tokens", 0) or 0)
+    gpu = (float(gs_costs.get("gpu", 0) or 0)
+           + float(w_costs.get("gpu", 0) or 0))
+    summary["costs"] = {"S_tokens": round(cost_s, 4),
+                        "W_tokens": round(cost_w, 4),
+                        "gpu": round(gpu, 4),
+                        "total": round(cost_s + cost_w + gpu, 4)}
+    tokens = dict((gs or {}).get("tokens", {}))
+    tokens.update((w or {}).get("tokens", {}))
+    if tokens:
+        summary["tokens"] = tokens
+    return summary
+
+
 def summarize_runs(gs_dir, w_dir, out_dir):
     """Decision over the union of the GS and W runs (FIX_SPEC Round 4.1).
 
     Each run's own summary sees only its own records, so the
     pre-registered T rule (T = S ∪ W-rescues) was never computed by
-    code. This reads both calls.jsonl files, runs evaluate_fc_decision
-    on the union, and writes summary.json + report.md into `out_dir`
-    (G, S, T rates, Wonder's share of T's passes, rules 1-4 on T and
-    on S, rule 6, both decision lines). No model, Modal, or network
-    calls: pure local reads and arithmetic.
+    code. This reads both calls.jsonl files, evaluates the decision on
+    the union (the thinking exam's rules for thinking records, the
+    first-test rules otherwise), keeps the two runs' costs and token
+    counts, and writes summary.json + report.md into `out_dir`. No
+    model, Modal, or network calls: pure local reads and arithmetic.
     """
     records = read_calls_jsonl(gs_dir) + read_calls_jsonl(w_dir)
     arms = tuple(sorted({r.get("arm") for r in records if r.get("arm")}))
-    summary = build_fc_summary(records, [], [], 0.0, None, None, None,
-                               False, False, False, arms, k=1, workers=None)
+    exams = {r.get("exam", "first-test") for r in records}
+    exam = exams.pop() if len(exams) == 1 else "first-test"
+    k = max([r.get("sample", 0) for r in records] + [0]) + 1
+    if exam == "thinking":
+        summary = build_thinking_summary(
+            records, [], [], 0.0, None, None, None,
+            False, False, False, arms, k=k, workers=None)
+        report = build_thinking_report(summary)
+    else:
+        summary = build_fc_summary(
+            records, [], [], 0.0, None, None, None,
+            False, False, False, arms, k=k, workers=None, exam=exam)
+        report = build_fc_report(summary)
+    merge_run_costs(summary, gs_dir, w_dir)
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "summary.json"), "w",
               encoding="utf-8") as f:
         json.dump(summary, f, indent=1)
     with open(os.path.join(out_dir, "report.md"), "w",
               encoding="utf-8") as f:
-        f.write(build_fc_report(summary))
+        f.write(report)
     print("Decision on T: %s" % summary["decision_t"])
     print("Decision on S alone: %s" % summary["decision_s"])
     print("Report decision: %s" % summary["decision"])
     return records, summary
 
 
+def _write_live(fh, rec):
+    """Append one graded record now (flush): the dashboard reads the
+    file while the run is still going."""
+    fh.write(json.dumps(rec) + "\n")
+    fh.flush()
+
+
+def finish_rec(rec, rep, live_fh):
+    """Stamp the rep index and append the graded record to calls.jsonl
+    now; returns the record."""
+    rec["sample"] = rep
+    _write_live(live_fh, rec)
+    return rec
+
+
 def run_suite_fc(jobs, manual_text, out_dir, arm_cfgs, key_map,
                  budget=3.5, budget_c=3.0, budget_w=3.0,
                  arms=("G", "S"), k=1, workers=MAX_WORKERS,
                  post_fn=None, sleep_fn=time.sleep,
-                 exec_fn=None, grade_fn=None, w_job_ids=None,
-                 call_timeout=CALL_TIMEOUT, affinity=None, gpu_start=None):
+                 exec_fn=None, grade_fn=None, w_samples=None,
+                 call_timeout=CALL_TIMEOUT, affinity=None, gpu_start=None,
+                 exam="first-test", standards_text=None):
     """Call every (job, arm) pair `k` times with `workers` threads.
 
     Arms run one after another with that many workers (up to 8 sandboxes
     in parallel), never mixed. New calls stop once the cost estimate
     passes `budget`; new S calls stop at `budget_c`, new W calls at
-    `budget_w`. W runs only on `w_job_ids` (S's failed jobs). Writes
-    calls.jsonl, summary.json and report.md into `out_dir`.
+    `budget_w`. W runs one try per failed S (job, rep) sample in
+    `w_samples`, with the same rep index. Each record is appended to
+    calls.jsonl as soon as it is graded (flushed); the final file holds
+    the same records in (arm, job, sample) order. Writes calls.jsonl,
+    summary.json and report.md into `out_dir`.
     """
     key_map = key_map or {}
     secrets = [v for v in key_map.values() if v]
@@ -652,7 +1018,9 @@ def run_suite_fc(jobs, manual_text, out_dir, arm_cfgs, key_map,
     if post_fn is None:
         post_fn = default_post_fns(arm_cfgs, key_map, affinity)
     exec_fn = exec_fn or default_exec_fn
-    grade_fn = grade_fn or default_grade_fn
+    if grade_fn is None:
+        def grade_fn(job_id, step_bytes, _exam=exam):
+            return default_grade_fn(job_id, step_bytes, _exam)
     os.makedirs(out_dir, exist_ok=True)
     pool_size = workers or MAX_WORKERS
     t_start = time.monotonic()
@@ -660,97 +1028,115 @@ def run_suite_fc(jobs, manual_text, out_dir, arm_cfgs, key_map,
     budget_stopped = budget_c_stopped = budget_w_stopped = False
     records = []
     arm_timing = {}
-    for arm in arms:
-        if arm == "W":
-            arm_jobs = [j for j in jobs if j["id"] in set(w_job_ids or [])]
-        else:
-            arm_jobs = list(jobs)
-        pairs = [(job, rep) for job in arm_jobs for rep in range(k)]
-        arm_start = runner.utcnow_iso()
-        arm_t0 = time.monotonic()
-        arm_recs = [None] * len(pairs)
-        next_i, in_flight = 0, {}
-        with concurrent.futures.ThreadPoolExecutor(
-                max_workers=pool_size) as pool:
-            while next_i < len(pairs) or in_flight:
-                while next_i < len(pairs) and len(in_flight) < pool_size:
-                    if over_budget_fc(s_usages, w_usages,
-                                      gpu_elapsed_s(t_start, gpu_start),
-                                      budget):
-                        budget_stopped = True
+    calls_path = os.path.join(out_dir, "calls.jsonl")
+    by_id = {j["id"]: j for j in jobs}
+    live = open(calls_path, "w", encoding="utf-8")
+    try:
+        for arm in arms:
+            if arm == "W":
+                # One try per failed S sample, with the same rep index.
+                pairs = [(by_id[jid], rep)
+                         for (jid, rep) in (w_samples or [])
+                         if jid in by_id]
+            else:
+                pairs = [(job, rep) for job in jobs for rep in range(k)]
+            arm_start = runner.utcnow_iso()
+            arm_t0 = time.monotonic()
+            arm_recs = [None] * len(pairs)
+            next_i, in_flight = 0, {}
+            with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=pool_size) as pool:
+                while next_i < len(pairs) or in_flight:
+                    while next_i < len(pairs) and len(in_flight) < pool_size:
+                        if over_budget_fc(s_usages, w_usages,
+                                          gpu_elapsed_s(t_start, gpu_start),
+                                          budget):
+                            budget_stopped = True
+                            break
+                        if arm == "S" and over_budget_s(s_usages, budget_c):
+                            budget_c_stopped = True
+                            next_i += 1
+                            continue
+                        if arm == "W" and over_budget_w(w_usages, budget_w):
+                            budget_w_stopped = True
+                            next_i += 1
+                            continue
+                        job, _rep = pairs[next_i]
+                        cfg = arm_cfgs[arm]
+                        fut = pool.submit(
+                            do_fc_call, job, arm, cfg["model"],
+                            cfg["endpoint"], secrets, manual_text, post_fn,
+                            sleep_fn, exec_fn, grade_fn, call_timeout, affinity,
+                            exam, standards_text)
+                        in_flight[fut] = next_i
+                        next_i += 1
+                    if budget_stopped and not in_flight:
                         break
-                    if arm == "S" and runner.over_budget_c(s_usages, budget_c):
-                        budget_c_stopped = True
-                        next_i += 1
-                        continue
-                    if arm == "W" and over_budget_w(w_usages, budget_w):
-                        budget_w_stopped = True
-                        next_i += 1
-                        continue
-                    job, _rep = pairs[next_i]
-                    cfg = arm_cfgs[arm]
-                    fut = pool.submit(
-                        do_fc_call, job, arm, cfg["model"],
-                        cfg["endpoint"], secrets, manual_text, post_fn,
-                        sleep_fn, exec_fn, grade_fn, call_timeout, affinity)
-                    in_flight[fut] = next_i
-                    next_i += 1
-                if budget_stopped and not in_flight:
-                    break
-                if not in_flight:
-                    break
-                done, _ = concurrent.futures.wait(
-                    in_flight,
-                    return_when=concurrent.futures.FIRST_COMPLETED)
-                for fut in done:
-                    idx = in_flight.pop(fut)
-                    job, _rep = pairs[idx]
-                    try:
-                        rec = fut.result()
-                    except Exception as e:  # noqa: BLE001 -- never lose a slot
-                        rec = {"job": job["id"], "level": job.get("level"),
-                               "arm": arm, "model": arm_cfgs[arm]["model"],
-                               "outcome": "INVALID", "fails": [],
-                               "failed_checks": [], "measurements": None,
-                               "run_error": runner.scrub(
-                                   "runner error: %r" % (e,), secrets),
-                               "failure_tag": "INVALID"}
-                    arm_recs[idx] = rec
-                    if arm == "S" and isinstance(rec.get("usage"), dict):
-                        s_usages.append(rec["usage"])
-                    if arm == "W" and isinstance(rec.get("usage"), dict):
-                        w_usages.append(rec["usage"])
-                if budget_stopped:
-                    while in_flight:
-                        done, _ = concurrent.futures.wait(
-                            in_flight,
-                            return_when=concurrent.futures.FIRST_COMPLETED)
-                        for fut in done:
-                            idx = in_flight.pop(fut)
-                            try:
-                                arm_recs[idx] = fut.result()
-                            except Exception as e:  # noqa: BLE001
-                                arm_recs[idx] = {
-                                    "job": pairs[idx][0]["id"], "arm": arm,
-                                    "outcome": "INVALID", "fails": [],
-                                    "failure_tag": "INVALID",
-                                    "run_error": "runner error: %r" % (e,)}
-                    break
-        arm_elapsed = time.monotonic() - arm_t0
-        for (job, rep), rec in zip(pairs, arm_recs):
-            if rec is not None:
-                rec["sample"] = rep
-            records.append(rec)
-        arm_timing[arm] = {"start": arm_start, "end": runner.utcnow_iso(),
-                           "seconds": round(arm_elapsed, 3)}
+                    if not in_flight:
+                        break
+                    done, _ = concurrent.futures.wait(
+                        in_flight,
+                        return_when=concurrent.futures.FIRST_COMPLETED)
+                    for fut in done:
+                        idx = in_flight.pop(fut)
+                        job, _rep = pairs[idx]
+                        try:
+                            rec = fut.result()
+                        except Exception as e:  # noqa: BLE001 -- never lose a slot
+                            rec = {"job": job["id"], "level": job.get("level"),
+                                   "exam": exam,
+                                   "arm": arm, "model": arm_cfgs[arm]["model"],
+                                   "outcome": "INVALID", "fails": [],
+                                   "failed_checks": [], "measurements": None,
+                                   "run_error": runner.scrub(
+                                       "runner error: %r" % (e,), secrets),
+                                   "failure_tag": "INVALID"}
+                        arm_recs[idx] = finish_rec(rec, pairs[idx][1], live)
+                        if arm == "S" and isinstance(rec.get("usage"), dict):
+                            s_usages.append(rec["usage"])
+                        if arm == "W" and isinstance(rec.get("usage"), dict):
+                            w_usages.append(rec["usage"])
+                    if budget_stopped:
+                        while in_flight:
+                            done, _ = concurrent.futures.wait(
+                                in_flight,
+                                return_when=concurrent.futures.FIRST_COMPLETED)
+                            for fut in done:
+                                idx = in_flight.pop(fut)
+                                try:
+                                    rec = fut.result()
+                                except Exception as e:  # noqa: BLE001
+                                    rec = {
+                                        "job": pairs[idx][0]["id"], "arm": arm,
+                                        "exam": exam,
+                                        "outcome": "INVALID", "fails": [],
+                                        "failure_tag": "INVALID",
+                                        "run_error": "runner error: %r" % (e,)}
+                                arm_recs[idx] = finish_rec(
+                                    rec, pairs[idx][1], live)
+                        break
+            arm_elapsed = time.monotonic() - arm_t0
+            for rec in arm_recs:
+                records.append(rec)
+            arm_timing[arm] = {"start": arm_start, "end": runner.utcnow_iso(),
+                               "seconds": round(arm_elapsed, 3)}
+    finally:
+        live.close()
     elapsed = time.monotonic() - t_start
     sent = [r for r in records if r is not None]
-    summary = build_fc_summary(sent, s_usages, w_usages, elapsed, budget,
-                               budget_c, budget_w, budget_stopped,
-                               budget_c_stopped, budget_w_stopped, arms, k,
-                               pool_size, arm_timing)
-    with open(os.path.join(out_dir, "calls.jsonl"), "w",
-              encoding="utf-8") as f:
+    if exam == "thinking":
+        summary = build_thinking_summary(
+            sent, s_usages, w_usages, elapsed, budget, budget_c, budget_w,
+            budget_stopped, budget_c_stopped, budget_w_stopped, arms, k,
+            pool_size, arm_timing)
+        report = build_thinking_report(summary)
+    else:
+        summary = build_fc_summary(
+            sent, s_usages, w_usages, elapsed, budget, budget_c, budget_w,
+            budget_stopped, budget_c_stopped, budget_w_stopped, arms, k,
+            pool_size, arm_timing, exam=exam)
+        report = build_fc_report(summary)
+    with open(calls_path, "w", encoding="utf-8") as f:
         for rec in sent:
             f.write(json.dumps(rec) + "\n")
     with open(os.path.join(out_dir, "summary.json"), "w",
@@ -758,14 +1144,14 @@ def run_suite_fc(jobs, manual_text, out_dir, arm_cfgs, key_map,
         json.dump(summary, f, indent=1)
     with open(os.path.join(out_dir, "report.md"), "w",
               encoding="utf-8") as f:
-        f.write(build_fc_report(summary))
+        f.write(report)
     return sent, summary
 
 
 def build_fc_summary(records, s_usages, w_usages, elapsed_s, budget,
                      budget_c, budget_w, budget_stopped, budget_c_stopped,
                      budget_w_stopped, arms, k=1, workers=None,
-                     arm_timing=None):
+                     arm_timing=None, exam="first-test"):
     arm_timing = arm_timing or {}
     per_arm = {arm: runner.arm_stats(records, arm, extra=True, k=k)
                for arm in arms}
@@ -796,7 +1182,7 @@ def build_fc_summary(records, s_usages, w_usages, elapsed_s, budget,
                            and r.get("outcome") == "INVALID"),
         }
     s_pass, g_pass = pass_job_ids(records, "S"), pass_job_ids(records, "G")
-    cost_s = round(sum(runner.cost_c_of_usage(u) for u in s_usages), 4)
+    cost_s = round(cost_s_total(s_usages), 4)
     cost_w = round(cost_w_total(w_usages), 4)
     gpu = round(runner.gpu_cost_of_elapsed(elapsed_s), 4)
     decision = evaluate_fc_decision(records)
@@ -804,6 +1190,7 @@ def build_fc_summary(records, s_usages, w_usages, elapsed_s, budget,
     for rec in records:
         table.setdefault(rec["job"], {})[rec["arm"]] = rec.get("outcome")
     return {
+        "exam": exam,
         "arms": per_arm,
         "levels": by_level,
         "by_level": by_level,
@@ -905,13 +1292,21 @@ def build_fc_report(summary):
 # ------------------------------------------------------- CLI
 
 
-def load_inputs_fc():
-    """Job texts (neutral, from the frozen first-test jobs) + the frozen
-    FreeCAD manual. The Mac never loads expected.json (the grader holds
-    the references)."""
+def load_inputs_fc(exam="first-test"):
+    """Job texts + the frozen FreeCAD manual (+ the frozen standard for
+    the thinking exam). Returns (JOBS, manual_text, standards_text or
+    None). Jobs are selected by level downstream, never by a hard-coded
+    id list (both exams use the ids D1 and D2). The Mac never loads
+    expected.json (the grader holds the references)."""
+    if exam == "thinking":
+        if _THINKING_DIR not in sys.path:
+            sys.path.insert(0, _THINKING_DIR)
+        from thinking_jobs import JOBS  # noqa: E402  (frozen; not modified)
+
+        return JOBS, load_manual(), load_standards()
     from jobs import JOBS  # noqa: E402  (frozen file; imported, not modified)
 
-    return JOBS, load_manual()
+    return JOBS, load_manual(), None
 
 
 def parse_fc_arms(value):
@@ -927,6 +1322,9 @@ def parse_fc_arms(value):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="FreeCAD gap-test runner.")
+    parser.add_argument("--exam", choices=VALID_EXAMS, default="first-test",
+                        help="which exam to run (default first-test: old "
+                             "commands behave the same)")
     parser.add_argument("--jobs", choices=("dry", "main"), default=None)
     parser.add_argument("--summarize", nargs=2,
                         metavar=("GS_RUN_DIR", "W_RUN_DIR"), default=None,
@@ -999,10 +1397,12 @@ def main(argv=None):
               file=sys.stderr)
         return 2
 
-    JOBS, manual_text = load_inputs_fc()
+    JOBS, manual_text, standards_text = load_inputs_fc(args.exam)
     if args.jobs == "dry":
+        # The pilot: level "dry" (D1, D2 plus C1-C3 for thinking).
         jobs = [j for j in JOBS if j.get("level") == "dry"]
     else:
+        # The main exam: levels "medium" + "hard" (13 thinking jobs).
         jobs = [j for j in JOBS if j.get("level") in ("medium", "hard")]
     if not jobs:
         parser.error("no jobs for --jobs %s" % args.jobs)
@@ -1041,12 +1441,12 @@ def main(argv=None):
               % (args.w_endpoint, finish, json.dumps(usage), reasoning))
         return 0
 
-    w_job_ids = None
+    w_samples = None
     if "W" in arms:
         if not args.escalate_from:
             parser.error("arm W needs --escalate-from <S run dir>")
-        w_job_ids = s_failed_job_ids(args.escalate_from)
-        if not w_job_ids:
+        w_samples = s_failed_samples(args.escalate_from)
+        if not w_samples:
             print("no S failures to escalate; W has nothing to run")
 
     import cloud_grade as _cloud_grade  # noqa: E402
@@ -1059,8 +1459,9 @@ def main(argv=None):
             run_suite_fc(jobs, manual_text, args.out, arm_cfgs, key_map,
                          budget=args.budget, budget_c=args.budget_c,
                          budget_w=args.budget_w, arms=arms, k=args.k,
-                         workers=args.workers, w_job_ids=w_job_ids,
-                         gpu_start=args.gpu_start)
+                         workers=args.workers, w_samples=w_samples,
+                         gpu_start=args.gpu_start, exam=args.exam,
+                         standards_text=standards_text)
     return 0
 
 

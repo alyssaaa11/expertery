@@ -629,6 +629,85 @@ def test_check_refs_names_failures(capsys):
     assert "REF FAIL M1" in out and "REFS 29/30 PASS" in out
 
 
+def test_check_refs_thinking_covers_the_13_main_jobs(capsys):
+    """The thinking exam resolves its own 13 jobs (T2, T5-T10, E1-E6),
+    never first-test's ids: selection is by level, not a hard-coded
+    id list. Uses fake builds/grades, never the real expected file."""
+    seen = []
+
+    def fake_grade(jid, step):
+        seen.append(jid)
+        return {"verdict": "PASS", "fails": []}
+
+    n, total = cloud_grade.check_refs(
+        build_refs_fn=lambda job: b"STEP", grade_fn=fake_grade,
+        exam="thinking")
+    assert (n, total) == (13, 13)
+    assert "REFS 13/13 PASS" in capsys.readouterr().out
+    assert "D1" not in seen and "T1" not in seen  # dry/dropped stay out
+
+
+def test_check_refs_cli_forwards_the_exam(monkeypatch, capsys):
+    """`cloud_grade.py --check-refs --exam thinking` checks the
+    thinking exam (the REFS 13/13 PASS path). Modal/app are stubbed;
+    check_refs itself is watched, never run."""
+    seen = {}
+
+    class _Ctx:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    class _Modal:
+        @staticmethod
+        def enable_output():
+            return _Ctx()
+
+    class _App:
+        def run(self):
+            return _Ctx()
+
+    monkeypatch.setattr(cloud_grade, "modal", _Modal())
+    monkeypatch.setattr(cloud_grade, "_app", _App())
+    monkeypatch.setattr(
+        cloud_grade, "check_refs",
+        lambda build_refs_fn=None, grade_fn=None, exam="first-test":
+        seen.setdefault("exam", exam) or (13, 13))
+    assert cloud_grade.main(["--check-refs", "--exam", "thinking"]) == 0
+    assert seen["exam"] == "thinking"
+
+
+def test_grader_image_bakes_both_exams(monkeypatch):
+    """The grader image holds first-test + thinking references under
+    their own folders, with checks.py shared."""
+    files = []
+
+    class _Image:
+        def apt_install(self, *pkgs):
+            return self
+
+        def pip_install(self, *pkgs):
+            return self
+
+        def add_local_file(self, local, remote):
+            files.append(remote)
+            return self
+
+    stub = types.SimpleNamespace(
+        Image=types.SimpleNamespace(from_registry=lambda base: _Image()))
+    monkeypatch.setattr(cloud_grade, "modal", stub)
+    cloud_grade.build_grader_image()
+    assert "/grader/first-test/jobs.py" in files
+    assert "/grader/first-test/expected.json" in files
+    assert "/grader/thinking/thinking_jobs.py" in files
+    assert "/grader/thinking/expected.json" in files
+    assert "/grader/checks.py" in files  # shared
+    assert "/grader/jobs.py" not in files  # no exam-blind top-level refs
+    assert "/grader/expected.json" not in files
+
+
 def test_grader_runs_inside_defining_app():
     """Grader calls run inside the App that defines grade: only the
     sandbox app goes through App.lookup."""

@@ -225,6 +225,61 @@ def test_dashboard_renders_from_fake_calls(tmp_path):
     assert "prefers-color-scheme" in page  # light/dark CSS
     assert dashboard.stopped("app stopped 10:00:00")
     assert not dashboard.stopped("ready 10:00:00")
+    assert "Exam:" not in page  # the fc line stays off by default
+
+
+def _fake_fc_run(tmp_path):
+    run = tmp_path / "fcrun"
+    run.mkdir()
+    recs = [
+        {"arm": "G", "job": "T2", "sample": 0, "outcome": "PASS",
+         "exam": "thinking", "box_ok": True, "graded": True,
+         "usage": {"total_tokens": 100}, "latency": 5.0},
+        {"arm": "S", "job": "T2", "sample": 0, "outcome": "FAIL",
+         "exam": "thinking", "box_ok": True, "graded": True,
+         "fails": ["bbox"], "usage": {"total_tokens": 200},
+         "latency": 7.0},
+        {"arm": "S", "job": "T5", "sample": 1, "outcome": "FAIL",
+         "exam": "thinking", "box_ok": False, "graded": False,
+         "usage": {"total_tokens": 200}, "latency": 7.0},
+    ]
+    with open(run / "calls.jsonl", "w", encoding="utf-8") as f:
+        for r in recs:
+            f.write(json.dumps(r) + "\n")
+    (run / "session.log").write_text("ready 10:00:00 (try 1)\n",
+                                     encoding="utf-8")
+    return run
+
+
+def test_dashboard_fc_mode_shows_exam_boxes_grades_and_gpu(tmp_path):
+    import time
+
+    run = _fake_fc_run(tmp_path)
+    arms = [("G", "Glimmer", "g", 13, "#2a78d6"),
+            ("S", "Spark", "s", 13, "#eb6834")]
+    out = str(tmp_path / "fc.html")
+    # calls.jsonl is read live on every render (no caching between runs).
+    dashboard.write_page(str(run), arms, out, title="FC", fc=True,
+                         gpu_start=time.time() - 600)
+    page = open(out, encoding="utf-8").read()
+    assert "Exam: thinking" in page  # the exam name, from the records
+    assert "2 answers through the safety box" in page  # box_ok records
+    assert "2 graded" in page  # graded records
+    assert "10 min" in page  # GPU minutes from --gpu-start
+    # A second render picks up records appended after the first.
+    with open(run / "calls.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps(
+            {"arm": "S", "job": "T5", "sample": 2, "outcome": "PASS",
+             "exam": "thinking", "box_ok": True, "graded": True,
+             "usage": {"total_tokens": 200}, "latency": 7.0}) + "\n")
+    dashboard.write_page(str(run), arms, out, title="FC", fc=True,
+                         gpu_start=time.time() - 600)
+    assert "3 answers through the safety box" in open(
+        out, encoding="utf-8").read()
+    # The --exam flag overrides the records' name; bad --gpu-start is "–".
+    info = dashboard.fc_status(dashboard.load_calls(str(run)),
+                               gpu_start="soon", exam="first-test")
+    assert info["exam"] == "first-test" and info["gpu_min"] is None
 
 
 # ---------------------------------------------------------------- score_one
