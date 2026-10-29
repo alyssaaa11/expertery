@@ -59,7 +59,12 @@ guard, k and workers handling. Replace only:
   Wonder (`muse-wonder-1.0`, https://api.meta.ai/v1 chat completions, key from env META_KEY, same messages, max_tokens
   16000; reasoning tokens are billed as output) run only on job ids that FAILED in S's calls.jsonl (`--escalate-from <S
   run dir>`), with its own budget guard (`--budget-w`, $20/M output, $4/M input, $0.20/M cached). k = 1. Summary adds
-  T = S ∪ W-rescues per job and evaluates the PLAN rule on T (S alone reported too).
+  T = S ∪ W-rescues per job and evaluates the PLAN rules 1-4 on BOTH T and S alone (PLAN rule 5); if they disagree,
+  report.md says "FreeCAD target only with Wonder escalation (closed API)"; it also gives Wonder's share of T's passes.
+  S's INVALID (cut-off) jobs are not escalated. Before the W arm runs on failures, `--w-smoke` sends ONE call (dry job
+  D1), logs the endpoint and the usage fields, and stops; if `/v1/chat/completions` is refused, use `/v1/responses`
+  (configurable `--w-endpoint`). Why: Meta's post does not state the endpoint path or whether reasoning tokens are
+  billed as output (verifier A5); one cheap call settles both before money is spent on more.
 - every FAIL is tagged `api_error` (the answer raised during the run: AttributeError, TypeError, NameError, Part
   errors, timeout, memory limit, PermissionError) or `wrong_geometry` (built but failed the checker, or `result` is not
   a Part solid); a reply cut off by the token limit is INVALID (as in the baseline). Why: API errors are tool knowledge that training

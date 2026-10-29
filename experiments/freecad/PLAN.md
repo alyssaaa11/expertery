@@ -64,6 +64,12 @@ Revised after the verifier's check (forge-freecad-2026-10-29, READY WITH 3 EDITS
 4. Otherwise (grey zone) → **default: stay on CadQuery.** FreeCAD only if api_error ≥ 60% of G's FAILs AND ≥ 6 jobs pass
    in T but not in G. No re-run of only the differing jobs (selecting on the outcome shrinks the gap by regression).
    Why: the grey zone also decides whether to go above the $30 cap, so it must be a fixed rule, not a judgement call.
+5. **Rules 1-4 are evaluated twice: on T and on S alone, and both are reported** (verifier edit A2,
+   forge-freecad-escalation-2026-10-29). If they disagree, the report says "FreeCAD target only with Wonder escalation
+   (closed API)" and the user decides. The report also gives Wonder's share of T's passes. S's INVALID (cut-off) jobs
+   are NOT escalated; they stay INVALID. Why: T gives each job two tries by two models against G's one (a pass@2 effect
+   that leans towards "FreeCAD target"), and every Wonder rescue sends the job to a closed API, which weakens the
+   "private" claim; the user must see when the decision rests on that.
 Failure tags: api_error = the answer raised, timed out, hit the memory limit or a PermissionError; wrong_geometry =
 built but failed the checker, or `result` was not a Part solid; cut off by the token limit = INVALID (as the baseline).
 Honest caveat for the report: FreeCAD's Part API has no counterbore/slot/polar-pattern helpers (CadQuery has them), so
@@ -73,9 +79,14 @@ harmless.
 
 ## Money
 Muse Code build ≈ $1.2-1.5; Glimmer 30 answers ≈ $1 (cold start + run); Spark 30 answers ≈ $0.7; Wonder only on S's
-failures ≈ $0.10 each (≈ $0.5-2, Meta credit, cap $3); cloud sandboxes + grader ≈ $0.1.
-≈ $3 total, cap $3.50 (session cap via experiments/common/run_session.sh, Baseten guard). Forge total after: ≈ $22.7;
-the full plan after the test (factory ≈ $5, training ≈ $4, final ≈ $1.5) ≈ $33-34 → needs the user's budget answer.
+failures ≈ $0.10 each (≈ $0.5-2; worst case 16k output tokens ≈ $0.34 per call); cloud sandboxes + grader ≈ $0.1.
+- decision (Claude, 2026-10-29, following the existing accounting where Muse Code's Meta-credit spend is already in the
+  Forge total): **Meta credit for W counts INSIDE Forge's $30 (or $35) budget.** Why: one budget total, so the user's
+  "go above $30?" decision sees every dollar.
+- Caps for the test run: Modal + Baseten **$3.50** (session cap via experiments/common/run_session.sh, Baseten guard)
+  + Meta (W) **$3** (`--budget-w`) = **$6.50 worst case**, plus the Muse build.
+- Typical total ≈ $4.2 (build ≈ $1.35 + run ≈ $2.8); Forge total after ≈ $24 typical, ≈ $28 worst case.
+  The full plan after the test (factory ≈ $5, training ≈ $4, final ≈ $1.5) ≈ $34-35 → needs the user's budget answer.
 
 ## After the test
 The gap test shows only room. "The factory works across tools" needs a trained result: train the tool with the bigger
