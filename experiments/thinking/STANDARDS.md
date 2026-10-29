@@ -8,11 +8,13 @@ An "inside space" height or depth is always measured from the top of the floor t
 2. **Material.** Parts are plastic unless the request says aluminium.
 3. **Clearance holes** for screws (through holes, normal fit): M3 → 3.4, M4 → 4.5, M5 → 5.5, M6 → 6.6 diameter.
 4. **Counterbores** for socket-head screws, cut from the top face: M3 → diameter 6.5, depth 3.5; M4 → 8, depth 4.5;
-   M5 → 10, depth 5.5; M6 → 11, depth 6.5. The clearance hole continues through the rest of the part.
+   M5 → 10, depth 5.5; M6 → 11, depth 6.5. The clearance hole continues through the rest of the part. Screws not called socket-head get a plain
+   clearance hole only (no counterbore).
 5. **Corner holes.** When a part is fixed by four screws "at the corners", each hole centre is inset from both
    adjacent outer edges by twice the screw size (M4 → 8 from each edge).
 6. **Walls.** Enclosures, housings and lids have walls, floors and plates of thickness 2.5 (plastic) or 4 (aluminium).
-7. **Fit around a contained part** (circuit board, pipe, module): leave a clearance of 0.5 on every side (so each
+7. **Fit around a contained or passing-through part** (any part given by its outside size: circuit board, pipe,
+   module, cable gland, motor body, shaft housing): leave a clearance of 0.5 on every side (so each
    inside size or bore diameter is 1.0 larger than the part).
 8. **Screw bosses** (plastic, thread-forming screws): a boss is a cylinder of outer diameter 2.5 × screw size, with a
    pilot hole of diameter 0.8 × screw size along its axis, open at the top and as deep as the boss is tall (it does

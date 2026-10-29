@@ -67,3 +67,10 @@ allows going above $30 (2026-10-29: "u can spend more"), within the $35 agreed f
   - Otherwise GO.
 - Rule 2 keeps ≥ 4 win jobs (now out of 13).
 - Money: 13 × 3 × 2 = 78 main answers + 30 pilot answers + Wonder ≤ $3 cap. Typical ≈ $3-4.5.
+- verified (2026-10-29, second blind Sonnet solve of E1-E6 and C1-C3, from the standard and the texts only): all
+  geometry equals the references, and nothing is physically impossible. Two flagged forks were fixed in STANDARDS.md
+  (geometry unchanged, selftest 18/18):
+  - rule 4 now says screws not called socket-head get a plain hole (E2's M4);
+  - rule 7 now covers any part given by its outside size: cable gland, motor body and shaft housing (E5, E2, C2).
+  - STANDARDS.md sha256 = 162f9fa119574b92575f696e55d5fa1010363d32d1f9b1ed7fd63fec9b914f0e (the runner's frozen
+    constant must equal this).
