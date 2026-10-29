@@ -42,12 +42,12 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Muse Code Oct 29 (sandbox+BX 1.45, fixes 1.15, rebuild 0.51) | ≈ 3.1 | run.usage × $1.25/$0.15/$4.25 per M |
 | Modal baseline run | ≈ 4.5 | `modal billing summary` 2.22 → 6.75 |
 | Modal smoke test | ≈ 1.06 | 6.76 → 7.82 |
-| **Total** | **≈ 18.6 of 30** | |
+| Muse Code training fix | ≈ 1.11 | run.usage |
+| **Total** | **≈ 19.7 of 30** | |
 
 ## Open questions
-1. Training script (Muse Code, experiments/train/forge_train.py, c8f5d55): **verifier NO-GO** (loop uses 1/8 of the data,
-   data never reaches Modal, no exam guard, cap timeouts not applied, trap/kill gaps). Fix spec
-   experiments/train/FIX_SPEC.md (8851957) — **waiting for the user's "yes fix"** (~$0.5-0.8) and the verifier's spec check.
+1. Training script: Muse Code applied FIX_SPEC + the verifier's 5 edits (6ce0a5e, ≈ $1.11); pytest 32/32 outside
+   Muse's shell. **Waiting for the verifier's finished-step check.**
 2. Training on answer-only text (no reasoning) may teach Glimmer to skip reasoning: cheaper, maybe weaker on hard jobs.
    The fixed script logs the rendered example + learned tokens; decide after looking.
 3. Factory spec (hard-style practice jobs, new families, strict 1e-6 referee, ~20 dev jobs) not written yet.
