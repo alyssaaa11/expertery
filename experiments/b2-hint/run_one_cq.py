@@ -4,12 +4,14 @@
 Invoked by experiments/first-test/runner.py as:
     <venv python> -I run_one_cq.py <scratch-dir>
 
-Reads <scratch>/answer.py, executes it in a fresh namespace, requires a
-variable `result`, exports it to <scratch>/answer.step with
-cadquery.exporters.export, then prints one JSON line
-`MEASURE {...}` (bounding box xmin..zmax, volume, number of solids) and
-the step path. The runner uses MEASURE only for the BX self-check
-message. No other output channel.
+Reads <scratch>/answer.py, executes it with `__name__ == "__main__"`,
+requires a variable `result`, exports it to the fixed path
+<scratch>/answer.step with cadquery.exporters.export, writes the
+measurements to the fixed path <scratch>/measure.json, then prints one
+JSON line `MEASURE {...}` (bounding box xmin..zmax, volume, number of
+solids) and the step path. The runner reads only the two fixed files
+(realpath must stay inside the scratch dir) and ignores stdout for
+them; the MEASURE line / step-path print exist only for humans.
 """
 
 import json
@@ -36,7 +38,7 @@ def main(argv):
     step_path = os.path.join(scratch, "answer.step")
     with open(answer_path, encoding="utf-8") as f:
         src = f.read()
-    ns = {}
+    ns = {"__name__": "__main__"}
     exec(compile(src, answer_path, "exec"), ns)
     if "result" not in ns:
         print("ERROR: no variable named 'result'", file=sys.stderr)
@@ -58,6 +60,9 @@ def main(argv):
         "solids": len(shape.Solids()),
     }
     _ex.export(result, step_path)
+    with open(os.path.join(scratch, "measure.json"), "w",
+              encoding="utf-8") as f:
+        json.dump(measure, f)
     print("MEASURE " + json.dumps(measure), flush=True)
     print(step_path, flush=True)
     return 0

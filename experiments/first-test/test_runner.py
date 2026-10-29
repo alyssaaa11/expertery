@@ -381,8 +381,9 @@ def test_arm_c_cap_skips_later_c_calls(tmp_path):
         key_map={}, budget=50.0, post_fn=post,
         sleep_fn=lambda s: None, max_workers=1, arms=("A", "C"),
         budget_c=3.0)
-    # Pairs per job are (A, C): both As run, only the first C runs.
-    assert [r["arm"] for r in records] == ["A", "C", "A"]
+    # Arms run one after another (FIX_SPEC item 6): both As run, then only
+    # the first C runs before the arm-C cap stops the second.
+    assert [r["arm"] for r in records] == ["A", "A", "C"]
     assert summary["budget_c_stopped"] is True
     assert summary["budget_stopped"] is False
     assert summary["budget_c"] == 3.0
@@ -402,8 +403,10 @@ def test_arm_c_cap_math():
 
 # ---------------------------------------------------------------- gpu-start + cost note
 
-COST_NOTE = ("GPU estimate covers only the runner's own wall-clock; the real "
-             "Modal cost (incl. cold start) comes from `modal billing report`.")
+COST_NOTE = ("Each arm ran alone on the GPU; per-arm cost is its own wall-clock "
+             "at $2.50/h (A100-80GB Modal rate). The estimate covers only the "
+             "runner's own wall-clock; the real Modal cost (incl. cold start) "
+             "comes from `modal billing report`.")
 
 
 def test_report_cost_note(tmp_path):
@@ -492,7 +495,7 @@ def test_c_not_called_when_not_requested(tmp_path):
     assert {r["arm"] for r in records} == {"A", "B"}
     assert set(summary["arms"]) == {"A", "B"}
     assert cfgs["C"]["endpoint"] not in seen
-    assert summary["decision"] == "decision: see experiments/b2-hint/PLAN.md"
+    assert summary["decision"] == "decision: see experiments/bmax/PLAN.md"
 
 
 def test_subset_summary_lists_only_requested_arms(tmp_path):
@@ -508,7 +511,7 @@ def test_subset_summary_lists_only_requested_arms(tmp_path):
         sleep_fn=lambda s: None, max_workers=1, arms=("BR", "B2"))
     assert [r["arm"] for r in records] == ["BR", "B2"]
     assert set(summary["arms"]) == {"BR", "B2"}
-    assert summary["decision"] == "decision: see experiments/b2-hint/PLAN.md"
+    assert summary["decision"] == "decision: see experiments/bmax/PLAN.md"
     report = (tmp_path / "report.md").read_text(encoding="utf-8")
     assert "Arm C" not in report
 
@@ -751,7 +754,8 @@ def test_bx_messages_examples_and_body():
         examples=BX_EXAMPLES, hint_text=HINT)
     assert rec["outcome"] == "FAIL"  # DONE with nothing built
     body = post.calls[0]
-    assert body["chat_template_kwargs"] == {"reasoning_strength": "high"}
+    assert body["chat_template_kwargs"] == {"reasoning_strength": "xhigh"}
+    assert runner.BX_REASONING == "xhigh"
     msgs = body["messages"]
     assert msgs[0] == {"role": "system",
                        "content": runner.SYSTEM_PROMPT + " " + HINT}
@@ -821,20 +825,23 @@ def test_bx_requires_sandbox():
 
 
 def test_bx_crash_then_good(tmp_path, monkeypatch):
+    # FIX_SPEC item 3: after ANY build, if calls remain, the self-check is
+    # sent. So crash -> fixed build -> self-check = 3 calls.
     post = _scripted_posts(
         fake_resp(CRASH_CONTENT, prompt=100, completion=50),
         fake_resp(GOOD_CONTENT, prompt=200, completion=60))
     rec = _bx_call(monkeypatch, post, sandbox_dir=str(tmp_path))
-    assert len(post.calls) == 2
+    assert len(post.calls) == 3
     assert rec["outcome"] == "PASS"
     assert rec["code"] == runner.extract_code(GOOD_CONTENT)
     second_users = [m["content"] for m in post.calls[1]["messages"]
                     if m["role"] == "user"]
     assert any("CRASHMARK" in u for u in second_users)
-    assert rec["model_calls"] == 2
-    assert rec["prompt_tokens_total"] == 300
-    assert rec["completion_tokens_total"] == 110
-    assert [r["event"] for r in rec["bx_rounds"]] == ["crash", "built"]
+    assert rec["model_calls"] == 3
+    assert rec["prompt_tokens_total"] == 500
+    assert rec["completion_tokens_total"] == 170
+    assert [r["event"] for r in rec["bx_rounds"]] == [
+        "crash", "built", "built"]
 
 
 def test_bx_good_then_done(tmp_path, monkeypatch):
@@ -955,6 +962,202 @@ def test_bx_crash_then_good_e2e(tmp_path):
         D2, "muse-glimmer", "http://x", [], MANUAL, EXPECTED["D2"], post,
         lambda s: None, sandbox_profile=SB_PROFILE,
         sandbox_dir=str(tmp_path))
-    assert len(calls) == 2
+    assert len(calls) == 3
     assert rec["outcome"] == "PASS"
-    assert [r["event"] for r in rec["bx_rounds"]] == ["crash", "built"]
+    assert [r["event"] for r in rec["bx_rounds"]] == [
+        "crash", "built", "built"]
+
+
+# ---------------------------------------------------------------- FIX_SPEC items 1-7
+
+
+def test_bx_done_variants_end_loop(tmp_path, monkeypatch):
+    # FIX_SPEC item 1: any reply with no Python code block ends the loop,
+    # whatever its text. Only a reply with a code block is run.
+    for text in ("DONE", "DONE.", "**DONE**", "Looks right, ship it."):
+        post = _scripted_posts(
+            fake_resp(GOOD_CONTENT), fake_resp(text))
+        rec = _bx_call(monkeypatch, post, sandbox_dir=str(tmp_path))
+        assert len(post.calls) == 2, text
+        assert rec["outcome"] == "PASS", text
+        assert rec["code"] == runner.extract_code(GOOD_CONTENT), text
+        assert [r["event"] for r in rec["bx_rounds"]] == ["built", "DONE"]
+
+
+def test_bx_failed_call_round1_is_invalid(tmp_path, monkeypatch):
+    # FIX_SPEC item 2: only round 1 can make a job INVALID.
+    def post(endpoint, body, timeout):
+        raise OSError("dial failed")
+
+    rec = _bx_call(monkeypatch, post, sandbox_dir=str(tmp_path))
+    assert rec["outcome"] == "INVALID"
+    assert rec["outcome"] != "FAIL"
+
+
+def test_bx_failed_call_round2_keeps_best(tmp_path, monkeypatch):
+    calls = []
+
+    def post(endpoint, body, timeout):
+        calls.append(body)
+        if len(calls) == 1:
+            return fake_resp(GOOD_CONTENT)
+        raise OSError("dial failed")
+
+    rec = _bx_call(monkeypatch, post, sandbox_dir=str(tmp_path))
+    # Round 2's failed call is retried once by post_with_retry, so the
+    # fake sees 3 attempts; only round 1 is recorded and its build wins.
+    assert len(calls) == 3
+    assert rec["outcome"] == "PASS"
+    assert rec["code"] == runner.extract_code(GOOD_CONTENT)
+    assert [r["event"] for r in rec["bx_rounds"]] == ["built"]
+
+
+def test_bx_empty_reply_round1_is_invalid(tmp_path, monkeypatch):
+    post = _scripted_posts(fake_resp("   "))
+    rec = _bx_call(monkeypatch, post, sandbox_dir=str(tmp_path))
+    assert rec["outcome"] == "INVALID"
+    assert rec["outcome"] != "FAIL"
+
+
+def test_bx_empty_reply_round2_keeps_best(tmp_path, monkeypatch):
+    post = _scripted_posts(fake_resp(GOOD_CONTENT), fake_resp("   "))
+    rec = _bx_call(monkeypatch, post, sandbox_dir=str(tmp_path))
+    assert len(post.calls) == 2
+    assert rec["outcome"] == "PASS"
+    assert rec["code"] == runner.extract_code(GOOD_CONTENT)
+
+
+def test_run_one_ignores_decoy_stdout_and_atexit(tmp_path):
+    # FIX_SPEC item 4: run_one_cq.py writes the real solid to the fixed
+    # <scratch>/answer.step and the measurements to <scratch>/measure.json
+    # even when the answer prints a decoy path / fake MEASURE line and
+    # registers an atexit writer elsewhere.
+    code = (
+        "import atexit, json as _json\n"
+        "import cadquery as cq\n"
+        "result = cq.Workplane('XY').box(10, 20, 30)\n"
+        "print('/tmp/decoy.step')\n"
+        "print('MEASURE ' + _json.dumps({'xmin': 0, 'fake': True}))\n"
+        "atexit.register(lambda: open('/tmp/atexit_decoy_xyz.step',"
+        " 'w').write('decoy'))\n"
+    )
+    scratch = os.path.realpath(str(tmp_path))
+    with open(os.path.join(scratch, "answer.py"), "w",
+              encoding="utf-8") as f:
+        f.write(code)
+    r = subprocess.run(
+        [sys.executable, "-I", RUN_ONE_CQ, scratch],
+        capture_output=True, text=True, timeout=180)
+    assert r.returncode == 0, r.stderr[-500:]
+    assert "decoy" in (r.stdout or "")
+    step_path = os.path.join(scratch, "answer.step")
+    assert os.path.isfile(step_path)
+    with open(os.path.join(scratch, "measure.json"),
+              encoding="utf-8") as f:
+        measure = json.load(f)
+    assert measure["xmin"] == -5.0
+    assert measure["xmax"] == 5.0
+    assert measure["volume"] == 6000.0
+    assert "fake" not in measure
+    try:
+        if os.path.isfile("/tmp/atexit_decoy_xyz.step"):
+            os.remove("/tmp/atexit_decoy_xyz.step")
+    except OSError:
+        pass
+
+
+def test_run_one_main_name(tmp_path):
+    code = (
+        "import cadquery as cq\n"
+        "result = cq.Workplane('XY').box(1, 1, 1)\n"
+        "seen = __name__\n"
+        "assert seen == '__main__', seen\n"
+    )
+    r = _run_one_direct(code, tmp_path)
+    assert r.returncode == 0, r.stderr[-500:]
+
+
+def test_per_arm_cost_numbers_and_no_split(tmp_path):
+    # FIX_SPEC item 6: per-arm input/output/total tokens, calls, tokens
+    # per correct part, wall seconds, $ per correct part; no even split.
+    def post(endpoint, body, timeout):
+        return fake_resp(GOOD_CONTENT, prompt=100, completion=50)
+
+    cfgs = arm_cfgs()
+    records, summary = runner.run_suite(
+        [D2], EXPECTED, MANUAL, str(tmp_path), cfgs,
+        key_map={}, budget=50.0, post_fn=post,
+        sleep_fn=lambda s: None, max_workers=1, arms=("A",))
+    s = summary["arms"]["A"]
+    assert s["input_tokens"] == 100
+    assert s["output_tokens"] == 50
+    assert s["total_tokens"] == 150
+    assert s["calls"] == 1
+    assert s["tokens_per_pass"] == 150
+    assert isinstance(s["wall_seconds"], float)
+    assert s["dollars_per_pass"] == pytest.approx(
+        s["wall_seconds"] / 3600.0 * 2.50 / 1)
+    assert "Arms A+B" not in summary["costs"]["note"]
+    assert "modal billing report" in (
+        tmp_path / "report.md").read_text(encoding="utf-8")
+    assert summary["arm_timing"]["A"]["seconds"] == pytest.approx(
+        s["wall_seconds"])
+    assert summary["decision"] == "decision: see experiments/bmax/PLAN.md"
+
+
+def test_latency_is_model_call_time_only(tmp_path):
+    # FIX_SPEC item 6: latency per job = model call time only, every arm.
+    def post(endpoint, body, timeout):
+        return fake_resp(GOOD_CONTENT, prompt=10, completion=5)
+
+    cfgs = arm_cfgs()
+    records, _ = runner.run_suite(
+        [D2], EXPECTED, MANUAL, str(tmp_path), cfgs,
+        key_map={}, budget=50.0, post_fn=post,
+        sleep_fn=lambda s: None, max_workers=1, arms=("A",))
+    rec = records[0]
+    assert "latency" in rec
+    assert rec["latency"] <= rec["seconds"]
+
+
+def test_k_samples_pass_at_k(tmp_path):
+    # FIX_SPEC item 7: --k K runs each job K times in fresh conversations;
+    # pass rate over all answers plus pass@K; every answer saved.
+    calls = []
+
+    def post(endpoint, body, timeout):
+        calls.append(body)
+        if len(calls) == 2:
+            return fake_resp(WRONG_CONTENT)
+        return fake_resp(GOOD_CONTENT)
+
+    cfgs = arm_cfgs()
+    records, summary = runner.run_suite(
+        [D2], EXPECTED, MANUAL, str(tmp_path), cfgs,
+        key_map={}, budget=50.0, post_fn=post,
+        sleep_fn=lambda s: None, max_workers=1, arms=("A",), k=3)
+    assert len(records) == 3
+    assert [r["sample"] for r in records] == [0, 1, 2]
+    assert summary["arms"]["A"]["n"] == 3
+    assert summary["arms"]["A"]["PASS"] == 2
+    assert summary["arms"]["A"]["pass_at_k"] == 1.0
+    assert summary["arms"]["A"]["pass_rate"] == pytest.approx(2 / 3)
+    assert summary["table"]["D2"]["A"] == ["PASS", "FAIL", "PASS"]
+    assert summary["k"] == 3
+    lines = (tmp_path / "calls.jsonl").read_text(
+        encoding="utf-8").splitlines()
+    assert len(lines) == 3
+
+
+def test_k_default_is_one(tmp_path):
+    def post(endpoint, body, timeout):
+        return fake_resp(GOOD_CONTENT)
+
+    cfgs = arm_cfgs()
+    records, summary = runner.run_suite(
+        [D2], EXPECTED, MANUAL, str(tmp_path), cfgs,
+        key_map={}, budget=50.0, post_fn=post,
+        sleep_fn=lambda s: None, max_workers=1, arms=("A",))
+    assert len(records) == 1
+    assert summary["table"]["D2"]["A"] == "PASS"
+    assert summary["arms"]["A"]["pass_at_k"] == 1.0

@@ -5,7 +5,7 @@ CadQuery code, score it with checks.py, and log everything.
 Built to RUNNER_SPEC.md. Uses only the standard library for HTTP
 (urllib.request) plus cadquery. Never prints, logs or writes an API key.
 
-CLI: runner.py --jobs dry|main --out <dir> [--budget 5.0] [--budget-c 3.0] [--gpu-start <unix seconds>] [--arms A,B,C]
+CLI: runner.py --jobs dry|main --out <dir> [--budget 5.0] [--budget-c 3.0] [--gpu-start <unix seconds>] [--arms A,B,C] [--workers N] [--k K] [--sandbox PROFILE]
 """
 
 import argparse
@@ -76,10 +76,11 @@ SANDBOX_CPU_LIMIT = 60        # `ulimit -t` inside the sandbox, seconds
 SANDBOX_MAX_RSS_MB = 4096   # sandbox memory kill threshold, MB (4 GB)
 SANDBOX_RSS_POLL = 0.5      # RSS watchdog interval, seconds
 
-# B-max arm (experiments/bmax/BMAX_SPEC.md).
+# B-max arm (experiments/bmax/BMAX_SPEC.md, FIX_SPEC.md item 5).
 BX_MAX_CALLS = 3
 BX_ERROR_HEAD = 2000        # chars of run error sent back to the model
 BX_EXAMPLES_HEADER = "\n\nSolved examples (same style as your job):\n\n"
+BX_REASONING = "xhigh"      # BX reasoning_strength (Glimmer default is high)
 
 
 def load_hint_text(path=None):
@@ -203,8 +204,8 @@ def build_body(model, messages, reasoning_strength=None):
 
 
 def build_bx_body(model, messages):
-    """Arm BX request body: arm B's body plus reasoning_strength high."""
-    return build_body(model, messages, reasoning_strength="high")
+    """Arm BX request body: arm B's body plus reasoning_strength xhigh."""
+    return build_body(model, messages, reasoning_strength=BX_REASONING)
 
 
 # ---------------------------------------------------------------- extraction
@@ -486,17 +487,36 @@ def run_code_sandboxed(code, run_tmp, profile, python=None,
         # Killed by a signal (e.g. the sandbox CPU limit): same timeout
         # string as the unsandboxed path.
         return None, f"timeout after {timeout:g}s running answer code", None
-    step_path = ""
-    for line in (out or "").splitlines():
-        line = line.strip()
-        if line.endswith(".step") and not line.startswith("MEASURE"):
-            step_path = line
-    if proc.returncode != 0 or not step_path or not os.path.isfile(step_path):
+    # FIX_SPEC item 4: never trust the answer's stdout. The solid comes
+    # only from the fixed path <scratch>/answer.step and the measurements
+    # only from <scratch>/measure.json (realpaths must stay inside the
+    # scratch dir). Decoy `.step` paths / fake MEASURE lines on stdout, or
+    # atexit writers elsewhere, are ignored.
+    if proc.returncode != 0:
         err = (err or "").strip() or f"exit {proc.returncode}"
         return None, f"answer code failed (exit {proc.returncode}): {err}", None
+    step_path = os.path.realpath(os.path.join(scratch, "answer.step"))
+    measure_path = os.path.realpath(os.path.join(scratch, "measure.json"))
+    inside = scratch + os.sep
+    if not step_path.startswith(inside) or not measure_path.startswith(inside):
+        return None, (
+            f"answer code failed (exit {proc.returncode}): "
+            "answer.step escaped the scratch dir"
+        ), None
+    if not os.path.isfile(step_path):
+        err = (err or "").strip() or f"exit {proc.returncode}"
+        return None, f"answer code failed (exit {proc.returncode}): {err}", None
+    measure = None
+    try:
+        with open(measure_path, encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, dict):
+            measure = loaded
+    except (OSError, ValueError):
+        measure = None
     try:
         shape = cq.importers.importStep(step_path)
-        return shape, None, parse_measure_line(out)
+        return shape, None, measure
     except Exception as e:  # noqa: BLE001 -- reported as FAIL, not raised
         return None, f"could not import exported STEP: {e!r}", None
 
@@ -658,11 +678,15 @@ def do_bx_call(
     hint_text=None,
 ):
     """Arm BX: up to BX_MAX_CALLS model calls in one conversation. Every
-    program runs in the sandbox. A build after an error-fix reply is final;
-    a build after the first prompt (or a self-check) gets a self-check
-    follow-up with its own measurements. Returns the final record with the
-    per-round records embedded as bx_rounds (run_suite writes those as one
-    calls.jsonl record per round plus the final record)."""
+    program runs in the sandbox. Only a reply that contains a Python code
+    block is run; a reply with no code block ends the loop whatever its
+    text. After ANY build, if calls remain, the self-check follow-up (with
+    the part's own measurements) is sent. A cut-off, failed call or empty
+    reply after round 1 ends the loop keeping the most recent program that
+    built (FAIL if none); only round 1 can make a job INVALID. Returns the
+    final record with the per-round records embedded as bx_rounds
+    (run_suite writes those as one calls.jsonl record per round plus the
+    final record)."""
     if sandbox_profile is None:
         raise ValueError("arm BX requires --sandbox <profile>")
     run_tmp = os.path.realpath(sandbox_dir) if sandbox_dir else None
@@ -682,10 +706,22 @@ def do_bx_call(
         n = 0
         while n < BX_MAX_CALLS:
             body = build_bx_body(model, messages)
-            t_call = time.monotonic()
-            data = post_with_retry(post_fn, endpoint, body, call_timeout,
-                                   sleep_fn)
-            latency = time.monotonic() - t_call
+            try:
+                t_call = time.monotonic()
+                data = post_with_retry(post_fn, endpoint, body, call_timeout,
+                                       sleep_fn)
+                latency = time.monotonic() - t_call
+            except Exception as e:  # noqa: BLE001 -- failed call
+                # Only round 1 can make a job INVALID; later failures end
+                # the loop and keep the most recent program that built
+                # (FAIL if none), exactly like a cut-off.
+                if n == 0:
+                    outcome, fails, measurements = "INVALID", [], None
+                    last_code = ""
+                    last_error = run_error = f"{type(e).__name__}: {e}"
+                    content, finish_reason, usage = "", None, {}
+                    reasoning_len = 0
+                break
             content, finish_reason, usage, reasoning_len = parse_response(data)
             prompt_n, completion_n = _usage_pair(usage)
             n += 1
@@ -709,9 +745,20 @@ def do_bx_call(
                     last_code = ""
                     last_error = run_error = "cut off by the token limit"
                 break
-            done_reply = (not FENCE_RE.search(content or "")
-                          and (content or "").strip() == "DONE")
-            if done_reply:
+            if not content or not (content or "").strip():
+                # Empty reply: only round 1 is INVALID; later ones keep
+                # the most recent build, exactly like a cut-off.
+                rec["event"] = "empty"
+                rounds.append(rec)
+                messages.append({"role": "assistant", "content": content})
+                if n == 1:
+                    outcome, fails, measurements = "INVALID", [], None
+                    last_code = ""
+                    last_error = run_error = "empty reply"
+                break
+            if not FENCE_RE.search(content or ""):
+                # No Python code block: the model is satisfied, whatever
+                # its text ("DONE", "Looks right", ...). Ends the loop.
                 rec["event"] = "DONE"
                 rounds.append(rec)
                 messages.append({"role": "assistant", "content": content})
@@ -719,8 +766,12 @@ def do_bx_call(
                     last_error = "no code in reply"
                 break
             code = extract_code(content)
-            shape, run_error, measure = run_code_sandboxed(
-                code, run_tmp, sandbox_profile, timeout=exec_timeout)
+            try:
+                shape, run_error, measure = run_code_sandboxed(
+                    code, run_tmp, sandbox_profile, timeout=exec_timeout)
+            except Exception as e:  # noqa: BLE001 -- harness error is FAIL
+                shape, run_error, measure = (
+                    None, f"runner error: {e!r}", None)
             if shape is None:
                 last_code = code
                 last_error = run_error or "code error"
@@ -740,7 +791,7 @@ def do_bx_call(
             messages.append({"role": "assistant", "content": content})
             if n >= BX_MAX_CALLS:
                 break
-            if any(r["event"] == "crash" for r in rounds[:-1]):
+            if measure is None:
                 break
             messages.append({"role": "user",
                              "content": bx_self_check_message(measure)})
@@ -763,10 +814,32 @@ def do_bx_call(
                 else:
                     outcome, run_error = "FAIL", None
                 last_code = best[0]
-    except Exception as e:  # noqa: BLE001 -- failed call => INVALID record
-        outcome, fails, measurements, last_code = "INVALID", [], None, ""
+    except Exception as e:  # noqa: BLE001 -- unexpected harness error
+        # Only round 1 can make a job INVALID; anything later keeps the
+        # most recent build (FAIL if none), exactly like a cut-off.
         run_error = f"{type(e).__name__}: {e}"
-        content, finish_reason, usage, reasoning_len = "", None, {}, 0
+        if not rounds and best is None and outcome != "INVALID":
+            outcome, fails, measurements, last_code = "INVALID", [], None, ""
+            content, finish_reason, usage, reasoning_len = "", None, {}, 0
+        else:
+            last_error = run_error
+            if outcome != "INVALID":
+                if best is None:
+                    outcome, fails, measurements = "FAIL", [], None
+                    run_error = last_error or "code error"
+                    last_code = last_code or ""
+                else:
+                    try:
+                        passed, fails, measurements = checks.score(
+                            best[1], job["build"](), expected_for_job)
+                    except Exception:  # noqa: BLE001 -- broken shape FAIL
+                        passed, fails, measurements = (
+                            False, ["scoring error"], None)
+                    if passed:
+                        outcome, run_error = "PASS", None
+                    else:
+                        outcome, run_error = "FAIL", last_error
+                    last_code = best[0]
     seconds = time.monotonic() - t0
     end = utcnow_iso()
     run_error = scrub(run_error, secrets)
@@ -838,8 +911,11 @@ def do_call(
     t0 = time.monotonic()
     content, finish_reason, usage, reasoning_len = "", None, {}, 0
     outcome = fails = measurements = code = run_error = None
+    latency = 0.0
     try:
+        t_call = time.monotonic()
         data = post_with_retry(post_fn, endpoint, body, call_timeout, sleep_fn)
+        latency = time.monotonic() - t_call
         content, finish_reason, usage, reasoning_len = parse_response(data)
         outcome, fails, measurements, code, run_error = score_content(
             content, finish_reason, job["build"], expected_for_job,
@@ -863,6 +939,7 @@ def do_call(
         "end": end,
         "end_time": end,
         "seconds": round(seconds, 3),
+        "latency": round(latency, 3),
         "finish_reason": finish_reason,
         "usage": usage,
         "content": content,
@@ -920,62 +997,48 @@ def over_budget_c(c_usages, budget_c):
 # ---------------------------------------------------------------- suite
 
 
-def run_suite(
-    jobs,
-    expected,
-    manual_text,
-    out_dir,
+def _run_one_arm(
+    arm,
+    arm_pairs,
     arm_cfgs,
-    key_map=None,
-    budget=5.0,
-    post_fn=None,
-    sleep_fn=time.sleep,
-    max_workers=MAX_WORKERS,
-    exec_timeout=RUN_TIMEOUT,
-    call_timeout=CALL_TIMEOUT,
-    arms=ARMS,
-    budget_c=3.0,
-    gpu_start=None,
-    sandbox_profile=None,
+    secrets,
+    manual_text,
+    expected,
+    post_fn,
+    sleep_fn,
+    exec_timeout,
+    call_timeout,
+    sandbox_profile,
+    run_tmp,
+    pool_size,
+    t_start,
+    budget,
+    budget_c,
+    c_usages,
+    budget_stopped,
+    budget_c_stopped,
 ):
-    """Call every (job, arm) pair once with up to `max_workers` concurrent
-    calls. Stop sending new calls once the cost estimate passes `budget`;
-    stop sending new arm-C calls once arm C's own estimate passes
-    `budget_c`. When `gpu_start` (unix seconds) is given, the GPU estimate
-    uses that start instead of the runner's start.
-    Writes calls.jsonl, summary.json and report.md into `out_dir`.
+    """Run one arm's (job, rep) pairs with `pool_size` workers and return
+    (records, budget_stopped, budget_c_stopped).
 
-    `arm_cfgs`: {arm: {"endpoint": ..., "model": ...}}.
-    `key_map`: {arm: api_key}; keys are only used in the Authorization
-    header, never in any record. `post_fn(endpoint, body, timeout)` may be
-    a fake for tests; the default posts with urllib.
-    Returns (records, summary).
+    Called once per arm, arms one after another (FIX_SPEC item 6), so two
+    arms are never mixed on the GPU at the same time. Otherwise the
+    scheduling is exactly as before: stop sending new calls once the cost
+    estimate passes `budget`; stop sending new arm-C calls once arm C's
+    own estimate passes `budget_c`.
     """
-    key_map = key_map or {}
-    secrets = [k for k in key_map.values() if k]
-    if post_fn is None:
-        post_fn = _default_post_fn(arm_cfgs, key_map, call_timeout)
-    os.makedirs(out_dir, exist_ok=True)
-    run_tmp = None
-    if sandbox_profile is not None:
-        run_tmp = os.path.realpath(
-            tempfile.mkdtemp(prefix="sandbox_",
-                             dir=os.path.realpath(out_dir)))
-    pairs = [(job, arm) for job in jobs for arm in arms]
-    records = [None] * len(pairs)
-    t_start = time.monotonic()
-    c_usages = []
-    budget_stopped = False
-    budget_c_stopped = False
+    n_pairs = len(arm_pairs)
+    records = [None] * n_pairs
     next_i = 0
     in_flight = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-        while next_i < len(pairs) or in_flight:
-            while next_i < len(pairs) and len(in_flight) < max_workers:
+    with concurrent.futures.ThreadPoolExecutor(
+            max_workers=pool_size) as pool:
+        while next_i < n_pairs or in_flight:
+            while next_i < n_pairs and len(in_flight) < pool_size:
                 if over_budget(c_usages, time.monotonic() - t_start, budget):
                     budget_stopped = True
                     break
-                job, arm = pairs[next_i]
+                job, _rep = arm_pairs[next_i]
                 if arm == "C" and over_budget_c(c_usages, budget_c):
                     budget_c_stopped = True
                     next_i += 1
@@ -1008,7 +1071,7 @@ def run_suite(
             )
             for fut in done:
                 idx = in_flight.pop(fut)
-                job, arm = pairs[idx]
+                job, _rep = arm_pairs[idx]
                 try:
                     rec = fut.result()
                 except Exception as e:  # noqa: BLE001 -- never lose a slot
@@ -1037,7 +1100,7 @@ def run_suite(
                     )
                     for fut in done:
                         idx = in_flight.pop(fut)
-                        job, arm = pairs[idx]
+                        job, _rep = arm_pairs[idx]
                         try:
                             records[idx] = fut.result()
                         except Exception as e:  # noqa: BLE001
@@ -1059,6 +1122,107 @@ def run_suite(
                         ):
                             c_usages.append(records[idx]["usage"])
                 break
+    return records, budget_stopped, budget_c_stopped
+
+
+def run_suite(
+    jobs,
+    expected,
+    manual_text,
+    out_dir,
+    arm_cfgs,
+    key_map=None,
+    budget=5.0,
+    post_fn=None,
+    sleep_fn=time.sleep,
+    max_workers=MAX_WORKERS,
+    exec_timeout=RUN_TIMEOUT,
+    call_timeout=CALL_TIMEOUT,
+    arms=ARMS,
+    budget_c=3.0,
+    gpu_start=None,
+    sandbox_profile=None,
+    k=1,
+    workers=None,
+):
+    """Call every (job, arm) pair `k` times with up to `workers`
+    (`max_workers` when None; both default to today's value) concurrent
+    calls. The requested arms run one after another, each with that many
+    workers, never mixed on the GPU at the same time; each arm's own
+    wall-clock start and end are recorded. Stop sending new calls once the
+    cost estimate passes `budget`; stop sending new arm-C calls once arm
+    C's own estimate passes `budget_c`. When `gpu_start` (unix seconds) is
+    given, the GPU estimate uses that start instead of the runner's start.
+    Writes calls.jsonl, summary.json and report.md into `out_dir`.
+
+    `arm_cfgs`: {arm: {"endpoint": ..., "model": ...}}.
+    `key_map`: {arm: api_key}; keys are only used in the Authorization
+    header, never in any record. `post_fn(endpoint, body, timeout)` may be
+    a fake for tests; the default posts with urllib.
+    `k`: samples per job per arm (default 1 = today's behaviour); each
+    sample is a fresh conversation and every answer is saved.
+    Returns (records, summary).
+    """
+    key_map = key_map or {}
+    secrets = [k for k in key_map.values() if k]
+    if post_fn is None:
+        post_fn = _default_post_fn(arm_cfgs, key_map, call_timeout)
+    os.makedirs(out_dir, exist_ok=True)
+    run_tmp = None
+    if sandbox_profile is not None:
+        run_tmp = os.path.realpath(
+            tempfile.mkdtemp(prefix="sandbox_",
+                             dir=os.path.realpath(out_dir)))
+    if k is None:
+        k = 1
+    k = int(k)
+    if k < 1:
+        raise ValueError(f"k must be >= 1, got {k!r}")
+    pool_size = workers if workers is not None else max_workers
+    t_start = time.monotonic()
+    c_usages = []
+    budget_stopped = False
+    budget_c_stopped = False
+    records = []
+    arm_timing = {}
+    for arm in arms:
+        arm_pairs = [(job, rep) for job in jobs for rep in range(k)]
+        arm_start_iso = utcnow_iso()
+        arm_t0 = time.monotonic()
+        arm_recs, budget_stopped, budget_c_stopped = _run_one_arm(
+            arm,
+            arm_pairs,
+            arm_cfgs,
+            secrets,
+            manual_text,
+            expected,
+            post_fn,
+            sleep_fn,
+            exec_timeout,
+            call_timeout,
+            sandbox_profile,
+            run_tmp,
+            pool_size,
+            t_start,
+            budget,
+            budget_c,
+            c_usages,
+            budget_stopped,
+            budget_c_stopped,
+        )
+        arm_elapsed = time.monotonic() - arm_t0
+        arm_end_iso = utcnow_iso()
+        for (_job, rep), rec in zip(arm_pairs, arm_recs):
+            if rec is not None:
+                rec["sample"] = rep
+                for rnd in rec.get("bx_rounds", []):
+                    rnd["sample"] = rep
+            records.append(rec)
+        arm_timing[arm] = {
+            "start": arm_start_iso,
+            "end": arm_end_iso,
+            "seconds": round(arm_elapsed, 3),
+        }
     elapsed = time.monotonic() - t_start
     if gpu_start is not None:
         try:
@@ -1081,6 +1245,9 @@ def run_suite(
         budget_c_stopped=budget_c_stopped,
         gpu_start=gpu_start,
         gpu_elapsed_s=gpu_elapsed,
+        k=k,
+        arm_timing=arm_timing,
+        workers=pool_size,
     )
     calls_path = os.path.join(out_dir, "calls.jsonl")
     with open(calls_path, "w", encoding="utf-8") as f:
@@ -1112,22 +1279,55 @@ def _default_post_fn(arm_cfgs, key_map, call_timeout):
 
 
 def _rec_calls_tokens_latency(rec):
-    """(model calls, total tokens, summed latency) for one final record."""
+    """(model calls, total tokens, summed model-call latency) for one final
+    record. Latency is model call time only, the same definition for every
+    arm (FIX_SPEC item 6)."""
     if "model_calls" in rec:
         tokens = (rec.get("prompt_tokens_total", 0) or 0) + \
             (rec.get("completion_tokens_total", 0) or 0)
         return (rec.get("model_calls", 1) or 0, tokens,
-                rec.get("latency_total", rec.get("seconds", 0) or 0) or 0)
+                rec.get("latency_total", rec.get("latency", 0) or 0) or 0)
     prompt_n, completion_n = _usage_pair(rec.get("usage"))
-    return 1, prompt_n + completion_n, rec.get("seconds", 0) or 0
+    latency = rec.get("latency", None)
+    if latency is None:
+        latency = rec.get("seconds", 0) or 0
+    return 1, prompt_n + completion_n, latency or 0
 
 
-def arm_stats(records, arm, extra=False):
+def _rec_token_split(rec):
+    """(input tokens, output tokens) for one final record."""
+    if "prompt_tokens_total" in rec or "completion_tokens_total" in rec:
+        try:
+            prompt = int(rec.get("prompt_tokens_total", 0) or 0)
+        except (TypeError, ValueError):
+            prompt = 0
+        try:
+            completion = int(rec.get("completion_tokens_total", 0) or 0)
+        except (TypeError, ValueError):
+            completion = 0
+        return prompt, completion
+    return _usage_pair(rec.get("usage"))
+
+
+def arm_stats(records, arm, extra=False, k=1, wall_seconds=None):
     arm_recs = [r for r in records if r.get("arm") == arm]
     n_pass = sum(1 for r in arm_recs if r.get("outcome") == "PASS")
     n_fail = sum(1 for r in arm_recs if r.get("outcome") == "FAIL")
     n_inv = sum(1 for r in arm_recs if r.get("outcome") == "INVALID")
     scored = n_pass + n_fail
+    by_job = {}
+    for r in arm_recs:
+        by_job.setdefault(r.get("job"), []).append(r)
+    n_jobs = len(by_job)
+    jobs_with_pass = sum(
+        1 for rs in by_job.values()
+        if any(x.get("outcome") == "PASS" for x in rs)
+    )
+    splits = [_rec_token_split(r) for r in arm_recs]
+    sum_in = sum(p for p, _ in splits)
+    sum_out = sum(c for _, c in splits)
+    sum_tokens = sum_in + sum_out
+    sum_calls = sum(_rec_calls_tokens_latency(r)[0] for r in arm_recs)
     stats = {
         "n": len(arm_recs),
         "PASS": n_pass,
@@ -1135,17 +1335,29 @@ def arm_stats(records, arm, extra=False):
         "INVALID": n_inv,
         "pass_rate": (n_pass / scored) if scored else None,
         "invalid_rate": (n_inv / len(arm_recs)) if arm_recs else None,
+        # FIX_SPEC items 6-7: per-arm cost/usage numbers over all answers.
+        "calls": sum_calls,
+        "input_tokens": sum_in,
+        "output_tokens": sum_out,
+        "total_tokens": sum_tokens,
+        "k": k,
+        "pass_at_k": (jobs_with_pass / n_jobs) if n_jobs else None,
     }
+    if wall_seconds is not None:
+        stats["wall_seconds"] = wall_seconds
+        stats["dollars_per_pass"] = (
+            (wall_seconds / 3600.0 * GPU_DOLLARS_PER_HOUR / n_pass)
+            if n_pass else None
+        )
     if extra:
         totals = [_rec_calls_tokens_latency(r) for r in arm_recs]
         n = len(arm_recs)
-        sum_tokens = sum(t for _, t, _ in totals)
         sum_latency = sum(s for _, _, s in totals)
+        denom = n_jobs or n
         stats.update({
-            "mean_calls_per_job": (sum(c for c, _, _ in totals) / n)
-            if n else None,
-            "mean_tokens_per_job": (sum_tokens / n) if n else None,
-            "mean_latency_per_job": (sum_latency / n) if n else None,
+            "mean_calls_per_job": (sum_calls / denom) if denom else None,
+            "mean_tokens_per_job": (sum_tokens / denom) if denom else None,
+            "mean_latency_per_job": (sum_latency / denom) if denom else None,
             "tokens_per_pass": (sum_tokens / n_pass) if n_pass else None,
             "latency_per_pass": (sum_latency / n_pass) if n_pass else None,
         })
@@ -1183,33 +1395,42 @@ def compute_decision(rate_b, rate_c, invalid_rates):
 
 def build_summary(records, c_usages, elapsed_s, budget, budget_stopped,
                   skipped, arms, budget_c=3.0, budget_c_stopped=False,
-                  gpu_start=None, gpu_elapsed_s=None):
-    extra = "BX" in arms
-    per_arm = {arm: arm_stats(records, arm, extra=extra) for arm in arms}
+                  gpu_start=None, gpu_elapsed_s=None, k=1,
+                  arm_timing=None, workers=None):
+    arm_timing = arm_timing or {}
+    wall = {
+        arm: (arm_timing.get(arm) or {}).get("seconds") for arm in arms
+    }
+    per_arm = {
+        arm: arm_stats(records, arm, extra=True, k=k,
+                       wall_seconds=wall[arm])
+        for arm in arms
+    }
     levels = sorted({r.get("level") for r in records if r.get("level")})
     by_level = {}
     for level in levels:
         by_level[level] = {}
         for arm in arms:
             sub = [r for r in records if r.get("level") == level]
-            by_level[level][arm] = arm_stats(sub, arm)
+            by_level[level][arm] = arm_stats(sub, arm, k=k)
     cost_c = sum(cost_c_of_usage(u) for u in c_usages)
     gpu_elapsed = gpu_elapsed_s if gpu_elapsed_s is not None else elapsed_s
     gpu_total = gpu_cost_of_elapsed(gpu_elapsed)
-    glimmer_arms = [a for a in arms if a in GLIMMER_ARMS]
     costs = {}
-    if glimmer_arms:
-        share = round(gpu_total / len(glimmer_arms), 4)
-        for arm in glimmer_arms:
-            costs[arm] = share
+    for arm in arms:
+        if wall[arm] is not None:
+            costs[arm] = round(
+                wall[arm] / 3600.0 * GPU_DOLLARS_PER_HOUR, 4)
     if "C" in arms:
-        costs["C"] = round(cost_c, 4)
+        costs["C_tokens"] = round(cost_c, 4)
     costs.update({
         "gpu_total": round(gpu_total, 4),
         "total": round(gpu_total + cost_c, 4),
-        "note": "Arms A+B share one A100-80GB at $2.50/h over the run "
-        "wall-clock, counted once (split evenly for display). Arm C is "
-        "input $1.25/M + output $4.25/M tokens from usage.",
+        "note": "Each arm ran alone on the GPU: that arm's cost is its "
+        "own wall-clock at $2.50/h (A100-80GB Modal rate). Arm C token "
+        "cost is input $1.25/M + output $4.25/M tokens from usage. "
+        "The estimate covers only the runner's own wall-clock; the real "
+        "Modal cost (incl. cold start) comes from `modal billing report`.",
     })
     invalid_rates = {
         arm: per_arm[arm]["invalid_rate"] for arm in arms if per_arm[arm]["n"]
@@ -1224,10 +1445,17 @@ def build_summary(records, c_usages, elapsed_s, budget, budget_stopped,
         run_valid = all(
             (r is None or r <= 0.05) for r in invalid_rates.values()
         )
-        decision = "decision: see experiments/b2-hint/PLAN.md"
+        decision = "decision: see experiments/bmax/PLAN.md"
     table = {}
     for rec in records:
-        table.setdefault(rec["job"], {})[rec["arm"]] = rec.get("outcome")
+        cell = table.setdefault(rec["job"], {}).get(rec["arm"])
+        if k is not None and int(k) > 1:
+            if cell is None:
+                table[rec["job"]][rec["arm"]] = [rec.get("outcome")]
+            else:
+                cell.append(rec.get("outcome"))
+        else:
+            table[rec["job"]][rec["arm"]] = rec.get("outcome")
     return {
         "arms": per_arm,
         "levels": by_level,
@@ -1245,6 +1473,12 @@ def build_summary(records, c_usages, elapsed_s, budget, budget_stopped,
         "decision": decision,
         "run_valid": run_valid,
         "table": table,
+        "k": k,
+        "workers": workers,
+        "arm_timing": {
+            arm: arm_timing.get(arm) or {"seconds": wall[arm]}
+            for arm in arms
+        },
     }
 
 
@@ -1272,10 +1506,15 @@ def build_report(summary):
     lines.append("## Cost estimate")
     for arm in arms:
         lines.append(f"- Arm {arm}: ${summary['costs'].get(arm, 0):.4f}")
+    if "C_tokens" in summary["costs"]:
+        lines.append(
+            f"- Arm C tokens: ${summary['costs']['C_tokens']:.4f}")
     lines.append(f"- Total: ${summary['costs']['total']:.4f}")
     lines.append(
-        "GPU estimate covers only the runner's own wall-clock; the real "
-        "Modal cost (incl. cold start) comes from `modal billing report`."
+        "Each arm ran alone on the GPU; per-arm cost is its own wall-clock "
+        "at $2.50/h (A100-80GB Modal rate). The estimate covers only the "
+        "runner's own wall-clock; the real Modal cost (incl. cold start) "
+        "comes from `modal billing report`."
     )
     lines.append("")
     lines.append("## Per arm (PASS / FAIL / INVALID, pass rate, INVALID rate)")
@@ -1292,8 +1531,10 @@ def build_report(summary):
         lines.append("## Cost and speed (all arms)")
         lines.append("| Arm | mean calls/job | mean tokens/job | "
                      "mean latency/job (s) | tokens/correct | "
-                     "latency/correct (s) |")
-        lines.append("|---|---|---|---|---|---|")
+                     "latency/correct (s) | in tokens | out tokens | "
+                     "calls | wall (s) | $/correct | "
+                     f"pass@{summary.get('k', 1)} |")
+        lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
         for arm in arms:
             s = summary["arms"][arm]
             lines.append(
@@ -1301,7 +1542,13 @@ def build_report(summary):
                 f"{_num(s.get('mean_tokens_per_job'))} | "
                 f"{_num(s.get('mean_latency_per_job'))} | "
                 f"{_num(s.get('tokens_per_pass'))} | "
-                f"{_num(s.get('latency_per_pass'))} |"
+                f"{_num(s.get('latency_per_pass'))} | "
+                f"{s.get('input_tokens', 'n/a')} | "
+                f"{s.get('output_tokens', 'n/a')} | "
+                f"{s.get('calls', 'n/a')} | "
+                f"{_num(s.get('wall_seconds'))} | "
+                f"{_num(s.get('dollars_per_pass'))} | "
+                f"{_pct(s.get('pass_at_k'))} |"
             )
         lines.append("")
     for level, per in summary["levels"].items():
@@ -1317,12 +1564,20 @@ def build_report(summary):
             )
         lines.append("")
     lines.append("## Per-job outcomes")
+    if summary.get("k", 1) is not None and int(summary.get("k", 1)) > 1:
+        lines.append(f"(k = {summary.get('k')}: one outcome per sample)")
     lines.append("| Job | " + " | ".join(arms) + " |")
     lines.append("|---|" + "|".join(["---"] * len(arms)) + "|")
+
+    def _cell(value):
+        if isinstance(value, list):
+            return ",".join(str(v) for v in value)
+        return str(value if value is not None else "-")
+
     for job in sorted(summary["table"]):
         lines.append(
             "| " + job + " | "
-            + " | ".join(str(summary["table"][job].get(a, "-")) for a in arms)
+            + " | ".join(_cell(summary["table"][job].get(a)) for a in arms)
             + " |"
         )
     lines.append("")
@@ -1353,7 +1608,17 @@ def main(argv=None):
                         help="comma list of arms (default A,B,C)")
     parser.add_argument("--sandbox", default=None,
                         help="sandbox profile (.sb file) for model answers")
+    parser.add_argument("--workers", type=int, default=MAX_WORKERS,
+                        help="workers per arm; arms run one after another, "
+                        f"never mixed (default {MAX_WORKERS})")
+    parser.add_argument("--k", type=int, default=1,
+                        help="samples per job per arm in fresh conversations "
+                        "(default 1)")
     args = parser.parse_args(argv)
+    if args.workers is not None and args.workers < 1:
+        parser.error("--workers must be >= 1")
+    if args.k is not None and args.k < 1:
+        parser.error("--k must be >= 1")
     try:
         arms = parse_arms(args.arms)
     except ValueError as e:
@@ -1403,7 +1668,7 @@ def main(argv=None):
     run_suite(
         jobs, expected, manual_text, args.out, arm_cfgs, key_map, args.budget,
         budget_c=args.budget_c, gpu_start=args.gpu_start, arms=arms,
-        sandbox_profile=args.sandbox,
+        sandbox_profile=args.sandbox, k=args.k, workers=args.workers,
     )
     return 0
 
