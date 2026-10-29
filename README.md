@@ -73,7 +73,17 @@ cd /tmp && ~/projects/forge/.venv/bin/python -I ~/projects/forge/scripts/check_c
 ```
 
 ## How this was built
-- The models doing the work are Meta's: Muse Glimmer 30B (open weights, the student, served with vLLM on Modal) and Muse Spark Open (open weights, the teacher, on Baseten).
-- Muse Code (Meta's coding agent) built the test program: experiments/first-test/runner.py and test_runner.py, and the later fixes from CHANGES_SPEC.md. From now on all project code is built by Muse Code from written specs.
-- Claude (Anthropic) was used as a planning assistant: it wrote the plans, specs, exam jobs and checks (experiments/first-test/jobs.py, checks.py, PLAN.md), the wiki, and coordinated; commits made with it carry a "Co-Authored-By: Claude" line.
-- Muse Code published this repository.
+The models doing the work are Meta's: Muse Glimmer 30B (open weights, the student, served with vLLM on Modal) and
+Muse Spark Open (open weights, the teacher, on Baseten).
+
+Who wrote what:
+| Part | Written by | Examples |
+|---|---|---|
+| Product code (runners, sandbox, company tool Keel, dashboard, tests) | **Muse Code** (Meta's coding agent), from written specs | `experiments/first-test/runner.py`, `test_runner.py`, `experiments/b2-hint/run_one_cq.py`, `sandbox_cq.sb`, `company/keel/`, `experiments/keel-exam-v2/runner.py` |
+| Specs and plans (what to build, decision rules written before each run) | Claude (Anthropic), as a planning assistant | `*SPEC*.md`, `PLAN.md` files, `experiments/bmax/BMAX_SPEC.md` |
+| Exams, references and solved examples (test content) | Claude, on purpose: the checker should not be the AI being tested, and Meta's models must not see the answers before a test | `experiments/*/jobs.py`, `checks.py`, `experiments/bmax/examples.py`, `experiments/option-a/` drafts |
+| Analysis and check scripts | Claude | `experiments/option-a/audit/coverage_audit.py`, `selftest*.py`, one-off checks of Muse Code's work |
+| Independent review before every paid run | a separate Claude verifier agent | reports in `~/agents/verifier/reports/` |
+| Wiki and coordination | Claude | `forge-wiki/` |
+
+Commits made with Claude carry a "Co-Authored-By: Claude" line. Muse Code published this repository.
