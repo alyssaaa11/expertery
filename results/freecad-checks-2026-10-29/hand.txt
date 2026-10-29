@@ -1,16 +1,20 @@
-Traceback (most recent call last):
-  File "~/projects/forge/experiments/freecad/cloud_exec.py", line 509, in <module>
-    _sys.exit(main())
-              ^^^^^^
-  File "~/projects/forge/experiments/freecad/cloud_exec.py", line 497, in main
-    check_hand(args.check_hand or None)
-  File "~/projects/forge/experiments/freecad/cloud_exec.py", line 330, in check_hand
-    boxed = (exec_fn or run_answer_in_box)(source)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "~/projects/forge/experiments/freecad/cloud_exec.py", line 184, in run_answer_in_box
-    sandbox.filesystem.write_text(
-  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/sandbox/_filesystem.py", line 619, in write_text
-    validate_absolute_remote_path(remote_path, "write_text")
-  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/sandbox_fs_utils.py", line 337, in validate_absolute_remote_path
-    raise InvalidError(f"Sandbox.filesystem.{operation}() currently only supports absolute remote_path values")
-modal.exception.InvalidError: Sandbox.filesystem.write_text() currently only supports absolute remote_path values
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-4UU1ZDRk2F7Q5HLKJJbhUe
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/freecad/cloud_grade.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+└── ✓ Created Function grade.
+H13: PASS (max rel-diff 4.22e-08)
+H13_wrong: FAIL (max rel-diff 3.20e-08)
+H6: PASS (max rel-diff 8.36e-09)
+M1: PASS (max rel-diff 6.37e-08)
+M10: PASS (max rel-diff 3.01e-08)
+M1_wrong: FAIL (max rel-diff 6.37e-08)
+M6: PASS (max rel-diff 2.49e-09)
+HAND OK
+Stopping app - local entrypoint completed.
+[modal-client] 2026-10-29T19:02:36+0100 Timed out waiting for final app logs.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-4UU1ZDRk2F7Q5HLKJJbhUe

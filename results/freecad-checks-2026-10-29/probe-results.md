@@ -11,3 +11,9 @@
 - verified: SAFETY OK: typo → AttributeError; `import cadquery` refused; network → URLError (name resolution); the
   listing probe found 0 jobs/expected/reference files.
 - verified: missing file in the box raises modal.exception.SandboxFilesystemNotFoundError (not FileNotFoundError).
+
+## Real-code checks after 798fd77 (no patches)
+- verified: `cloud_exec.py --check-safety` → SAFETY OK (safety.txt); `cloud_grade.py --check-refs` → REFS 30/30 PASS (refs.txt).
+- verified: hand check → HAND OK, 5 PASS / 2 FAIL, max rel-diff 6.37e-08 ≤ 1e-6 (hand.txt). Run as
+  `with cloud_grade._app.run(): cloud_exec.check_hand()` because the `--check-hand` CLI lacks the grader app context
+  ("Function has not been hydrated"); runner_fc.py main does have it (runner_fc.py:1002-1003). CLI-only bug, open note.
