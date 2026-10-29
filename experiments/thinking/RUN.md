@@ -1,9 +1,9 @@
 # Thinking exam: exact run commands (pending verifier pre-run check + user yes)
 
-Out dir: `OUT=~/projects/forge/results/thinking-2026-10-29`. Run from ~/projects/forge.
+Out dir: `OUT=~/projects/forge/results/thinking-2026-10-29-run2`. Run from ~/projects/forge.
 
 Caps:
-- Modal + Baseten: $4.00 for the session.
+- Modal + Baseten: $3.50 for the session (lowered after launch 1).
 - Wonder (Meta): $1.50. This is the verifier's fix: worst case $29.0 + $4.3 + $1.5 ≈ $34.8, inside $35. Wonder
   cannot change the decision, because S governs.
 - Stop if Forge's total would pass $35.
@@ -14,7 +14,7 @@ Keys come from envsave opaque ids inside run_fc_session.sh and are never printed
    `.venv/bin/python experiments/freecad/cloud_grade.py --check-refs --exam thinking`
    It must print `REFS 13/13 PASS`. Anything else → STOP.
 1. **Session** (Glimmer deploy, pilot, gate, main run):
-   `experiments/freecad/run_fc_session.sh $OUT 4.00 --pilot "thinking:dry:pilot:G,S:3" --run "thinking:main:main-GS:G,S:3"`
+   `caffeinate -i -s experiments/freecad/run_fc_session.sh $OUT 3.50 --pilot "thinking:dry:pilot:G,S:3" --run "thinking:main:main-GS:G,S:3"`
    - The pilot is D1, D2 and C1-C3, run by G and S at k = 3, which gives 30 answers.
    - The session then waits up to 20 min for `$OUT/GO` or `$OUT/STOP`. Claude writes one of them only after this
      gate (pre-registered in PLAN.md):
