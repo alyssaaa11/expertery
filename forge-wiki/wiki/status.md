@@ -14,6 +14,10 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
   fix (B-max), but many times cheaper and faster, and runs privately** ([[new-goal-2026-10-29]]; method = distillation,
   known; ours = referee-verified training data, strongest fair baseline, end-to-end private tool + proof report).
 - decision (user): budget **$30 max** for Forge; every paid step needs the user's yes.
+- decision (user, 2026-10-29 ~17:30): if Forge is going well and becomes the final hackathon project, the budget can
+  rise to **$40-50**; while it is unproven, keep spending low so another project can still be run if Forge fails.
+  Proposed gate for "going well" (to confirm with the user): factory teacher pass rate ≥ 50% on the pilot AND the
+  trained model beats the untrained short-prompt Glimmer on the ~20 dev jobs.
 - decision (user, 2026-10-29): **all code is written by Muse Code** from Claude's specs (incl. run scripts, training,
   dashboards, checks); Claude writes specs, plans, exams/references, wiki, and checks results.
 - decision (user, 2026-10-29): **verifier workflow**: after every finished step and before every paid step, ask
