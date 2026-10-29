@@ -49,3 +49,8 @@ the short prompt), the exam-guard report, the dev split, and cost (Baseten usage
 ## Freeze
 SPEC, generator code + seed + generated jobs file, referee, sandbox, teacher runner, prompt — sha256 recorded here before
 the pilot.
+
+## Privacy headline (decision, user 2026-10-29)
+Headline: "a private teacher; Wonder only helps on the hardest jobs (X% of the data)", X = share of kept records
+tagged `teacher: wonder`, printed next to the headline in the factory summary. Large X is stated openly. See
+forge-wiki/wiki/decisions/new-goal-2026-10-29.md.
