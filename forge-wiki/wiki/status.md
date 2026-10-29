@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-10-29 ~18:15
+**Last updated**: 2026-10-29 ~19:00
 
 ---
 
@@ -48,22 +48,25 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | **Total** | **≈ 19.7 of 30** | |
 
 ## Open questions
-1. Training script: Muse Code applied FIX_SPEC + the verifier's 5 edits (6ce0a5e, ≈ $1.11); pytest 32/32 outside
-   Muse's shell. **Waiting for the verifier's finished-step check.**
-2. Training on answer-only text (no reasoning) may teach Glimmer to skip reasoning: cheaper, maybe weaker on hard jobs.
-   The fixed script logs the rendered example + learned tokens; decide after looking.
-3. Factory spec (hard-style practice jobs, new families, strict 1e-6 referee, ~20 dev jobs) not written yet.
-4. Final exam must use the same runner + 0.2% referee + 16,000 tokens + k=3 + 8 workers as the baselines (verifier);
+1. hypothesis: training on answer-only text (no reasoning) may teach Glimmer to skip reasoning: cheaper, maybe weaker
+   on hard jobs. The fixed script logs the rendered example + learned tokens; decide after looking.
+2. Final exam must use the same runner + 0.2% referee + 16,000 tokens + k=3 + 8 workers as the baselines (verifier);
    a short-prompt trained arm needs a small runner spec. Finish BX's 11 missing hard answers in that session.
-5. Budget: ≈ $11 left for factory (~$3) + training (~$3) + final (~$1.5) + fixes; no money for a training retry.
+3. Which Meta account owns the key used for Wonder (META_KEY)? It must be the user's own (verifier A6). Ask before the run.
+4. Budget: ≈ $10 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Next step
-1. **FreeCAD gap test** (decision, user 2026-10-29: test FreeCAD before the factory; budget up to ~$35 only if FreeCAD
-   shows a big gap). FreeCAD 1.1.4 installed; all free checks pass (experiments/freecad/PLAN.md); manual frozen; Muse
-   spec experiments/freecad/SPEC.md (392323e) **with the verifier**; then the user's yes → Muse Code (~$1.2) → paid run
-   G + S on 30 jobs (~$1.4).
-2. Training pipeline: GO WITH 2 FIXES (round 2 in experiments/train/FIX_SPEC.md) — bundle with the next Muse session.
-   Needs the user's yes to install modal into the forge venv.
+1. **FreeCAD gap test** (decision, user 2026-10-29: test FreeCAD before the factory).
+   - decision (user, 2026-10-29): **teacher escalation**: Wonder answers only the jobs Spark failed; teacher T = S ∪
+     Wonder rescues; the rule is evaluated on T and on S alone (PLAN rule 5), and the report labels a decision that
+     rests on Wonder (closed API). Same `--escalate` in the factory, with a teacher tag per record.
+   - decision (Claude, following existing accounting): Meta credit for Wonder counts inside Forge's budget.
+   - verified: modal 1.6.3 + cadquery 2.8.0 in the forge venv (verifier evidence/02, forge-freecad-escalation).
+   - Verifier: READY WITH 3 EDITS, rubric 6/7/5 (forge-freecad-escalation-2026-10-29); edits applied f999208 + 7854051.
+   - **Now:** Muse Code build (FreeCAD cloud box + grader + runner_fc with W + training round 2) running, log
+     results/muse-freecad-build.jsonl. Then: tests outside Muse's shell, free CLI cap check, cloud consistency check
+     (cents), verifier finished-step check, the user's yes → paid run (caps Modal+Baseten $3.50 + Meta $3).
+2. Training pipeline: round 2 is in the same Muse build.
 3. Factory: plan READY (verifier); its target tool (FreeCAD or CadQuery hard jobs) follows from the gap test.
 
 ## Where things are
