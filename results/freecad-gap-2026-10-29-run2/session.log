@@ -1,0 +1,38 @@
+key generated (never printed)
+secret updated
+deploy start 19:20:34
+
+View Deployment: 
+https://modal.com/apps/my-workspace/main/deployed/forge-glimmer
+ready 19:24:42 (try 4)
+pilot start 19:24:42
+budget left for this runner call: $3.03
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-gV3Vkt0dtDkFCiLOscwU5w
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/freecad/cloud_grade.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+└── ✓ Created Function grade.
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-gV3Vkt0dtDkFCiLOscwU5w
+runner exit 0 19:28:40
+PILOT DONE: waiting for ~/projects/forge/results/freecad-gap-2026-10-29-run2/GO or ~/projects/forge/results/freecad-gap-2026-10-29-run2/STOP (20 min max)
+main start 19:29:00
+budget left for this runner call: $2.85
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-TeljIOpJtrQg9YUcaW9H91
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/freecad/cloud_grade.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+└── ✓ Created Function grade.
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-TeljIOpJtrQg9YUcaW9H91
+runner exit 0 19:40:12
+done 19:40:12
+app stopped 19:40:13

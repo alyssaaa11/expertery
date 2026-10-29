@@ -1,0 +1,5 @@
+[
+ {"name": "G", "label": "Glimmer (student)", "description": "FreeCAD manual + job, 1 try", "expected": 30, "colour": "#2a78d6"},
+ {"name": "S", "label": "Spark Open (teacher)", "description": "same prompt, 1 try", "expected": 30, "colour": "#eb6834"},
+ {"name": "W", "label": "Wonder (rescue)", "description": "only on jobs Spark failed, 1 try", "expected": 10, "colour": "#1baf7a"}
+]

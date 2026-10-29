@@ -1,0 +1,1 @@
+Launch 1 (results/freecad-gap-2026-10-29) died at import: python -I drops the script dir, runner_fc could not import cloud_exec; stopped after the pilot with STOP, app stopped 19:19:56, no model calls. Run 2 = same commands via run_session.sh directly without -I (RUN.md hook minus -I).

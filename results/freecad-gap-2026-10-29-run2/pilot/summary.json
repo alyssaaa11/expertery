@@ -1,0 +1,190 @@
+{
+ "arms": {
+  "G": {
+   "n": 3,
+   "PASS": 3,
+   "FAIL": 0,
+   "INVALID": 0,
+   "pass_rate": 1.0,
+   "invalid_rate": 0.0,
+   "calls": 3,
+   "input_tokens": 18903,
+   "output_tokens": 8307,
+   "total_tokens": 27210,
+   "k": 1,
+   "pass_at_k": 1.0,
+   "mean_calls_per_job": 1.0,
+   "mean_tokens_per_job": 9070.0,
+   "mean_latency_per_job": 106.20299999999999,
+   "tokens_per_pass": 9070.0,
+   "latency_per_pass": 106.20299999999999
+  },
+  "S": {
+   "n": 3,
+   "PASS": 3,
+   "FAIL": 0,
+   "INVALID": 0,
+   "pass_rate": 1.0,
+   "invalid_rate": 0.0,
+   "calls": 3,
+   "input_tokens": 19257,
+   "output_tokens": 4849,
+   "total_tokens": 24106,
+   "k": 1,
+   "pass_at_k": 1.0,
+   "mean_calls_per_job": 1.0,
+   "mean_tokens_per_job": 8035.333333333333,
+   "mean_latency_per_job": 7.327333333333333,
+   "tokens_per_pass": 8035.333333333333,
+   "latency_per_pass": 7.327333333333333
+  }
+ },
+ "levels": {
+  "dry": {
+   "G": {
+    "n": 3,
+    "PASS": 3,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0,
+    "calls": 3,
+    "input_tokens": 18903,
+    "output_tokens": 8307,
+    "total_tokens": 27210,
+    "k": 1,
+    "pass_at_k": 1.0
+   },
+   "S": {
+    "n": 3,
+    "PASS": 3,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0,
+    "calls": 3,
+    "input_tokens": 19257,
+    "output_tokens": 4849,
+    "total_tokens": 24106,
+    "k": 1,
+    "pass_at_k": 1.0
+   }
+  }
+ },
+ "by_level": {
+  "dry": {
+   "G": {
+    "n": 3,
+    "PASS": 3,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0,
+    "calls": 3,
+    "input_tokens": 18903,
+    "output_tokens": 8307,
+    "total_tokens": 27210,
+    "k": 1,
+    "pass_at_k": 1.0
+   },
+   "S": {
+    "n": 3,
+    "PASS": 3,
+    "FAIL": 0,
+    "INVALID": 0,
+    "pass_rate": 1.0,
+    "invalid_rate": 0.0,
+    "calls": 3,
+    "input_tokens": 19257,
+    "output_tokens": 4849,
+    "total_tokens": 24106,
+    "k": 1,
+    "pass_at_k": 1.0
+   }
+  }
+ },
+ "failure_tags": {
+  "G": {
+   "api_error": 0,
+   "wrong_geometry": 0,
+   "harness": 0,
+   "INVALID": 0
+  },
+  "S": {
+   "api_error": 0,
+   "wrong_geometry": 0,
+   "harness": 0,
+   "INVALID": 0
+  }
+ },
+ "jobs_passed_by_S_not_G": [],
+ "n_calls": 6,
+ "budget": 3.03,
+ "budget_stopped": false,
+ "budget_c": 3.0,
+ "budget_c_stopped": false,
+ "budget_w": 3.0,
+ "budget_w_stopped": false,
+ "elapsed_seconds": 232.717,
+ "costs": {
+  "S_tokens": 0.0447,
+  "W_tokens": 0,
+  "gpu": 0.1616,
+  "total": 0.2063
+ },
+ "tokens": {
+  "G": {
+   "input": 18903,
+   "output": 8307,
+   "total": 27210
+  },
+  "S": {
+   "input": 19257,
+   "output": 4849,
+   "total": 24106
+  }
+ },
+ "teacher_T_pass": [
+  "D1",
+  "D2",
+  "D3"
+ ],
+ "wonder_share": 0.0,
+ "decision_t": "stay on hard CadQuery jobs",
+ "decision_s": "stay on hard CadQuery jobs",
+ "decision": "stay on hard CadQuery jobs",
+ "agree_T_S": true,
+ "run_invalid": false,
+ "run_invalid_arms": {},
+ "rate_g": 1.0,
+ "rate_t": 1.0,
+ "rate_s": 1.0,
+ "table": {
+  "D1": {
+   "G": "PASS",
+   "S": "PASS"
+  },
+  "D2": {
+   "G": "PASS",
+   "S": "PASS"
+  },
+  "D3": {
+   "G": "PASS",
+   "S": "PASS"
+  }
+ },
+ "k": 1,
+ "workers": 8,
+ "arm_timing": {
+  "G": {
+   "start": "2026-10-29T18:24:45.923Z",
+   "end": "2026-10-29T18:28:25.469Z",
+   "seconds": 219.545
+  },
+  "S": {
+   "start": "2026-10-29T18:28:25.469Z",
+   "end": "2026-10-29T18:28:38.641Z",
+   "seconds": 13.172
+  }
+ }
+}
