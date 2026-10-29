@@ -28,7 +28,8 @@ from part families that are **not** in the 30-job exam, cheaply enough to train 
 Measured: Spark Open's answers to hard first-test jobs average **5,212 output tokens** (first-test arm C) → ≈ $0.023 per
 call ($1.25 / $0.15 cached / $4.25 per M; output dominates). Pilot 20 ≈ $0.46; main 180 ≈ $4.2; retries extra.
 **Cap $5 on Baseten** (Forge's $30 budget; more only if the user raises it under the "final, winnable project" rule).
-Within $5: pilot + about 180 first tries, retries only with what is left. Muse Code build ≈ $0.5-1.
+Within $5: the guard keeps 8 × $0.075 = $0.60 for in-flight answers, so ≈ $4.40 is usable → pilot + about 170 first
+tries (expected records ≈ 170 × p), retries only with what is left. Muse Code build ≈ $0.5-1.
 ## Yield rule (verifier A1)
 Target ≥ 150 kept records needs a first-try pass rate p ≥ 83% (150/180). At the pilot gate: if p ≥ 0.83, run 180 jobs;
 if 0.5 ≤ p < 0.83, either accept fewer records (expected 180 × p, e.g. ≈ 110 at 60%) or ask the user to raise the

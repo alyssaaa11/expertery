@@ -52,7 +52,7 @@ Reply with exactly one Python code block and nothing else." + user "Here is the 
 header x-session-affinity (same value per run, for prompt caching). Key from env BASETEN_KEY. 8 parallel workers.
 Each answer: extract the code, run it in the sandbox, score against the job's reference at 1e-6. Log per call: id,
 usage (incl. prompt_tokens_details.cached_tokens), latency, verdict, fails. Budget guard counts cost from usage
-($1.25/M uncached input, $0.15/M cached, $4.25/M output) and stops new calls when the next call would pass the budget.
+($1.25/M uncached input, $0.15/M cached, $4.25/M output); the stop rule is the in-flight rule below.
 Pilot = the 20 non-dev ids that come first per family (2 per family), never dev ids.
 `--ids train` skips every id that already has an answer in earlier runs' calls.jsonl (pass `--prior <dirs>`), and
 train_records.jsonl holds at most one record per id (the first PASS). Why: without this the pilot jobs get paid for
