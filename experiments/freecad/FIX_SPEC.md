@@ -38,3 +38,32 @@ offline with fakes; anything that could reach real Modal is monkeypatched to rai
 7. **Rates (B9).** Pass rate = PASS ÷ (PASS + FAIL) per arm, as in the baseline; INVALID/harness counted separately.
 The rule-5 disagreement label may stay as is (user, 2026-10-29: PLAN rule 5 decides "stay on CadQuery").
 Short report at the end: files changed, the pytest line, anything not followed.
+
+## Round 2 (Claude's free cloud probe 2026-10-29, after 65e86ad) — binding
+Evidence: `cloud_exec.py --check-image` failed at the extract step (`Permission denied`, exit 126; image
+im-QIoVZxT6A4M6dizIy9fVWe logs). A throwaway probe by Claude (trusted code only, not project code) then showed:
+FreeCAD 1.1.4 runs in the box after `chmod +x`; `freecadcmd /work/run_one_fc.py` IMPORTS the file (a __pycache__
+appears, nothing runs, no STEP); run through `freecadcmd -c` with exec + `__name__ = "__main__"` it runs; hand/M10.py
+(PASS on the Mac) then fails with "result is not a Part solid" because `Shape.Solids` is a LIST attribute, not a
+method (Mac freecadcmd: `type(s.Solids)` → list); network is blocked (URLError) and `import cadquery` is refused.
+1. **Image:** `chmod +x` the AppImage before `--appimage-extract`, and delete the AppImage after extracting (smaller
+   image). Why: the build stopped there.
+2. **Start the box script as a program:** run it with
+   `sb.exec("freecadcmd", "-c", BOOTSTRAP, env={"FC_SCRATCH": "/work"}, timeout=60)` where BOOTSTRAP is
+   `import sys; sys.argv=['run_one_fc.py']; exec(open('/work/run_one_fc.py').read(), {'__name__': '__main__', '__file__': '/work/run_one_fc.py'})`
+   (verified in the probe). Why: freecadcmd imports a file argument, so main() never ran.
+3. **`Solids` is a list:** use `len(shape.Solids)` everywhere (solid check and measure.json). Make the fake Part in
+   the tests expose `Solids` as a list attribute, like real FreeCAD, and add a test that a fake whose `Solids` is a
+   list passes. Why: the fake had a method, so the tests passed while the real box failed every answer.
+4. **Decision rates = PASS ÷ (PASS + FAIL)** per arm in `evaluate_fc_decision` too (now it divides by all jobs),
+   matching summary.json and PLAN; T's rate = T passes ÷ (S's PASS + FAIL jobs). Test with one INVALID job.
+5. **Hand check vs the Mac:** `--check-hand` reads `experiments/freecad/hand/mac_measure.json` (Claude's Mac
+   measurements: bbox, volume, solids per hand answer) and prints, per answer, the grader verdict and the largest
+   relative bbox/volume difference; it prints `HAND OK` only if M1, M6, M10, H6, H13 PASS, M1_wrong and H13_wrong
+   FAIL, and every difference ≤ 1e-9. Map each hand file to its job id by the file name prefix (M1_wrong → M1).
+6. **Safety check CLI:** `cloud_exec.py --check-safety` runs four tiny answers through the real box + grader path and
+   prints one line each: an answer calling a misspelled Part function → api_error; `import cadquery` → refused
+   (api_error, error text kept); an answer that tries `urllib.request.urlopen("https://example.com")` → fails, no
+   network; an answer that lists `/` and `/work` and searches for files named like jobs/expected/reference → none
+   found (it writes what it found into an error so it shows in `run_error`). Prints `SAFETY OK` only if all four hold.
+Run the same pytest line until all pass. Short report: files changed, pytest line, anything not followed.
