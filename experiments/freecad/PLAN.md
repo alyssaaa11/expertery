@@ -27,6 +27,22 @@ Spark Open + the same manual? If so, FreeCAD is the factory's training target (a
 3. Cheat test: an answer that imports cadquery is refused in the sandbox.
 4. Neutral-text scan done and frozen (sha256).
 
+## Free checks done (verified 2026-10-29, Claude; check commands run ad hoc in Claude's temp folder, not project code)
+- FreeCAD 1.1.4 installed (`brew install --cask freecad`); headless `freecadcmd` builds a part and exports STEP in ~4 s
+  (0.2 s warm); FreeCAD's own Python is 3.11.14 and has **no cadquery / OCP**.
+- A FreeCAD part scored against a CadQuery reference: PASS at 0.2% and at 1e-6, mismatch 0.0.
+- Hand-written FreeCAD answers (experiments/freecad/hand/): M1, M6, M10, H6, H13 all PASS at 0.2% and 1e-6;
+  M1_wrong (hole 1 mm off) and H13_wrong (countersink too big) FAIL at both.
+- The 30 CadQuery references survive a STEP round trip: 30/30 at 0.2% and 1e-6.
+- Neutral-text scan of the 30 job texts (workplane, centered, cadquery, selector, >Z, sketch, extrude, cbore, csk…): none.
+- Sandbox: freecadcmd runs under `env -i HOME=<scratch>` + sandbox-exec with experiments/freecad/sandbox_fc.reference.sb
+  (Keel-v2 style, home + temp reads denied, writes only to scratch); inside it `import cadquery` → ModuleNotFoundError and
+  reading experiments/first-test/expected.json → PermissionError.
+- Manual: experiments/freecad/manual.md, an excerpt of FreeCAD's official "Topological data scripting" guide + the
+  built-in Part `help()` text, 21,640 chars (CadQuery manual 21,696). 27 of its 30 official code examples run as
+  written (3 doc quirks: a placeholder `myShape`, a missing `from math import radians`, one example OCC error); kept
+  authentic. **Frozen: sha256 865ab9af45eb2fb554f97155fa8f3cf44f92d54973437a1f94c78d67cdc89bb6.**
+
 ## Decision rule (pre-registered; reuses the Oct 28 day-1 gate; n = 30 at k = 1 ≈ ±17 points, act only on clear margins)
 1. S < 70% → INVALID: fix the manual once, re-run once.
 2. G ≤ 60% AND S ≥ 75% AND S − G ≥ 20 points AND ≥ 8 jobs pass in S but not in G → **FreeCAD becomes the factory target**.
