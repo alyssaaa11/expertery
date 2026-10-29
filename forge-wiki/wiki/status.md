@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-10-29 ~19:50
+**Last updated**: 2026-10-29 ~22:50
 
 ---
 
@@ -54,6 +54,15 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 2. Final exam must use the same runner + 0.2% referee + 16,000 tokens + k=3 + 8 workers as the baselines (verifier);
    a short-prompt trained arm needs a small runner spec. Finish BX's 11 missing hard answers in that session.
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
+
+## Training + final exam: PREPARED, NOT RUN (user 2026-10-29: "prepare the training, not run")
+- Plan experiments/final/PLAN.md, Muse spec experiments/final/MUSE_SPEC.md (commit 19c261d), diagram
+  forge-wiki/attachments/final-plan-diagram.html (ffa6fcd). Sent to the verifier (pre-build check, waiting).
+- verified: the CadQuery path (factory spec, exam guard, first-test runner) still runs answer code on the Mac
+  (sandbox-exec, experiments/first-test/runner.py:423, forge_train.py run_train_code); the spec moves it to a Modal box.
+- verified: Spark Open = 816B (42B active), needs >= 700 GB VRAM (https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B);
+  Glimmer 30B 4-bit < 20 GB (https://huggingface.co/meta-models/Muse-Glimmer-30B).
+- decision pending (user): Muse build ($2-4, fits under $35) and the budget raise to $50 for steps 1-7 (≈ $10-14 total).
 
 ## Next step
 1. **FreeCAD gap test: DONE** ([[freecad-gap-2026-10-29]]). verified: Glimmer 28/30 (93%), Spark 30/30 (100%), Wonder 0
