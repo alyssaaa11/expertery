@@ -88,3 +88,18 @@ verdicts: hand 5 PASS / 2 FAIL, SAFETY OK, REFS 30/30 PASS. Fix exactly these:
    strict referee's 1e-6, so "same part" means the same as in the factory data check. `HAND OK` needs the 5/2
    verdicts AND every difference ≤ 1e-6.
 Same pytest line until all pass. Short report: files changed, pytest line, anything not followed.
+
+## Round 4 (verifier GO WITH 4 FIXES, forge-freecad-prerun-2026-10-29) — binding, small
+1. **`runner_fc.py --summarize <GS run dir> <W run dir> --out <dir>`:** read both calls.jsonl files, run
+   `evaluate_fc_decision` on the union of records, and write summary.json + report.md there (G, S, T rates, Wonder's
+   share of T's passes, rules 1-4 on T and on S, rule 6, both decision lines: the runner's label and "PLAN rule 5:
+   disagreement → stay on CadQuery"). No model, Modal or network calls. Test with two small fake calls.jsonl files
+   (one disagreement case, one rule-6 case). Why: each run's summary sees only its own records, so the pre-registered
+   T rule was never computed by code.
+2. **`cloud_exec.py --check-hand`:** run inside `with modal.enable_output(): with cloud_grade._app.run():` (it failed
+   with "Function has not been hydrated"). Test with a patched app.
+3. **run_fc_session.sh keys:** `envsave get` takes the OPAQUE id, not the name. Use
+   `envsave get es_LMDrY_C1YRDJYOAGLb2hB1y5WpczSEujtnquV4V5DTzZSMhp` for BASETEN_KEY (the id the baseten-muse-spark
+   skill and experiments/first-test/run_live.sh use) and the HerdShot id from `~/.local/bin/muse-wonder` (first
+   `es_…` token, read at run time with grep, never printed) for META_HERDSHOT_API_KEY. Keep the empty-key refusal.
+Same pytest line until all pass. Short report: files changed, pytest line, anything not followed.
