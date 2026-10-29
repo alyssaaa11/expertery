@@ -23,6 +23,12 @@ company's standard as well as the teacher.
   (boss centres from the wall corner) FAILs (mismatch 5.3%).
 - Ambiguity check: an independent blind solve from STANDARDS.md + the request texts only (results recorded below
   before freezing). Any job a careful engineer can read two ways is fixed before the run.
+  - verified (2026-10-29, Sonnet subagent, blind: STANDARDS.md + request texts only, no references): 12/12 jobs
+    give ONE geometry, all equal to the references. Four wordings it ranked as possible misreadings were tightened in
+    STANDARDS.md (geometry unchanged): a stated boss height is measured from the surface it stands on (T6, T10);
+    "inside space" depth or height is from the floor top to the rim (T7, T8, D2); lid-screw bosses are one in each of
+    the four inner corners (T8); 0.5 per side = +1.0 per size or diameter, and the lip is 0.6 smaller (T3, T5, T6, T9).
+    selftest.py re-run after the edit: 12/12 OK, every wrong version caught ("BAD: none").
 - Prompt (arm B layout): system = the FreeCAD system prompt; user = "Here is the FreeCAD manual. Use it." + manual +
   "Here is the company design standard. Apply it." + STANDARDS.md + request. The standard is in the prompt, so the
   test is about APPLYING rules, not knowing them (the trained model's later advantage is not needing them in the prompt).
