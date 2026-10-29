@@ -33,8 +33,8 @@ A separate Modal Function (CPU, our own trusted code) with CadQuery 2.8 + experi
 expected.json} baked into its image. Input: job id + STEP bytes; output: verdict at 0.2% (the verdict) and at 1e-6,
 the failed checks, measurements. It never runs model code. Why: the reference parts live only here, never in the box.
 **Consistency check before any paid run (CPU only, cents):** (a) run all 7 hand answers of experiments/freecad/hand/
-IN the cloud box → 5 PASS + 2 FAIL through the cloud grader, exactly as on the Mac, with bbox and volume within 1e-9
-relative of the Mac-made parts; (b) the 30 CadQuery references through the cloud grader → 30/30 PASS. Why: (a) tests
+IN the cloud box → 5 PASS + 2 FAIL through the cloud grader, exactly as on the Mac, with bbox and volume within 1e-6
+relative of the Mac-made parts (was 1e-9; Mac arm64 vs cloud x86 differ by up to 6.4e-8, FIX_SPEC round 3); (b) the 30 CadQuery references through the cloud grader → 30/30 PASS. Why: (a) tests
 the Linux FreeCAD box itself, (b) tests the grader; together they show the cloud gives the same verdicts as the Mac.
 
 ## 2b. Mac side

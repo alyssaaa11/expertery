@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "~/projects/forge/experiments/freecad/cloud_exec.py", line 509, in <module>
+    _sys.exit(main())
+              ^^^^^^
+  File "~/projects/forge/experiments/freecad/cloud_exec.py", line 497, in main
+    check_hand(args.check_hand or None)
+  File "~/projects/forge/experiments/freecad/cloud_exec.py", line 330, in check_hand
+    boxed = (exec_fn or run_answer_in_box)(source)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/projects/forge/experiments/freecad/cloud_exec.py", line 184, in run_answer_in_box
+    sandbox.filesystem.write_text(
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/sandbox/_filesystem.py", line 619, in write_text
+    validate_absolute_remote_path(remote_path, "write_text")
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/sandbox_fs_utils.py", line 337, in validate_absolute_remote_path
+    raise InvalidError(f"Sandbox.filesystem.{operation}() currently only supports absolute remote_path values")
+modal.exception.InvalidError: Sandbox.filesystem.write_text() currently only supports absolute remote_path values

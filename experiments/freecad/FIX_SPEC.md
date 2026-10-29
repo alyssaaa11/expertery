@@ -67,3 +67,24 @@ method (Mac freecadcmd: `type(s.Solids)` → list); network is blocked (URLError
    network; an answer that lists `/` and `/work` and searches for files named like jobs/expected/reference → none
    found (it writes what it found into an error so it shows in `run_error`). Prints `SAFETY OK` only if all four hold.
 Run the same pytest line until all pass. Short report: files changed, pytest line, anything not followed.
+
+## Round 3 (Claude's free cloud checks after fd43235; results/freecad-checks-2026-10-29/probe-results.md) — binding
+Image check passed (FreeCAD 1.1.4). With the bugs below patched around in a throwaway probe, the cloud gives the Mac's
+verdicts: hand 5 PASS / 2 FAIL, SAFETY OK, REFS 30/30 PASS. Fix exactly these:
+1. **write_text argument order:** Modal 1.6.3 is `filesystem.write_text(data, remote_path)`; call it with keywords
+   `write_text(data=..., remote_path=...)`. Add a test that reads `inspect.signature` of
+   `modal.sandbox._filesystem._SandboxFilesystem.write_text` / `read_bytes` / `read_text` (skip if modal is missing)
+   and asserts the parameter names the code uses exist. Make the fake filesystem use the same parameter names. Why:
+   the fake accepted the reversed order, so tests passed and the real box crashed.
+2. **Missing file:** reading a missing STEP/measure raises `modal.exception.SandboxFilesystemNotFoundError`; treat it
+   (and FileNotFoundError) as "the answer wrote no STEP" (a FAIL with the ERROR line), not as a harness error.
+3. **Grader app:** run grader calls inside the App that defines `grade` (`cloud_grade._app.run()`), in
+   cloud_grade.py main and runner_fc.py main; `App.lookup(...).run()` fails with "App is already running". Keep
+   App.lookup only for the sandbox app.
+4. **Grader image:** add `.apt_install("libgl1", "libglib2.0-0", "libxrender1", "libx11-6", "libxext6")` before
+   pip (CadQuery's OCP needs libGL.so.1).
+5. **Hand tolerance = 1e-6** (decision, Claude 2026-10-29, disclosed): the Mac (arm64) and the cloud box (x86) give the
+   same verdicts but bbox/volume differ by up to 6.4e-8 relative (float differences between builds). The gate is the
+   strict referee's 1e-6, so "same part" means the same as in the factory data check. `HAND OK` needs the 5/2
+   verdicts AND every difference ≤ 1e-6.
+Same pytest line until all pass. Short report: files changed, pytest line, anything not followed.

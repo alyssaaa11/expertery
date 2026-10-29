@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "~/projects/forge/experiments/freecad/cloud_grade.py", line 254, in <module>
+    _sys.exit(main())
+              ^^^^^^
+  File "~/projects/forge/experiments/freecad/cloud_grade.py", line 244, in main
+    with lookup_grader_app().run():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/contextlib.py", line 210, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/app.py", line 497, in run
+    async with _run_app(
+               ^^^^^^^^^
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/contextlib.py", line 210, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/runner.py", line 394, in _run_app
+    raise InvalidError(
+modal.exception.InvalidError: App is already running and can't be started again.
+You should not use `app.run` or `run_app` within a Modal `local_entrypoint`
