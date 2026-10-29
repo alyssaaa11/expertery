@@ -74,3 +74,15 @@ allows going above $30 (2026-10-29: "u can spend more"), within the $35 agreed f
   - rule 7 now covers any part given by its outside size: cable gland, motor body and shaft housing (E5, E2, C2).
   - STANDARDS.md sha256 = 162f9fa119574b92575f696e55d5fa1010363d32d1f9b1ed7fd63fec9b914f0e (the runner's frozen
     constant must equal this).
+
+## Pre-run changes (2026-10-29, before any paid call on this exam)
+- decision (user via Claude, 2026-10-29): NDS-1 grows to 40 rules. Rules 1-10 are unchanged. Rules 11-40 are
+  realistic distractors: steel, sheet metal, countersunk screws, inserts, captive nuts, features made only on request,
+  and threshold exceptions. None changes any job's geometry. The thinking gap is FINDING which rules apply.
+  Rule 15 (a lid takes its enclosure's material) resolves E6, which the verifier flagged as ambiguous.
+  verified: selftest 18/18 after the change. STANDARDS.md sha256 = f9aa341e6224fdfbf0770900b9404fbf3146577e0640b91b5cc1e6b31784877c.
+- decision (verifier early blocker, m1793301049415-175): **the verdict for rates and every rule is the 1e-6 grade**.
+  The 0.2% grade is reported as a reference only. Why: at 0.2%, 4 rule-breaking answers passed (pilots through the
+  floor in T6, T8 and T10, and T7's counterbore cut from outside). The hand-built FreeCAD T6 and T8 PASS at 1e-6.
+- decision (user): Glimmer's time and tokens per answer are a main result next to accuracy (median s, output tokens,
+  $ per answer, G÷S ratios). If accuracy ties, "same accuracy, N× cheaper and faster, private" is the factory case.

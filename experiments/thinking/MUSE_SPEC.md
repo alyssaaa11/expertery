@@ -76,3 +76,23 @@ denominator in experiments/thinking/PLAN.md.
 - An offline test shows the thinking prompt contains the manual, the standard and the job text in that order.
 
 Report: list the files changed, give the pytest line, and name anything not followed.
+
+## Round 2 (binding; from the verifier's early blocker and the user's 2026-10-29 points)
+1. **Verdict at 1e-6 for the thinking exam.** For `--exam thinking`, the PASS/FAIL that rates and decisions use is the
+   grader's `tight` field (1e-6). Record the 0.2% `verdict` next to it, and report it as a second table titled "0.2%
+   (for reference, not the decision)". Why: at 0.2% the verifier found 4 rule-breaking answers that PASS (a pilot
+   through the floor, a counterbore from the wrong side). first-test keeps 0.2% as before.
+   Test: a fake record with verdict PASS and tight FAIL counts as FAIL under the thinking exam and as PASS under
+   first-test.
+2. **Speed and cost per answer as a main result.** summary.json and report.md give, per arm:
+   - median and mean wall time per answer in seconds, from request sent to response received;
+   - mean input tokens, cached tokens and output tokens;
+   - $ per answer;
+   - answers per dollar.
+   Put this table directly under the accuracy table, under the heading "Speed and cost per answer". Also write the
+   ratios G÷S and S÷G for time and $. Every calls.jsonl record already has, or must get, `t_call_s` (wall time of the
+   model call only) and its usage.
+3. **Frozen standard.** The STANDARDS.md SHA-256 constant must equal
+   f9aa341e6224fdfbf0770900b9404fbf3146577e0640b91b5cc1e6b31784877c (NDS-1 with 40 rules).
+4. **Call timeout and tokens.** The prompt is now longer (manual + a 40-rule standard). Keep max_tokens and the call
+   timeout as for the first-test FreeCAD run, and log the prompt token count of the first call per arm.

@@ -27,3 +27,60 @@ An "inside space" height or depth is always measured from the top of the floor t
     with a rectangular lip ring under it that goes into the enclosure opening. The lip's outside is the enclosure's
     inside minus 0.3 on every side (0.6 smaller in X and in Y); its walls have the rule-6 thickness and it is 4 tall. A lid is modelled upside
     down: the plate on Z = 0 to its thickness, the lip on top of it (rule 1).
+
+## Further rules (NDS-1 sections 11-40)
+
+**Materials and thickness**
+11. **Steel** parts (only when the request says steel): walls, floors and plates 2.0 thick; corner holes (rule 5) are
+    inset 1.5 × screw size instead of 2 ×.
+12. **Sheet-metal** parts (only when the request says sheet metal): thickness 1.5, inside bend radius 1.5, and no
+    counterbores; use countersinks (rule 16) instead.
+13. **Aluminium enclosures and housings whose inside is deeper than 60** have walls and floor 5 thick instead of 4.
+    Shallower ones keep rule 6.
+14. **Plastic plates thinner than 3** never get counterbores; their socket-head screws get a plain clearance hole.
+15. A **lid** is made of the same material as the enclosure it closes, unless the request names its material.
+
+**Other fasteners**
+16. **Countersunk screws** (only when the request says countersunk): 90° countersink from the top face, top
+    diameter M3 → 6.3, M4 → 8.4, M5 → 10.4, M6 → 12.4; the clearance hole (rule 3) continues below.
+17. **Tapped holes** (only when the request says tapped or threaded): drill diameter M3 → 2.5, M4 → 3.3, M5 → 4.2,
+    M6 → 5.0, and no clearance hole.
+18. **Heat-set inserts** (only when the request says insert): the boss pilot (rule 8) is replaced by a hole of
+    M3 → 4.0, M4 → 5.6, M5 → 6.4, as deep as the boss is tall.
+19. **Captive nuts** (only when the request says captive nut): a hexagonal pocket from the bottom face, across flats
+    M3 → 5.7, M4 → 7.1, M5 → 8.1, depth equal to the nut height (M3 2.4, M4 3.2, M5 4.0).
+20. **Press-fit pins** (only when the request says press-fit): hole diameter = pin diameter − 0.05.
+21. **Washers** are not modelled; never add washer seats unless the request asks for them.
+
+**Features made only on request**
+22. **Ventilation slots** (only when the request asks for ventilation): a row of 2 × 15 slots on the long walls, 4
+    apart, centred at half the inside height.
+23. **Stiffening ribs** (only when the request asks for ribs): 0.6 × wall thickness, from the floor to 2 below the rim.
+24. **Feet** (only when the request says with feet): four cylinders of diameter 8, 2 tall, under the floor, inset 6
+    from both outer edges; the part then stands on the feet, so Z = 0 is the bottom of the feet.
+25. **Edge fillets and chamfers** are not modelled unless the request gives their size.
+26. **Draft** (only for parts the request calls injection-moulded): 1° on walls; otherwise walls are vertical.
+27. **Engraved text or part numbers** are not modelled unless the request asks for them.
+28. **Cable entries** (only when the request asks for a cable entry in a wall): a round hole in the shorter wall,
+    diameter = cable diameter + 1, centred at half the inside height.
+29. **Snap-fit hooks** and **hinges** are not modelled unless the request asks for them.
+30. **Light pipes and display windows** (only when requested): a rectangular through-cut in the lid with 0.2
+    clearance per side.
+
+**Exceptions and limits**
+31. **Bosses taller than 40** get four triangular gussets; bosses of 40 or less have none.
+32. **Mounting slots longer than 30** have a 1 wide relief groove around them; shorter slots have none.
+33. **Lids for enclosures whose inside is smaller than 20 in X or in Y** have a 3 tall lip instead of 4 (rule 10).
+34. **Counterbores deeper than 90% of the material they are cut into** are not allowed; use a plain clearance hole
+    instead (only then). A counterbore of 90% or less is made as rule 4 says.
+35. **Corner holes in parts whose shorter side is less than 8 × screw size** (M4 → 32) move to the centre line;
+    other parts keep rule 5.
+36. **Plastic parts for outdoor use** (only when the request says outdoor): walls 3.5 instead of 2.5.
+37. **Enclosures for batteries** (only when the request says battery): clearance 1.0 per side instead of rule 7's 0.5.
+
+**Drawing and model conventions**
+38. A model is one solid; separate parts (screws, boards, pipes, motors, modules) are never modelled, only the space
+    they need.
+39. Hole and boss positions given in a request are measured from the part's centre (rule 1), not from an edge,
+    unless the request says "from the edge".
+40. Where a request and this standard disagree, the request wins.
