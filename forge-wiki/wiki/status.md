@@ -60,8 +60,8 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
      Wonder rescues; the rule is evaluated on T and on S alone (PLAN rule 5), and the report labels a decision that
      rests on Wonder (closed API). Same `--escalate` in the factory, with a teacher tag per record.
    - decision (Claude, following existing accounting): Meta credit for Wonder counts inside Forge's budget.
-   - hypothesis: META_HERDSHOT_API_KEY is on the user's own Meta account (alyssasancho); the user is OK if so but has not
-     confirmed it. Check in the Meta developer dashboard (API keys list) before the W arm runs (verifier A6 open).
+   - verified (user saw the HerdShot key in their own Meta developer key list, 2026-10-29): Wonder uses
+     META_HERDSHOT_API_KEY on the user's own Meta account (verifier A6 closed).
    - verified: modal 1.6.3 + cadquery 2.8.0 in the forge venv (verifier evidence/02, forge-freecad-escalation).
    - Verifier: READY WITH 3 EDITS, rubric 6/7/5 (forge-freecad-escalation-2026-10-29); edits applied f999208 + 7854051.
    - **Now:** Muse Code build (FreeCAD cloud box + grader + runner_fc with W + training round 2) running, log
