@@ -71,7 +71,9 @@ Budget **$30 max** for the whole project (user), so credits stay free for anothe
 - **2026-10-29 step 1 done (user yes):** Muse Code built the sandbox + BX arm (cd29dfa). verified: pytest 62/62 (outside
   Muse's shell); 30 blind references pass through the sandbox 30/30. Cost: 62 calls, 6.30M input (6.15M cached), 62.5k
   output → ≈ $1.4-1.55 Meta (run.usage × $1.25 / $0.15 / $4.25 per M), over the $0.8-1.2 estimate. **Spend ≈ $11.3 of
-  $30.** Open: my spec bug (no self-check after a crash is fixed); verifier check requested; then the user's yes for step 2.
+  $30.** Verifier: GO WITH FIXES (0 wrong). Muse Code fix session (user yes) ≈ $1.1-1.2 (56 calls); pytest 73/73,
+  refs 30/30 sandboxed; PLAN frozen by hash (cd0716e). **Spend ≈ $12.5 of $30.** Verifier re-check requested; then the
+  run (user yes given 2026-10-29: 30 jobs, BR k=1, B2/BX k=3, ≈ $1.3-2.2).
 - **2026-10-29 NEW GOAL, decision (user):** "same quality as Glimmer + all fair cheap fixes, but many times cheaper and
   faster, and private" ([[new-goal-2026-10-29]]). Next: the user's yes for step 1 (Muse Code: sandbox + B-max arm).
 - **2026-10-29 morning, decision (user):** all 6 = yes, but cheapest kill tests first. verified: the free coverage audit
