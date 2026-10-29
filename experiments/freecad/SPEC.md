@@ -55,7 +55,11 @@ guard, k and workers handling. Replace only:
   verdict** (the baseline's yardstick) and 1e-6 is also recorded. Nothing from the model runs on the Mac; the Mac only
   coordinates and writes logs. Run up to 8 sandboxes in parallel.
 - arms: `G` = Glimmer (same body as arm B: max_tokens 16000, temperature 1.0, top_p 0.95, top_k 64); `S` = Spark Open
-  on Baseten (meta-models/muse-spark-open-1026, same sampling, header x-session-affinity, log cached_tokens). k = 1.
+  on Baseten (meta-models/muse-spark-open-1026, same sampling, header x-session-affinity, log cached_tokens); `W` = Muse
+  Wonder (`muse-wonder-1.0`, https://api.meta.ai/v1 chat completions, key from env META_KEY, same messages, max_tokens
+  16000; reasoning tokens are billed as output) run only on job ids that FAILED in S's calls.jsonl (`--escalate-from <S
+  run dir>`), with its own budget guard (`--budget-w`, $20/M output, $4/M input, $0.20/M cached). k = 1. Summary adds
+  T = S ∪ W-rescues per job and evaluates the PLAN rule on T (S alone reported too).
 - every FAIL is tagged `api_error` (the answer raised during the run: AttributeError, TypeError, NameError, Part
   errors, timeout, memory limit, PermissionError) or `wrong_geometry` (built but failed the checker, or `result` is not
   a Part solid); a reply cut off by the token limit is INVALID (as in the baseline). Why: API errors are tool knowledge that training

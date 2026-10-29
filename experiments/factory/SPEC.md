@@ -57,6 +57,10 @@ Pilot = the 20 non-dev ids that come first per family (2 per family), never dev 
 `--ids train` skips every id that already has an answer in earlier runs' calls.jsonl (pass `--prior <dirs>`), and
 train_records.jsonl holds at most one record per id (the first PASS). Why: without this the pilot jobs get paid for
 twice and the same job could appear twice in training (verifier A6).
+`--escalate` (decision, user 2026-10-29): for every id Spark FAILED, ask Muse Wonder (`muse-wonder-1.0`, api.meta.ai,
+META_KEY, same prompt) once; keep its answer only if it PASSES at 1e-6. Each record gets `teacher: spark|wonder`;
+summary reports the share of records from Wonder (why: privacy reporting; Wonder is a closed API). Separate budget
+`--budget-w` (Meta credit).
 `--retry-failed` re-asks only FAILed ids (k = 2 at most) while the budget lasts. The budget guard stops new calls when
 spent + 8 in-flight calls × $0.075 would pass the budget (why: in-flight answers still cost money, verifier A2).
 Log `cached_tokens` from usage in every record (why: x-session-affinity caching is not verified; cost depends on it).

@@ -18,7 +18,12 @@ Spark Open + the same manual? If so, FreeCAD is the factory's training target (a
   before any run. Why: otherwise the result can be blamed on the manual.
 - Sandbox: the Keel v2-style profile + FreeCAD's own install readable; `import cadquery` / `OCP` blocked inside the
   answer run. Why: FreeCAD can run CadQuery; Glimmer could cheat by writing CadQuery.
-- Arms (k = 1, one session each): **G** = Glimmer + FreeCAD manual + job; **S** = Spark Open (Baseten) + the same.
+- Arms (k = 1, one session each): **G** = Glimmer + FreeCAD manual + job; **S** = Spark Open (Baseten) + the same;
+  **W** = Muse Wonder (`muse-wonder-1.0`, api.meta.ai, Meta credit) + the same, run **only on the jobs S failed**
+  (decision, user 2026-10-29: "if Spark fails, it contacts Wonder to be helped"). **Teacher T** = jobs passed by S or
+  by W after S failed. Why: shows whether an escalating teacher team can produce correct FreeCAD answers where Spark
+  alone cannot. Privacy note: W sends the job + manual to Meta's API; in a real confidential deployment the escalation
+  is switched off or uses a stronger open model; every record says which teacher made it.
 - Every failure tagged: API error / crash (tool knowledge: training can fix) vs wrong geometry (general skill).
 
 ## Free checks before any paid call
@@ -50,13 +55,14 @@ done with Claude's hand-written answers only.
 
 ## Decision rule (pre-registered; reuses the Oct 28 day-1 gate; n = 30 at k = 1 ≈ ±17 points, act only on clear margins)
 Revised after the verifier's check (forge-freecad-2026-10-29, READY WITH 3 EDITS), before any paid call:
-1. **S < 70% → RUN INVALID for FreeCAD: stay on CadQuery.** No manual fix on exam failures (that would tune the manual on
+1. **T < 70% → RUN INVALID for FreeCAD: stay on CadQuery.** No manual fix on exam failures (that would tune the manual on
    the exam). A manual fix is allowed only after a new user approval and is tested on the dry jobs D1-D3 only.
    Why: re-running after fixing the manual on exam failures re-touches the exam and biases the result.
-2. G ≤ 60% AND S ≥ 75% AND S − G ≥ 20 points AND ≥ 8 jobs pass in S but not in G → **FreeCAD becomes the factory target**.
+2. G ≤ 60% AND T ≥ 75% AND T − G ≥ 20 points AND ≥ 8 jobs pass in T but not in G → **FreeCAD becomes the factory target**
+   (teacher = Spark with Wonder escalation). S alone and W's rescues are reported separately.
 3. G ≥ 75% → stay on hard CadQuery jobs.
 4. Otherwise (grey zone) → **default: stay on CadQuery.** FreeCAD only if api_error ≥ 60% of G's FAILs AND ≥ 6 jobs pass
-   in S but not in G. No re-run of only the differing jobs (selecting on the outcome shrinks the gap by regression).
+   in T but not in G. No re-run of only the differing jobs (selecting on the outcome shrinks the gap by regression).
    Why: the grey zone also decides whether to go above the $30 cap, so it must be a fixed rule, not a judgement call.
 Failure tags: api_error = the answer raised, timed out, hit the memory limit or a PermissionError; wrong_geometry =
 built but failed the checker, or `result` was not a Part solid; cut off by the token limit = INVALID (as the baseline).
@@ -66,7 +72,8 @@ Manual note (not changed, hash frozen): its line "Part.show() is not available" 
 harmless.
 
 ## Money
-Muse Code runner adapter + sandbox ≈ $1-1.2; Glimmer 30 answers ≈ $1 (cold start + run); Spark 30 answers ≈ $0.7.
+Muse Code build ≈ $1.2-1.5; Glimmer 30 answers ≈ $1 (cold start + run); Spark 30 answers ≈ $0.7; Wonder only on S's
+failures ≈ $0.10 each (≈ $0.5-2, Meta credit, cap $3); cloud sandboxes + grader ≈ $0.1.
 ≈ $3 total, cap $3.50 (session cap via experiments/common/run_session.sh, Baseten guard). Forge total after: ≈ $22.7;
 the full plan after the test (factory ≈ $5, training ≈ $4, final ≈ $1.5) ≈ $33-34 → needs the user's budget answer.
 
