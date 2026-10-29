@@ -96,3 +96,20 @@ Report: list the files changed, give the pytest line, and name anything not foll
    f9aa341e6224fdfbf0770900b9404fbf3146577e0640b91b5cc1e6b31784877c (NDS-1 with 40 rules).
 4. **Call timeout and tokens.** The prompt is now longer (manual + a 40-rule standard). Keep max_tokens and the call
    timeout as for the first-test FreeCAD run, and log the prompt token count of the first call per arm.
+5. **The thinking rules run everywhere they decide.** With exam = thinking, `build_fc_summary`, the end-of-run
+   summary and `--summarize` must all call `decide_thinking`, using k as recorded in the records, not a hard-coded
+   k = 1. `--summarize` reads the exam from the records.
+6. **Never mix exams.** `--escalate-from` and `--summarize` refuse, with exit 2 and a clear message, when the run
+   dirs' exams differ from each other or from `--exam`. A record without `exam` counts as first-test. Test: a
+   thinking S dir plus a first-test dir is refused.
+7. **INVALID inside the decision.**
+   - In the wins count ("S passes ≥ 2 of 3, G passes ≤ 1 of 3"), an INVALID sample counts as not passed for S and
+     as passed for G. This is conservative against claiming a gap.
+   - W's INVALID answers count as "not rescued". Rule 0's 5% gate applies to G and S only.
+   - Test both cases.
+8. **Small items.**
+   - Live append to calls.jsonl goes under a threading lock, because there are 8 workers.
+   - Wonder's cached input is priced at $0.20/M.
+   - The box image must not include experiments/thinking/; add a test that inspects the image's local files.
+   - "Done when" uses `pytest -q experiments/freecad experiments/train experiments/common`: the old 107 must still
+     pass, plus the new tests.

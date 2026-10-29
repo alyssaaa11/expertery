@@ -86,3 +86,16 @@ allows going above $30 (2026-10-29: "u can spend more"), within the $35 agreed f
   floor in T6, T8 and T10, and T7's counterbore cut from outside). The hand-built FreeCAD T6 and T8 PASS at 1e-6.
 - decision (user): Glimmer's time and tokens per answer are a main result next to accuracy (median s, output tokens,
   $ per answer, G÷S ratios). If accuracy ties, "same accuracy, N× cheaper and faster, private" is the factory case.
+- Verifier pre-build NO-GO (forge-thinking-prebuild-2026-10-29, rubric 2/7/4) and its fixes:
+  - M1: rule 34 now says "90% of the material it is cut into". T7 is 87.5% and E2 is 81%, so both references keep
+    their counterbores (fixed before the report arrived).
+  - M2: decision at 1e-6.
+  - M3: thinking rules in summary and --summarize (Muse round 2 item 5).
+  - M4: refuse mixed exams (item 6).
+  - M5: sha frozen in round 2.
+  - The rules are applied first-match in the order 0 → 4.
+  - In "of 3", an INVALID sample counts as not passed for S and as passed for G (conservative). W's INVALID counts as
+    not rescued, and rule 0 covers G and S only.
+  - Correction: k = 3 reduces within-job noise (by less than √3), not job-level noise. With 13 jobs, rule 2's
+    "≥ 4 wins" condition carries the claim.
+  - W cannot change the decision (S governs); it only gives the privacy share.
