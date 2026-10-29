@@ -507,6 +507,8 @@ def main(argv=None):
     --check-safety runs the four safety probes."""
     import argparse as _ap
 
+    import cloud_grade as _cloud_grade  # noqa: E402  (grader app context)
+
     parser = _ap.ArgumentParser(description="FreeCAD cloud-box checks.")
     parser.add_argument("--check-image", action="store_true")
     parser.add_argument("--check-hand", nargs="*", default=None,
@@ -518,7 +520,15 @@ def main(argv=None):
         check_image()
         return 0
     if args.check_hand is not None:
-        check_hand(args.check_hand or None)
+        if modal is None:
+            raise RuntimeError(
+                "modal is not installed; cannot reach the grader")
+        # Grader calls need an app context ("Function has not been
+        # hydrated" without it): grade inside the App that defines
+        # grade, as in cloud_grade.main and runner_fc.main.
+        with modal.enable_output():
+            with _cloud_grade._app.run():
+                check_hand(args.check_hand or None)
         return 0
     if args.check_safety:
         check_safety()

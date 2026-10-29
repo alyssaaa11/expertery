@@ -438,9 +438,14 @@ def test_session_wrapper_uses_the_hook():
     assert "--budget 3.50" not in src and "--budget 3.5" not in src
     assert "CAP=3.50" in src
     assert "run_session.sh" in src
-    # Keys loaded without printing, refusing when empty.
-    assert "envsave get BASETEN_API_KEY" in src
-    assert "envsave get META_HERDSHOT_API_KEY" in src
+    # Keys loaded without printing, refusing when empty. envsave takes
+    # the OPAQUE id, not the name (Round 4.3): the Baseten id inline,
+    # the HerdShot id read at run time from muse-wonder with grep.
+    assert "envsave get es_LMDrY_C1YRDJYOAGLb2hB1y5WpczSEujtnquV4V5DTzZSMhp" \
+        in src
+    assert "envsave get BASETEN_API_KEY" not in src
+    assert "envsave get META_HERDSHOT_API_KEY" not in src
+    assert "muse-wonder" in src and "grep" in src
     assert "refusing to run" in src
     assert "echo $BASETEN" not in src and "echo $META" not in src
     hook = open(os.path.join(HERE, "..", "common", "run_session.sh"),
@@ -581,6 +586,100 @@ def test_summary_counts_harness_and_invalid_per_arm(tmp_path):
     assert summary["failure_tags"]["G"]["INVALID"] == 1
     assert summary["run_invalid"] is True  # 1/2 is over 5%
     assert summary["decision"] == "RUN INVALID"
+
+
+def _write_calls_jsonl(path, records):
+    with open(path, "w", encoding="utf-8") as f:
+        for r in records:
+            f.write(json.dumps(r) + "\n")
+
+
+def _disagreement_run_dirs(tmp_path):
+    """Two small fake runs: T is FreeCAD target, S alone is not."""
+    ids = ["J%d" % i for i in range(1, 11)]
+    gs = [rec(j, "G", "PASS" if i < 2 else "FAIL",
+              "" if i < 2 else "api_error")
+          for i, j in enumerate(ids)]
+    gs += [rec(j, "S", "PASS" if i < 7 else "FAIL",
+               "" if i < 7 else "wrong_geometry")
+           for i, j in enumerate(ids)]
+    w = [rec(j, "W", "PASS") for j in ("J8", "J9", "J10")]
+    gs_dir, w_dir = tmp_path / "main-GS", tmp_path / "main-W"
+    gs_dir.mkdir()
+    w_dir.mkdir()
+    _write_calls_jsonl(str(gs_dir / "calls.jsonl"), gs)
+    _write_calls_jsonl(str(w_dir / "calls.jsonl"), w)
+    return str(gs_dir), str(w_dir)
+
+
+def test_summarize_unites_gs_and_w_and_reports_both_lines(tmp_path):
+    gs_dir, w_dir = _disagreement_run_dirs(tmp_path)
+    out = str(tmp_path / "decision")
+    records, summary = runner_fc.summarize_runs(gs_dir, w_dir, out)
+    assert len(records) == 23  # 20 GS + 3 W rescues
+    assert summary["decision_t"] == "FreeCAD target"
+    assert summary["decision_s"] == "stay on CadQuery (grey zone)"
+    assert summary["decision"] == "FreeCAD target only with " \
+        "Wonder escalation (closed API)"
+    assert summary["wonder_share"] == pytest.approx(0.3)
+    assert summary["rate_g"] == pytest.approx(0.2)
+    assert summary["rate_s"] == pytest.approx(0.7)
+    assert summary["rate_t"] == pytest.approx(1.0)
+    assert summary["run_invalid"] is False
+    assert os.path.isfile(os.path.join(out, "summary.json"))
+    report = open(os.path.join(out, "report.md"), encoding="utf-8").read()
+    assert "FreeCAD target only with Wonder escalation" in report
+    assert "PLAN rule 5: disagreement → stay on CadQuery" in report
+    assert "Wonder's share" in report
+
+
+def test_summarize_rule6_case_is_run_invalid(tmp_path):
+    gs_dir, w_dir = tmp_path / "main-GS", tmp_path / "main-W"
+    gs_dir.mkdir()
+    w_dir.mkdir()
+    _write_calls_jsonl(str(gs_dir / "calls.jsonl"), [
+        {"job": "J1", "arm": "G", "outcome": "PASS", "failure_tag": "",
+         "usage": {}},
+        {"job": "J2", "arm": "G", "outcome": "INVALID",
+         "failure_tag": "harness", "run_error": "harness: boom",
+         "usage": {}},
+        {"job": "J1", "arm": "S", "outcome": "PASS", "failure_tag": "",
+         "usage": {}},
+        {"job": "J2", "arm": "S", "outcome": "PASS", "failure_tag": "",
+         "usage": {}},
+    ])
+    _write_calls_jsonl(str(w_dir / "calls.jsonl"), [])
+    out = str(tmp_path / "decision")
+    records, summary = runner_fc.summarize_runs(gs_dir, w_dir, out)
+    assert len(records) == 4
+    assert summary["decision"] == "RUN INVALID"
+    assert summary["run_invalid"] is True
+    assert summary["run_invalid_arms"]["G"] == pytest.approx(0.5)
+    report = open(os.path.join(out, "report.md"), encoding="utf-8").read()
+    assert "RUN INVALID" in report
+    assert "PLAN rule 5: disagreement → stay on CadQuery" in report
+
+
+def test_summarize_cli_needs_no_keys_or_suite(monkeypatch, tmp_path):
+    gs_dir, w_dir = _disagreement_run_dirs(tmp_path)
+    out = str(tmp_path / "decision")
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("summarize must not run the suite")
+
+    monkeypatch.setattr(runner_fc, "run_suite_fc", _boom)
+    for var in ("GLIMMER_URL", "GLIMMER_KEY", "BASETEN_KEY",
+                "META_HERDSHOT_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    rc = runner_fc.main(["--summarize", gs_dir, w_dir, "--out", out])
+    assert rc == 0
+    assert os.path.isfile(os.path.join(out, "summary.json"))
+    assert os.path.isfile(os.path.join(out, "report.md"))
+
+
+def test_cli_needs_jobs_or_summarize(tmp_path):
+    with pytest.raises(SystemExit):
+        runner_fc.main(["--out", str(tmp_path / "o")])
 
 
 def test_main_runs_suite_inside_grader_app_context(monkeypatch, tmp_path):

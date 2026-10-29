@@ -773,3 +773,67 @@ def test_check_safety_cli_flag(monkeypatch, capsys):
         }))
     assert cloud_exec.main(["--check-safety"]) == 0
     assert "SAFETY OK" in capsys.readouterr().out
+
+
+def test_check_hand_cli_grades_inside_grader_app(monkeypatch, tmp_path,
+                                                 capsys):
+    """--check-hand runs inside the App that defines grade (Round 4.2):
+    without the app context the grader call fails with "Function has
+    not been hydrated". The app is patched; box and grader are faked."""
+    import cloud_grade
+
+    events = []
+
+    class _Ctx:
+        def __init__(self, name):
+            self._name = name
+
+        def __enter__(self):
+            events.append("enter:" + self._name)
+            return self
+
+        def __exit__(self, *args):
+            events.append("exit:" + self._name)
+            return False
+
+    class _Modal:
+        @staticmethod
+        def enable_output():
+            events.append("enable_output")
+            return _Ctx("output")
+
+    class _App:
+        def run(self):
+            events.append("app.run")
+            return _Ctx("app")
+
+    monkeypatch.setattr(cloud_exec, "modal", _Modal())
+    monkeypatch.setattr(cloud_grade, "_app", _App())
+    hand = tmp_path / "M1.py"
+    hand.write_text("result = 1", encoding="utf-8")
+    monkeypatch.setattr(
+        cloud_exec, "run_answer_in_box",
+        lambda source: {"step_bytes": b"S", "measure": {}, "log": "",
+                        "run_error": None})
+
+    class _Grade:
+        def remote(self, job_id, step):
+            assert job_id == "M1"  # file name prefix, not the file
+            return {"verdict": "PASS", "tight": "PASS", "fails": [],
+                    "measurements": {"bbox": [0, 0, 0, 10, 5, 2],
+                                     "volume": 100.0}}
+
+    monkeypatch.setattr(cloud_grade, "grade", _Grade())
+    assert cloud_exec.main(["--check-hand", str(hand)]) == 0
+    assert events[0] == "enable_output"  # grader calls get an app context
+    assert "app.run" in events
+    out = capsys.readouterr().out
+    assert "M1: PASS" in out
+
+
+def test_check_hand_cli_refuses_without_modal(monkeypatch, tmp_path):
+    monkeypatch.setattr(cloud_exec, "modal", None)
+    hand = tmp_path / "M1.py"
+    hand.write_text("result = 1", encoding="utf-8")
+    with pytest.raises(RuntimeError):
+        cloud_exec.main(["--check-hand", str(hand)])

@@ -11,10 +11,12 @@
 set -u
 FORGE=~/projects/forge
 # Keys loaded without printing them (never echo a key); refuse when empty.
-export BASETEN_KEY=$(envsave get BASETEN_API_KEY)
-[ -z "$BASETEN_KEY" ] && { echo "BASETEN_API_KEY is empty (envsave get BASETEN_API_KEY); refusing to run"; exit 1; }
-export META_HERDSHOT_API_KEY=$(envsave get META_HERDSHOT_API_KEY)
-[ -z "$META_HERDSHOT_API_KEY" ] && { echo "META_HERDSHOT_API_KEY is empty (envsave get META_HERDSHOT_API_KEY); refusing to run"; exit 1; }
+# envsave takes the OPAQUE id, not the name.
+export BASETEN_KEY=$(envsave get es_LMDrY_C1YRDJYOAGLb2hB1y5WpczSEujtnquV4V5DTzZSMhp)
+[ -z "$BASETEN_KEY" ] && { echo "Baseten key is empty (envsave); refusing to run"; exit 1; }
+HERDSHOT_ID=$(grep -o -m1 'es_[A-Za-z0-9_]*' "$HOME/.local/bin/muse-wonder" 2>/dev/null)
+export META_HERDSHOT_API_KEY=$(envsave get "$HERDSHOT_ID")
+[ -z "$META_HERDSHOT_API_KEY" ] && { echo "HerdShot key is empty (envsave); refusing to run"; exit 1; }
 export RUN_SESSION_RUNNER_CMD="$FORGE/.venv/bin/python -I $FORGE/experiments/freecad/runner_fc.py --workers 8 --budget-c 3.00 --budget-w 3.00"
 OUT=$1; shift
 CAP=3.50

@@ -16,6 +16,7 @@ writes logs. Up to 8 sandboxes run in parallel.
 CLI: runner_fc.py --jobs main --out <dir> --arms G,S --k 1 --workers 8
   --budget <$> --budget-c <$> [--budget-w <$>] [--escalate-from <S run dir>]
   [--w-smoke] [--w-endpoint <url>]
+  runner_fc.py --summarize <GS run dir> <W run dir> --out <dir>
 """
 
 import argparse
@@ -592,6 +593,45 @@ def s_failed_job_ids(s_run_dir):
     return ids
 
 
+def read_calls_jsonl(run_dir):
+    """Records from one run dir's calls.jsonl (blank lines skipped)."""
+    records = []
+    with open(os.path.join(run_dir, "calls.jsonl"), encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                records.append(json.loads(line))
+    return records
+
+
+def summarize_runs(gs_dir, w_dir, out_dir):
+    """Decision over the union of the GS and W runs (FIX_SPEC Round 4.1).
+
+    Each run's own summary sees only its own records, so the
+    pre-registered T rule (T = S ∪ W-rescues) was never computed by
+    code. This reads both calls.jsonl files, runs evaluate_fc_decision
+    on the union, and writes summary.json + report.md into `out_dir`
+    (G, S, T rates, Wonder's share of T's passes, rules 1-4 on T and
+    on S, rule 6, both decision lines). No model, Modal, or network
+    calls: pure local reads and arithmetic.
+    """
+    records = read_calls_jsonl(gs_dir) + read_calls_jsonl(w_dir)
+    arms = tuple(sorted({r.get("arm") for r in records if r.get("arm")}))
+    summary = build_fc_summary(records, [], [], 0.0, None, None, None,
+                               False, False, False, arms, k=1, workers=None)
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, "summary.json"), "w",
+              encoding="utf-8") as f:
+        json.dump(summary, f, indent=1)
+    with open(os.path.join(out_dir, "report.md"), "w",
+              encoding="utf-8") as f:
+        f.write(build_fc_report(summary))
+    print("Decision on T: %s" % summary["decision_t"])
+    print("Decision on S alone: %s" % summary["decision_s"])
+    print("Report decision: %s" % summary["decision"])
+    return records, summary
+
+
 def run_suite_fc(jobs, manual_text, out_dir, arm_cfgs, key_map,
                  budget=3.5, budget_c=3.0, budget_w=3.0,
                  arms=("G", "S"), k=1, workers=MAX_WORKERS,
@@ -811,6 +851,7 @@ def build_fc_report(summary):
     lines.append("Decision on T: **%s**" % summary["decision_t"])
     lines.append("Decision on S alone: **%s**" % summary["decision_s"])
     lines.append("Report decision: **%s**" % summary["decision"])
+    lines.append("Governing rule: PLAN rule 5: disagreement → stay on CadQuery")
     lines.append("Wonder's share of T's passes: %.1f%%"
                  % (100.0 * summary["wonder_share"]))
     lines.append("Rates: G %.1f%%, T %.1f%%, S %.1f%%"
@@ -886,7 +927,13 @@ def parse_fc_arms(value):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="FreeCAD gap-test runner.")
-    parser.add_argument("--jobs", choices=("dry", "main"), required=True)
+    parser.add_argument("--jobs", choices=("dry", "main"), default=None)
+    parser.add_argument("--summarize", nargs=2,
+                        metavar=("GS_RUN_DIR", "W_RUN_DIR"), default=None,
+                        help="decide over the union of two runs' "
+                             "calls.jsonl files (no model, Modal, or "
+                             "network calls) and write summary.json + "
+                             "report.md with --out")
     parser.add_argument("--out", required=True)
     parser.add_argument("--arms", default="G,S")
     parser.add_argument("--k", type=int, default=1)
@@ -909,6 +956,14 @@ def main(argv=None):
                         help="send ONE Wonder call (a dry job), log the "
                              "endpoint and usage fields, and stop")
     args = parser.parse_args(argv)
+    if args.summarize is not None:
+        # Offline union decision (Round 4.1): before any key or Modal
+        # handling, so no model, Modal, or network call can happen here.
+        summarize_runs(args.summarize[0], args.summarize[1], args.out)
+        return 0
+    if args.jobs is None:
+        parser.error("--jobs is required "
+                     "(or use --summarize <GS run dir> <W run dir> --out <dir>)")
     if args.workers is not None and args.workers < 1:
         parser.error("--workers must be >= 1")
     if args.k is not None and args.k < 1:
