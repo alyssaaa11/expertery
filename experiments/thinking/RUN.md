@@ -25,6 +25,8 @@ Keys come from envsave opaque ids inside run_fc_session.sh and are never printed
      - S passes ≤ 4 of its 9 → STOP: too hard or ambiguous.
      - Otherwise → GO.
 2. **Wonder** on S's failed samples only (no GPU):
+   `export META_HERDSHOT_API_KEY=$(envsave get $(grep -o -m1 'es_[A-Za-z0-9_]*' ~/.local/bin/muse-wonder))` (verifier F1:
+   the key is otherwise exported only inside run_fc_session.sh; never printed), then
    `.venv/bin/python experiments/freecad/runner_fc.py --exam thinking --jobs main --out $OUT/main-W --arms W --escalate-from $OUT/main-GS --budget-w 1.50 --budget 10`
 3. **Decision** (offline):
    `.venv/bin/python experiments/freecad/runner_fc.py --exam thinking --summarize $OUT/main-GS $OUT/main-W --out $OUT/final`
