@@ -42,15 +42,17 @@ scratch, 60 s CPU + wall limit, 4 GB RSS kill, process-group kill). Replace only
 - arms: `G` = Glimmer (same body as arm B: max_tokens 16000, temperature 1.0, top_p 0.95, top_k 64); `S` = Spark Open
   on Baseten (meta-models/muse-spark-open-1026, same sampling, header x-session-affinity, log cached_tokens). k = 1.
 - every FAIL is tagged `api_error` (the answer raised during the run: AttributeError, TypeError, NameError, Part
-  errors, no result) or `wrong_geometry` (built but failed the checker). Why: API errors are tool knowledge that training
+  errors, timeout, memory limit, PermissionError) or `wrong_geometry` (built but failed the checker, or `result` is not
+  a Part solid); a reply cut off by the token limit is INVALID (as in the baseline). Why: API errors are tool knowledge that training
   can fix; wrong geometry is general skill (PLAN).
 - outputs: calls.jsonl, summary.json (pass rate per arm and level, api_error vs wrong_geometry counts, jobs passed by S
   but not G, tokens, cost), report.md, and the PLAN decision rule evaluated (FreeCAD target / stay on CadQuery / grey /
   INVALID). CLI: `runner_fc.py --jobs main --out <dir> --arms G,S --k 1 --workers 8 --budget <$> --budget-c <$>`.
 
 ## 4. Session script
-Use experiments/common/run_session.sh (session cap, always stops the app). If it cannot run runner_fc.py, add a
-`--runner <path>` option there in a backward-compatible way (default = today's runner) and test it. Why: the money cap
+Use experiments/common/run_session.sh unchanged, through its existing RUN_SESSION_RUNNER_CMD hook (run_session.sh
+lines ~20 and ~87) to call runner_fc.py; do not edit run_session.sh (new files only in experiments/freecad/). Add a
+small wrapper experiments/freecad/run_fc_session.sh that sets the hook and passes the arms/budget, plus a test. Why: the money cap
 and the app stop must be the same as for every other paid run.
 
 ## 5. Tests (offline, fake HTTP)

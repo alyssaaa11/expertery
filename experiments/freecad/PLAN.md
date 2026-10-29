@@ -44,10 +44,21 @@ Spark Open + the same manual? If so, FreeCAD is the factory's training target (a
   authentic. **Frozen: sha256 865ab9af45eb2fb554f97155fa8f3cf44f92d54973437a1f94c78d67cdc89bb6.**
 
 ## Decision rule (pre-registered; reuses the Oct 28 day-1 gate; n = 30 at k = 1 ≈ ±17 points, act only on clear margins)
-1. S < 70% → INVALID: fix the manual once, re-run once.
+Revised after the verifier's check (forge-freecad-2026-10-29, READY WITH 3 EDITS), before any paid call:
+1. **S < 70% → RUN INVALID for FreeCAD: stay on CadQuery.** No manual fix on exam failures (that would tune the manual on
+   the exam). A manual fix is allowed only after a new user approval and is tested on the dry jobs D1-D3 only.
+   Why: re-running after fixing the manual on exam failures re-touches the exam and biases the result.
 2. G ≤ 60% AND S ≥ 75% AND S − G ≥ 20 points AND ≥ 8 jobs pass in S but not in G → **FreeCAD becomes the factory target**.
 3. G ≥ 75% → stay on hard CadQuery jobs.
-4. Otherwise (grey zone) → re-run only the differing jobs at k = 3, or decide by the API-error share, with the user.
+4. Otherwise (grey zone) → **default: stay on CadQuery.** FreeCAD only if api_error ≥ 60% of G's FAILs AND ≥ 6 jobs pass
+   in S but not in G. No re-run of only the differing jobs (selecting on the outcome shrinks the gap by regression).
+   Why: the grey zone also decides whether to go above the $30 cap, so it must be a fixed rule, not a judgement call.
+Failure tags: api_error = the answer raised, timed out, hit the memory limit or a PermissionError; wrong_geometry =
+built but failed the checker, or `result` was not a Part solid; cut off by the token limit = INVALID (as the baseline).
+Honest caveat for the report: FreeCAD's Part API has no counterbore/slot/polar-pattern helpers (CadQuery has them), so
+part of a G-vs-S gap measures that the tool is harder to use, which is exactly the kind of difficulty a company tool has.
+Manual note (not changed, hash frozen): its line "Part.show() is not available" is inaccurate (it exists headless);
+harmless.
 
 ## Money
 Muse Code runner adapter + sandbox ≈ $1-1.2; Glimmer 30 answers ≈ $1 (cold start + run); Spark 30 answers ≈ $0.7.
