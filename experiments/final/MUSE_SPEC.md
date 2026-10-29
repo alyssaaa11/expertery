@@ -29,7 +29,8 @@ Same design as experiments/freecad/cloud_exec.py and cloud_grade.py (read both):
   Prints `REFS n/n PASS`.
 - `--regrade <baseline results dir>`: re-run each recorded answer's code (from calls.jsonl) in the box, grade it, and
   write regrade.json with old verdict, new verdict (0.2%) and new tight (1e-6), per answer (the 199 final
-  answers: BR 30, B2 90, BX 79); print `REGRADE same=X changed=Y`. (PLAN step 1.)
+  answers: BR 30, B2 90, BX 79), plus a measure-equality column: box measurements vs the recorded ones at the
+  recorded print precision; print `MEASURE same=X changed=Y`; print `REGRADE same=X changed=Y`. (PLAN step 1.)
 - Tests: BREP round trip of a simple part keeps volume and bbox at 1e-9; a fake sandbox returns bytes → grader
   verdict path; image file list has no references; regrade counts with fake records.
 
@@ -65,6 +66,9 @@ Same design as experiments/freecad/cloud_exec.py and cloud_grade.py (read both):
   solids), and the verdict comes from the cloud grader. Write per-round + final records like run_suite does.
 - Test: with fake model replies and a fake executor, the cloud BX loop sends exactly the same message list, round by
   round, as runner.do_bx_call does with the same fake executor (build, run error, self-check, no-code-block end).
+- Default `--workers 12` for `--fill-missing` (one wave). If fewer final records than missing pairs exist at the end,
+  exit 3 with "INCOMPLETE: ask the user" and write no summary that compare.py would accept.
+- Log the vLLM image digest (from the server) into summary.json for every session.
 - compare.py merges these records with the baseline BX records (no (job, rep) twice; refuses on a duplicate).
 
 ## 4. Exam guard on the cloud box

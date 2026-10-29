@@ -29,7 +29,7 @@ on the 30 held-out CadQuery jobs, and **many times cheaper and faster**, while r
 | 3 | Factory main: ~170 jobs (yield rule in experiments/factory/PLAN.md) | Baseten + Modal CPU | $5.00 (incl. step 2) | ~$4.2 |
 | 4 | Training: LoRA on H100 + merge | Modal H100 | $4.00 | ~$2-3 |
 | 5 | Dev check: trained model on the 20 dev jobs, k=3 | Modal A100 | $1.00 | ~$0.5 |
-| 6a | Finish BX: its 11 missing answers (H12 ×2, H13-H15 ×3), base Glimmer | Modal A100 | $1.00 | ~$0.5 |
+| 6a | Finish BX: its 11 missing answers (H12 ×2, H13-H15 ×3), base Glimmer, 12 workers (one wave) | Modal A100 | $1.00 | ~$0.6 (worst ≈ $0.74) |
 | 6 | Final exam: trained model on the 30 exam jobs, k=3 | Modal A100 | $2.00 | ~$1 |
 | 7 | (optional, free GPU) offline Mac demo with MLX | Mac + Modal CPU | $0.30 | ~$0 |
 Total ≈ **$10-14 expected; worst case caps $13.80 + Muse $3-5 = $16.8-18.8** (verifier N2, + step 6a) → Forge ≈ $41-45
@@ -40,7 +40,9 @@ user's yes and the verifier.
 ## Step 1: comparability (why: baselines were graded on the Mac; the trained arm will be graded in the cloud)
 Re-run the code of the 199 recorded final answers (BR 30, B2 90, BX 79; results/bmax-baseline-2026-10-29) in the
 cloud box and grade it in the cloud grader, recording both 0.2% and 1e-6. Box and grader pin the Mac's versions:
-cadquery==2.8.0, cadquery-ocp==7.9.3.1. Pass = 0 verdict changes at 0.2%. Any change → STOP and explain before step 6 (a grader difference
+cadquery==2.8.0, cadquery-ocp==7.9.3.1. Pass = 0 verdict changes at 0.2%, AND the box's measurements (bbox, volume,
+solids) equal the recorded ones at print precision (verifier A3: BX's round 2 feeds these measurements back to the
+model, so a Mac-vs-cloud difference would change BX's conversation). Any change → STOP and explain before step 6 (a grader difference
 would make the comparison unfair).
 
 ## Steps 2-3: factory (frozen plan: experiments/factory/PLAN.md, spec experiments/factory/SPEC.md)
@@ -81,6 +83,13 @@ the 30 jobs, 10,000 resamples, each job's pass rate over its answers:
   frozen BX prompt, settings and loop, on the cloud box, base Glimmer on the same A100-80GB. Then all 30 jobs have 3
   BX answers and rule 3's 30-job paired bootstrap applies unchanged. Disclosed: these 11 answers ran on a later day
   and were graded in the cloud (step 1 shows the grader gives the same verdicts).
+  - 12 workers, so all 11 run in one wave (verifier A1: hard BX answers take up to 821 s; 8 workers = 2 waves ≈ $1.31
+    worst, over the cap). Concurrency differs from the baseline's 8, so the median latency is reported too.
+  - If 6a stops before 11 final answers exist → STOP and ask the user; compare.py is not run.
+  - Bar (d) is recomputed over all 90 BX answers, as rule 3 says. The 7,105 above is the 79-answer value; hard answers
+    average 22,303 tokens against 20,235, so the bar will likely get a little looser for FT. Disclosed in the report
+    (verifier A2).
+  - BX wall-clock for "per correct part" = 3,050 s (baseline arm) + 6a's arm wall-clock without the cold start.
 - Reported per arm: pass rate (all / medium / hard), pass@3, tokens per correct part, seconds per answer (median and
   mean), $ per correct part (= arm wall-clock h × $2.50 ÷ PASS), chart accuracy vs $ per correct part.
 
@@ -94,7 +103,8 @@ answer one exam-style job offline. The model only writes text on the Mac; its co
 - No defence or war examples anywhere (user rule).
 
 ## Before step 6
-Check that the merged model's generation_config.json equals the base model's (same sampling defaults).
+Check that the merged model's generation_config.json equals the base model's (same sampling defaults). Log the vLLM
+image digest for every session (base and trained).
 
 ## Freeze (sha256 recorded here before step 6)
 runner_final.py, cloud_cq.py, the grader, deploy/modal_forge.py, the merged model's file list, this PLAN.
