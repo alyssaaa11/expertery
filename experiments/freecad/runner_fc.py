@@ -359,9 +359,20 @@ def wonder_share(records):
     return (len(t - s_pass) / len(t)) if t else 0.0
 
 
+def scored_job_ids(records, arm):
+    """Jobs in `arm` with a scored answer (PASS or FAIL; INVALID excluded)."""
+    return {r["job"] for r in records
+            if r.get("arm") == arm
+            and r.get("outcome") in ("PASS", "FAIL")}
+
+
 def evaluate_fc_decision(records):
     """PLAN rules 5+6: rules 1-4 evaluated on BOTH T and S alone, then
     the harness gate.
+
+    Rates are PASS / (PASS + FAIL) per arm (INVALID excluded), matching
+    summary.json and PLAN: G and S over their own scored jobs, T over
+    S's scored jobs (T = S passes plus W rescues of S FAILs).
 
     Returns {"decision_t", "decision_s", "agree", "decision",
     "wonder_share", "run_invalid", "run_invalid_arms"}. On disagreement
@@ -374,16 +385,14 @@ def evaluate_fc_decision(records):
     g_ids = pass_job_ids(records, "G")
     s_ids = pass_job_ids(records, "S")
     t_ids = teacher_pass_ids(records)
-    jobs = set()
-    for arm in ("G", "S"):
-        jobs.update(r["job"] for r in records if r.get("arm") == arm)
-    # n = 30 jobs at k = 1: every rate is the share of jobs with a pass,
-    # so T-vs-G gaps are comparable (pass@1 for G and S, S-plus-rescues
+    scored_g = scored_job_ids(records, "G")
+    scored_s = scored_job_ids(records, "S")
+    # n = 30 jobs at k = 1: every rate is passes over scored jobs, so
+    # T-vs-G gaps are comparable (S-plus-rescues over S's scored jobs
     # for T; S INVALID jobs stay INVALID and are never escalated).
-    n = len(jobs) or 1
-    rate_g = (len(g_ids) / n) if n else None
-    rate_t = (len(t_ids) / n) if n else None
-    rate_s = (len(s_ids) / n) if n else None
+    rate_g = (len(g_ids & scored_g) / len(scored_g)) if scored_g else None
+    rate_s = (len(s_ids & scored_s) / len(scored_s)) if scored_s else None
+    rate_t = (len(t_ids) / len(scored_s)) if scored_s else None
     api_g = api_error_share(records, "G")
     decision_t = decide_one(rate_g, rate_t, len(t_ids - g_ids), api_g)
     decision_s = decide_one(rate_g, rate_s, len(s_ids - g_ids), api_g)

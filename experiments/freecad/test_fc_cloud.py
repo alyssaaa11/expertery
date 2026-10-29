@@ -114,7 +114,11 @@ def test_box_protocol_write_run_read_terminate():
     assert box.filesystem.files["/work/answer.py"] == "result = 1"
     call = box.exec_calls[0]
     # Separate string arguments (Modal: app is required; exec takes args).
-    assert call["args"] == ("freecadcmd", "/work/run_one_fc.py")
+    # freecadcmd IMPORTS a file argument, so the box script starts as a
+    # program through -c (Round 2 probe).
+    assert call["args"] == ("freecadcmd", "-c", cloud_exec.BOOTSTRAP)
+    assert "run_one_fc.py" in call["args"][2]
+    assert "__main__" in call["args"][2]
     assert call["env"] == {"FC_SCRATCH": "/work"}  # baseline speed limit box
     assert call["timeout"] == 60
 
@@ -194,7 +198,12 @@ def _no_hooks_left():
 
 @pytest.fixture
 def fake_part(monkeypatch):
-    """A minimal Part module: one solid box shape."""
+    """A minimal Part module: one solid box shape.
+
+    Real FreeCAD exposes ``Shape.Solids`` as a LIST attribute, not a
+    method, so the fake does too (the old method-shaped fake passed
+    while the real box failed every answer).
+    """
     mod = types.ModuleType("Part")
 
     class _BB:
@@ -203,9 +212,7 @@ def fake_part(monkeypatch):
     class Shape:
         BoundBox = _BB()
         Volume = 100.0
-
-        def Solids(self):
-            return [object()]
+        Solids = [object()]
 
         def isValid(self):
             return True
@@ -217,6 +224,20 @@ def fake_part(monkeypatch):
     mod.Shape = Shape
     monkeypatch.setitem(sys.modules, "Part", mod)
     yield mod
+
+
+def test_solids_list_attribute_passes(fake_part):
+    """A fake whose Solids is a list (like real FreeCAD) validates."""
+    assert not callable(fake_part.Shape.Solids)
+    shape, err = run_one_fc.run_answer_source(
+        "import sys\nresult = sys.modules['Part'].Shape()")
+    assert err is None
+    assert run_one_fc.validate_result(shape) is None
+    assert run_one_fc.measure_shape(shape)["solids"] == 1
+    # A method-shaped Solids is NOT a solid (len() of a method fails).
+    shape2 = fake_part.Shape()
+    shape2.Solids = shape2.isValid  # a bound method, not a list
+    assert run_one_fc.validate_result(shape2) == run_one_fc.ERROR_NOT_SOLID
 
 
 def test_answer_exec_and_result_errors(fake_part):
@@ -368,6 +389,13 @@ def test_image_recipe_downloads_verified_release(monkeypatch):
         "libice6" in blob
     assert "|| true" not in blob and "fuse" not in blob.lower()
     assert "--appimage-extract" in blob
+    # chmod +x before extracting (the build stopped there, exit 126),
+    # and the AppImage deleted after extracting (smaller image).
+    assert "chmod +x /opt/%s" % cloud_exec.APPIMAGE_ASSET in blob
+    assert "rm /opt/%s" % cloud_exec.APPIMAGE_ASSET in blob
+    cmds = made["image"].commands
+    at = lambda s: next(i for i, c in enumerate(cmds) if s in c)
+    assert at("chmod +x") < at("--appimage-extract") < at("rm /opt/")
     # freecadcmd on PATH + version printed.
     assert "ln -s /opt/squashfs-root/usr/bin/freecadcmd " \
         "/usr/local/bin/freecadcmd" in blob
@@ -399,6 +427,21 @@ def test_lookup_exec_app_name(monkeypatch):
 # ------------------------------------------------------- live check CLIs
 
 
+def test_hand_job_id_is_the_file_name_prefix():
+    assert cloud_exec.hand_job_id("M1") == "M1"
+    assert cloud_exec.hand_job_id("M1_wrong") == "M1"  # prefix, not the file
+    assert cloud_exec.hand_job_id("H13_wrong") == "H13"
+    assert cloud_exec.hand_job_id("H6") == "H6"
+
+
+def test_load_hand_expected_keys_are_stems():
+    exp = cloud_exec.load_hand_expected()  # the Mac measurements
+    assert set(exp) == {"M1", "M1_wrong", "M6", "M10", "H6", "H13",
+                        "H13_wrong"}
+    assert exp["M1"]["volume"] == pytest.approx(4322.190275490383)
+    assert len(exp["M10"]["bbox"]) == 6
+
+
 def test_check_hand_reports_pass_fail_and_rel_diff(tmp_path, capsys):
     a = tmp_path / "M1.py"
     a.write_text("result = 1", encoding="utf-8")
@@ -411,11 +454,14 @@ def test_check_hand_reports_pass_fail_and_rel_diff(tmp_path, capsys):
         if source == "x = 1":
             return {"step_bytes": None, "measure": None, "log": "",
                     "run_error": "the answer wrote no STEP: ERROR: boom"}
-        return {"step_bytes": b"S", "measure": {}, "log": "",
-                "run_error": None}
+        return {"step_bytes": ("STEP:" + source).encode(), "measure": {},
+                "log": "", "run_error": None}
+
+    seen = {}
 
     def fake_grade(job_id, step):
-        if job_id == "M1":
+        seen[step] = job_id
+        if step == b"STEP:result = 1":
             return {"verdict": "PASS", "tight": "PASS", "fails": [],
                     "measurements": {"bbox": [0, 0, 0, 10, 5, 2],
                                      "volume": 100.0}}
@@ -431,8 +477,78 @@ def test_check_hand_reports_pass_fail_and_rel_diff(tmp_path, capsys):
     assert lines[0].startswith("M1: PASS") and "rel-diff 0.00e+00" in lines[0]
     assert lines[1].startswith("M1_wrong: FAIL") and "rel-diff" in lines[1]
     assert lines[2].startswith("M6: FAIL") and "no STEP" in lines[2]
+    # M1_wrong is graded under job M1 (file name prefix).
+    assert seen[b"STEP:result = 2"] == "M1"
+    assert lines[-1] == "HAND FAIL"  # M6/M10/H6/H13 missing: no HAND OK
     out = capsys.readouterr().out
     assert "M1: PASS" in out and "M1_wrong: FAIL" in out
+    assert "HAND FAIL" in out
+
+
+def _hand_files(tmp_path, names):
+    paths = []
+    for n in names:
+        p = tmp_path / (n + ".py")
+        p.write_text("result = %s" % n, encoding="utf-8")
+        paths.append(str(p))
+    return paths
+
+
+def _hand_fakes(exact=True, wrong_verdict="FAIL", diff_ok=True):
+    """exec/grade fakes for the 7 hand stems; grade under mapped job ids."""
+
+    def fake_exec(source):
+        return {"step_bytes": ("STEP:" + source).encode(), "measure": {},
+                "log": "", "run_error": None}
+
+    def fake_grade(job_id, step):
+        stem = step.decode().split("result = ", 1)[1]
+        base = {"bbox": [0, 0, 0, 10, 5, 2], "volume": 100.0}
+        if stem in ("M1_wrong", "H13_wrong"):
+            meas = dict(base) if diff_ok else {
+                "bbox": [0, 0, 0, 10, 5, 3], "volume": 150.0}
+            return {"verdict": wrong_verdict, "tight": wrong_verdict,
+                    "fails": [] if wrong_verdict == "PASS" else ["bbox"],
+                    "measurements": meas}
+        meas = dict(base) if exact else {
+            "bbox": [0, 0, 0, 10, 5, 3], "volume": 150.0}
+        return {"verdict": "PASS", "tight": "PASS", "fails": [],
+                "measurements": meas}
+
+    expected = {n: {"bbox": [0, 0, 0, 10, 5, 2], "volume": 100.0}
+                for n in ("M1", "M6", "M10", "H6", "H13", "M1_wrong",
+                          "H13_wrong")}
+    return fake_exec, fake_grade, expected
+
+
+def test_check_hand_ok_gate(tmp_path, capsys):
+    names = ["M1", "M6", "M10", "H6", "H13", "M1_wrong", "H13_wrong"]
+    exec_fn, grade_fn, expected = _hand_fakes()
+    lines = cloud_exec.check_hand(_hand_files(tmp_path, names),
+                                  exec_fn=exec_fn, grade_fn=grade_fn,
+                                  expected=expected)
+    assert lines[-1] == "HAND OK"
+    assert "HAND OK" in capsys.readouterr().out
+
+
+def test_check_hand_gate_rejects_wrong_pass_and_big_diff(tmp_path):
+    names = ["M1", "M6", "M10", "H6", "H13", "M1_wrong", "H13_wrong"]
+    # A wrong answer that PASSes is not HAND OK.
+    exec_fn, grade_fn, expected = _hand_fakes(wrong_verdict="PASS")
+    assert cloud_exec.check_hand(
+        _hand_files(tmp_path, names), exec_fn=exec_fn,
+        grade_fn=grade_fn, expected=expected)[-1] == "HAND FAIL"
+    # A >1e-9 difference is not HAND OK either.
+    exec_fn, grade_fn, expected = _hand_fakes(exact=False)
+    assert cloud_exec.check_hand(
+        _hand_files(tmp_path, names), exec_fn=exec_fn,
+        grade_fn=grade_fn, expected=expected)[-1] == "HAND FAIL"
+    assert cloud_exec.hand_gate({"M1": "PASS"}, {}) is False  # no diffs
+    assert cloud_exec.hand_gate(
+        {n: "PASS" for n in cloud_exec.HAND_MUST_PASS
+         } | {n: "FAIL" for n in cloud_exec.HAND_MUST_FAIL},
+        {n: 0.0 for n in list(cloud_exec.HAND_MUST_PASS)
+         + list(cloud_exec.HAND_MUST_FAIL)}) is True
 
 
 def test_check_refs_prints_refs_line(capsys):
@@ -461,3 +577,104 @@ def test_grader_app_lookup_name(monkeypatch):
     monkeypatch.setattr(cloud_grade, "modal", None)
     with pytest.raises(RuntimeError):
         cloud_grade.lookup_grader_app()
+
+
+# ------------------------------------------------------- safety probes
+
+
+def _safety_exec(run_errors):
+    """exec_fn serving canned no-STEP run_errors keyed by probe source."""
+
+    def _exec(source):
+        return {"step_bytes": None, "measure": None, "log": "",
+                "run_error": run_errors[source]}
+
+    return _exec
+
+
+def test_safety_probes_fail_safe_through_answer_runner():
+    import runner_fc as _runner_fc
+
+    # A misspelled Part function is an api_error, never a build.
+    _, err = run_one_fc.run_answer_source(cloud_exec.SAFETY_TYPO_SOURCE)
+    assert err is not None  # no Part here or a typo there: it raises
+    tag = _runner_fc.tag_failure("stop", cloud_exec.SAFETY_TYPO_SOURCE,
+                                 err, False, [])
+    assert tag == "api_error"
+    # `import cadquery` is refused, with the error text kept.
+    _, err = run_one_fc.run_answer_source(cloud_exec.SAFETY_CADQUERY_SOURCE)
+    assert "refused import" in err
+    tag = _runner_fc.tag_failure("stop", cloud_exec.SAFETY_CADQUERY_SOURCE,
+                                 err, False, [])
+    assert tag == "api_error"
+    # The listing probe reports what it found in its error.
+    assert "urllib.request.urlopen" in cloud_exec.SAFETY_NETWORK_SOURCE
+    assert "jobs" in cloud_exec.SAFETY_LISTING_SOURCE
+    assert "expected" in cloud_exec.SAFETY_LISTING_SOURCE
+    assert "reference" in cloud_exec.SAFETY_LISTING_SOURCE
+
+
+def test_check_safety_ok_when_all_four_hold(capsys):
+    run_errors = {
+        cloud_exec.SAFETY_TYPO_SOURCE:
+            "AttributeError: module 'Part' has no attribute 'makeBx'",
+        cloud_exec.SAFETY_CADQUERY_SOURCE:
+            "refused import: cadquery (answers must use the Part module)",
+        cloud_exec.SAFETY_NETWORK_SOURCE:
+            "RuntimeError: no network: URLError: <urlopen error blocked>",
+        cloud_exec.SAFETY_LISTING_SOURCE:
+            "RuntimeError: probe found 0 (none found)",
+    }
+    lines = cloud_exec.check_safety(exec_fn=_safety_exec(run_errors))
+    assert len(lines) == 5  # one line per probe plus the SAFETY line
+    assert lines[0].startswith("typo: hold")
+    assert lines[1].startswith("cadquery: hold") and "refused" in lines[1]
+    assert lines[2].startswith("network: hold")
+    assert lines[3].startswith("listing: hold") and "none found" in lines[3]
+    assert lines[-1] == "SAFETY OK"
+    assert "SAFETY OK" in capsys.readouterr().out
+
+
+def test_check_safety_fails_on_reachable_network_or_found_files():
+    base = {
+        cloud_exec.SAFETY_TYPO_SOURCE:
+            "AttributeError: module 'Part' has no attribute 'makeBx'",
+        cloud_exec.SAFETY_CADQUERY_SOURCE:
+            "refused import: cadquery (answers must use the Part module)",
+        cloud_exec.SAFETY_NETWORK_SOURCE:
+            "RuntimeError: no network: URLError: <urlopen error blocked>",
+        cloud_exec.SAFETY_LISTING_SOURCE:
+            "RuntimeError: probe found 0 (none found)",
+    }
+    bad_net = dict(base)
+    bad_net[cloud_exec.SAFETY_NETWORK_SOURCE] = \
+        "RuntimeError: network reachable"
+    assert cloud_exec.check_safety(
+        exec_fn=_safety_exec(bad_net))[-1] == "SAFETY FAIL"
+    bad_list = dict(base)
+    bad_list[cloud_exec.SAFETY_LISTING_SOURCE] = \
+        "RuntimeError: probe found 2: ['/work/jobs.json']"
+    assert cloud_exec.check_safety(
+        exec_fn=_safety_exec(bad_list))[-1] == "SAFETY FAIL"
+    bad_cq = dict(base)
+    bad_cq[cloud_exec.SAFETY_CADQUERY_SOURCE] = \
+        "the answer wrote no STEP: ERROR: no variable named 'result'"
+    assert cloud_exec.check_safety(
+        exec_fn=_safety_exec(bad_cq))[-1] == "SAFETY FAIL"
+
+
+def test_check_safety_cli_flag(monkeypatch, capsys):
+    monkeypatch.setattr(
+        cloud_exec, "run_answer_in_box",
+        _safety_exec({
+            cloud_exec.SAFETY_TYPO_SOURCE:
+                "AttributeError: module 'Part' has no attribute 'makeBx'",
+            cloud_exec.SAFETY_CADQUERY_SOURCE:
+                "refused import: cadquery (answers must use the Part module)",
+            cloud_exec.SAFETY_NETWORK_SOURCE:
+                "RuntimeError: no network: URLError: blocked",
+            cloud_exec.SAFETY_LISTING_SOURCE:
+                "RuntimeError: probe found 0 (none found)",
+        }))
+    assert cloud_exec.main(["--check-safety"]) == 0
+    assert "SAFETY OK" in capsys.readouterr().out

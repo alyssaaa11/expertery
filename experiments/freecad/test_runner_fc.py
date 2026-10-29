@@ -531,6 +531,37 @@ def test_rule6_harness_over_five_percent_is_run_invalid():
     assert d["run_invalid"] is False
 
 
+def test_decision_rates_exclude_invalid_and_t_over_s_scored():
+    # One INVALID job per arm: rates are PASS / (PASS + FAIL), and T's
+    # rate is T passes over S's scored (PASS + FAIL) jobs.
+    ids = jobs()
+    records = [rec(j, "G", "PASS" if i < 14 else "FAIL",
+                   "" if i < 14 else "wrong_geometry")
+               for i, j in enumerate(ids)]
+    records += [rec(j, "S", "PASS" if i < 18 else "FAIL",
+                    "" if i < 18 else "wrong_geometry")
+                for i, j in enumerate(ids)]
+    records = [r for r in records
+               if not (r["job"] == "J30" and r["arm"] in ("G", "S"))]
+    records.append({"job": "J30", "arm": "G", "outcome": "INVALID",
+                    "failure_tag": "INVALID", "run_error": "cut off",
+                    "usage": {}})
+    records.append({"job": "J30", "arm": "S", "outcome": "INVALID",
+                    "failure_tag": "harness", "run_error": "harness: boom",
+                    "usage": {}})
+    d = runner_fc.evaluate_fc_decision(records)
+    assert d["rate_g"] == pytest.approx(14 / 29)
+    assert d["rate_s"] == pytest.approx(18 / 29)
+    assert d["rate_t"] == pytest.approx(18 / 29)  # no W: T is S
+    # A W rescue of an S-FAILED job joins T but never an S-INVALID job.
+    rescued = list(records) + [rec("J29", "W", "PASS")]
+    d2 = runner_fc.evaluate_fc_decision(rescued)
+    assert d2["rate_t"] == pytest.approx(19 / 29)
+    not_rescued = list(records) + [rec("J30", "W", "PASS")]
+    d3 = runner_fc.evaluate_fc_decision(not_rescued)
+    assert d3["rate_t"] == pytest.approx(18 / 29)
+
+
 def test_summary_counts_harness_and_invalid_per_arm(tmp_path):
     arm_recs = [
         {"job": "D1", "level": "dry", "arm": "G", "outcome": "PASS",

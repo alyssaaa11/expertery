@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run one FreeCAD answer inside the cloud box (SPEC section 1).
 
-Runs headless under `freecadcmd /work/run_one_fc.py` with env
-FC_SCRATCH=/work. The answer file (answer.py, written by the box caller)
+Runs headless under `freecadcmd -c BOOTSTRAP` (see cloud_exec.py)
+with env FC_SCRATCH=/work. The answer file (answer.py, written by the box caller)
 is exec'd with ``ns = {"__name__": "__main__"}``; ``result`` must be a
 ``Part.Shape`` with at least one solid. ``import cadquery`` / ``OCP`` is
 refused by an import hook. On success writes answer.step + measure.json
@@ -104,13 +104,17 @@ def run_answer_source(source):
 
 
 def is_part_solid(result):
-    """True when result is a Part.Shape with >= 1 solid."""
+    """True when result is a Part.Shape with >= 1 solid.
+
+    Real FreeCAD exposes ``Shape.Solids`` as a LIST attribute, not a
+    method, so this uses ``len(shape.Solids)`` (a method object has no
+    len: not a solid)."""
     try:
         import Part  # noqa: E402
     except ImportError:
         return False
     try:
-        return isinstance(result, Part.Shape) and len(result.Solids()) >= 1
+        return isinstance(result, Part.Shape) and len(result.Solids) >= 1
     except Exception:  # noqa: BLE001 -- a broken shape is not a solid
         return False
 
@@ -129,7 +133,7 @@ def measure_shape(shape):
         "bbox": [float(bb.XMin), float(bb.YMin), float(bb.ZMin),
                  float(bb.XMax), float(bb.YMax), float(bb.ZMax)],
         "volume": float(shape.Volume),
-        "solids": int(len(shape.Solids())),
+        "solids": int(len(shape.Solids)),
         "valid": bool(shape.isValid()),
     }
 

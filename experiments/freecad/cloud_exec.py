@@ -16,9 +16,11 @@ The image holds ONLY FreeCAD + run_one_fc.py: no references, no jobs
 file, no expected.json, no cadquery (see IMAGE_FILES).
 
 Flow: write answer.py with sb.filesystem.write_text, run
-``freecadcmd /work/run_one_fc.py`` with sb.exec (env FC_SCRATCH=/work,
+``freecadcmd -c BOOTSTRAP`` with sb.exec (env FC_SCRATCH=/work,
 timeout 60 s inside the 90 s box, the baseline's speed limit), read back
 /work/answer.step (bytes) + /work/measure.json, then sb.terminate().
+BOOTSTRAP execs run_one_fc.py with ``__name__ == "__main__"`` because
+freecadcmd IMPORTS a file argument (main() never runs) but runs -c.
 STEP answers over 20 MB are refused. The verdict and failure tags come
 only from the grader; measure.json is for logs (the box runs untrusted
 code and must not score itself).
@@ -53,6 +55,15 @@ ANSWER_NAME = "answer.py"
 RUN_SCRIPT = "run_one_fc.py"  # experiments/freecad/run_one_fc.py, baked in
 STEP_PATH = WORK_DIR + "/answer.step"
 MEASURE_PATH = WORK_DIR + "/measure.json"
+RUN_PATH = WORK_DIR + "/" + RUN_SCRIPT
+
+# freecadcmd IMPORTS a file argument (nothing runs, no STEP), so the
+# box script is started as a program through -c (verified in the probe).
+BOOTSTRAP = (
+    "import sys; sys.argv=['run_one_fc.py']; "
+    "exec(open('/work/run_one_fc.py').read(), "
+    "{'__name__': '__main__', '__file__': '/work/run_one_fc.py'})"
+)
 
 # The box image holds ONLY FreeCAD + run_one_fc.py.
 IMAGE_FILES = [RUN_SCRIPT]
@@ -94,7 +105,9 @@ def build_image():
     --appimage-extract, link freecadcmd on PATH, and print `freecadcmd`
     version 1.1.4. Lazy: no network or Modal call until the image builds
     remotely. `curl -fL` fails the build on an HTTP error (a 404 is not a
-    checksum mismatch later)."""
+    checksum mismatch later). The AppImage is chmod +x before extracting
+    (the build stopped there with Permission denied, exit 126) and
+    deleted after extracting (smaller image)."""
     if modal is None:
         raise RuntimeError("modal is not installed; cannot build the box image")
     return (
@@ -109,7 +122,9 @@ def build_image():
             "curl -fL -o /opt/%s %s" % (APPIMAGE_SHA_NAME, APPIMAGE_SHA_URL),
             "cd /opt && grep %s %s | sha256sum -c -"
             % (APPIMAGE_ASSET, APPIMAGE_SHA_NAME),
+            "chmod +x /opt/%s" % APPIMAGE_ASSET,
             "cd /opt && ./%s --appimage-extract >/dev/null" % APPIMAGE_ASSET,
+            "rm /opt/%s /opt/%s" % (APPIMAGE_ASSET, APPIMAGE_SHA_NAME),
             "ln -s /opt/squashfs-root/usr/bin/freecadcmd "
             "/usr/local/bin/freecadcmd",
             "freecadcmd --version",
@@ -169,7 +184,7 @@ def run_answer_in_box(answer_code, sandbox=None, sandbox_factory=None):
         sandbox.filesystem.write_text(
             WORK_DIR + "/" + ANSWER_NAME, answer_code or "")
         proc = sandbox.exec(
-            "freecadcmd", WORK_DIR + "/" + RUN_SCRIPT,
+            "freecadcmd", "-c", BOOTSTRAP,
             env={"FC_SCRATCH": WORK_DIR},
             timeout=EXEC_TIMEOUT_S,
         )
@@ -226,12 +241,184 @@ def rel_diff(a, b):
         return None
 
 
-def check_hand(answer_paths, exec_fn=None, grade_fn=None, expected=None):
+HAND_DIR_NAME = "hand"
+HAND_MAC_MEASURE_NAME = "mac_measure.json"
+# HAND OK gate: these hand answers must PASS ...
+HAND_MUST_PASS = ("M1", "M6", "M10", "H6", "H13")
+# ... these must FAIL (wrong geometry), and every bbox/volume diff <= 1e-9.
+HAND_MUST_FAIL = ("M1_wrong", "H13_wrong")
+HAND_MAX_REL_DIFF = 1e-9
+
+
+def hand_job_id(stem):
+    """Job id for a hand file stem: the file name prefix (M1_wrong -> M1)."""
+    if stem.endswith("_wrong"):
+        return stem[: -len("_wrong")]
+    return stem
+
+
+def load_hand_expected(path=None):
+    """Mac measurements for the hand answers (bbox, volume, solids each).
+
+    Keys are normalized to file stems ("H13.py" -> "H13"). Read by
+    --check-hand; never printed wholesale (one rel-diff per answer only).
+    """
+    import json as _json
+
+    with open(path or os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            HAND_DIR_NAME, HAND_MAC_MEASURE_NAME),
+            encoding="utf-8") as f:
+        raw = _json.load(f)
+    return {os.path.splitext(k)[0]: v for k, v in raw.items()}
+
+
+def max_rel_diff(exp, got):
+    """Largest relative bbox/volume difference (None when not comparable)."""
+    diffs = []
+    for key in ("bbox", "volume"):
+        if exp is not None and got is not None and key in exp and key in got:
+            vals_e = exp[key] if isinstance(exp[key], list) else [exp[key]]
+            vals_g = got[key] if isinstance(got[key], list) else [got[key]]
+            for g, e in zip(vals_g, vals_e):
+                d = rel_diff(g, e)
+                if d is not None:
+                    diffs.append(d)
+    return max(diffs) if diffs else None
+
+
+def default_hand_paths():
+    """All hand answer files (the Mac-measured set)."""
+    hand_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            HAND_DIR_NAME)
+    return sorted(
+        os.path.join(hand_dir, n) for n in sorted(os.listdir(hand_dir))
+        if n.endswith(".py"))
+
+
+def check_hand(answer_paths=None, exec_fn=None, grade_fn=None, expected=None):
     """Run hand-written answers in the box and grade each STEP.
 
-    Prints one line per answer: `<name>: PASS` (or FAIL) plus the
-    bbox/volume relative difference vs the Mac-made parts when `expected`
-    ({name: {"bbox": [...], "volume": ...}}) is given. Returns the lines.
+    Prints one line per answer: `<stem>: PASS` (or FAIL) plus the
+    bbox/volume relative difference vs the Mac-made parts from
+    hand/mac_measure.json (loaded when `expected` is None; keyed by
+    file stem). Each file is graded under its job id (the file name
+    prefix: M1_wrong -> M1). Prints `HAND OK` only if M1, M6, M10, H6,
+    H13 PASS, M1_wrong and H13_wrong FAIL, and every difference <= 1e-9;
+    else prints `HAND FAIL`. Returns the lines (per-answer lines plus
+    the HAND line). `exec_fn`/`grade_fn` are injected in tests; by
+    default the real box and the cloud grader (needs the grader app
+    context) are used.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import cloud_grade as _cloud_grade  # noqa: E402
+
+    if answer_paths is None:
+        answer_paths = default_hand_paths()
+    if expected is None:
+        expected = load_hand_expected()
+    lines = []
+    verdicts = {}
+    maxdiffs = {}
+    for path in answer_paths:
+        name = os.path.splitext(os.path.basename(path))[0]
+        job_id = hand_job_id(name)
+        with open(path, encoding="utf-8") as f:
+            source = f.read()
+        boxed = (exec_fn or run_answer_in_box)(source)
+        verdict, extra = "FAIL", ""
+        if boxed.get("step_bytes") is not None:
+            graded = (grade_fn or _cloud_grade.grade.remote)(
+                job_id, boxed["step_bytes"])
+            verdict = graded.get("verdict", "FAIL")
+            exp = expected.get(name)
+            got = (graded.get("measurements") or boxed.get("measure")) or {}
+            diff = max_rel_diff(exp, got)
+            if diff is not None:
+                maxdiffs[name] = diff
+                extra = " (max rel-diff %.2e)" % diff
+        else:
+            extra = " (%s)" % (boxed.get("run_error") or NO_STEP_PREFIX)
+        verdicts[name] = verdict
+        line = "%s: %s%s" % (name, verdict, extra)
+        print(line)
+        lines.append(line)
+    ok = hand_gate(verdicts, maxdiffs)
+    tail = "HAND OK" if ok else "HAND FAIL"
+    print(tail)
+    lines.append(tail)
+    return lines
+
+
+def hand_gate(verdicts, maxdiffs):
+    """True iff the HAND OK conditions hold: must-pass PASS, must-fail
+    FAIL, and every bbox/volume difference <= 1e-9."""
+    for name in HAND_MUST_PASS:
+        if verdicts.get(name) != "PASS":
+            return False
+    for name in HAND_MUST_FAIL:
+        if verdicts.get(name) != "FAIL":
+            return False
+    for name in list(HAND_MUST_PASS) + list(HAND_MUST_FAIL):
+        diff = maxdiffs.get(name)
+        if diff is None or diff > HAND_MAX_REL_DIFF:
+            return False
+    return True
+
+
+SAFETY_TYPO_SOURCE = "import Part\nresult = Part.makeBx(1, 1, 1)\n"
+SAFETY_CADQUERY_SOURCE = "import cadquery\nresult = 1\n"
+SAFETY_NETWORK_SOURCE = (
+    "import urllib.request\n"
+    "try:\n"
+    "    urllib.request.urlopen(\"https://example.com\", timeout=5)\n"
+    "except Exception as e:\n"
+    "    raise RuntimeError(\"no network: %s: %s\"\n"
+    "                       % (type(e).__name__, e))\n"
+    "raise RuntimeError(\"network reachable\")\n"
+)
+SAFETY_LISTING_SOURCE = (
+    "import os\n"
+    "found = []\n"
+    "for _root in (\"/\", \"/work\"):\n"
+    "    try:\n"
+    "        _top = os.listdir(_root)\n"
+    "    except Exception as _e:\n"
+    "        found.append(\"%s list error\" % _root)\n"
+    "        continue\n"
+    "    for _n in _top:\n"
+    "        _low = _n.lower()\n"
+    "        if \"jobs\" in _low or \"expected\" in _low \\\n"
+    "                or \"reference\" in _low:\n"
+    "            found.append(os.path.join(_root, _n))\n"
+    "for _dirpath, _dirnames, _filenames in os.walk(\"/work\"):\n"
+    "    for _n in list(_dirnames) + list(_filenames):\n"
+    "        _low = _n.lower()\n"
+    "        if \"jobs\" in _low or \"expected\" in _low \\\n"
+    "                or \"reference\" in _low:\n"
+    "            _p = os.path.join(_dirpath, _n)\n"
+    "            if _p not in found:\n"
+    "                found.append(_p)\n"
+    "    if len(found) > 50:\n"
+    "        break\n"
+    "if found:\n"
+    "    raise RuntimeError(\"probe found %d: %s\" % (len(found), found[:20]))\n"
+    "raise RuntimeError(\"probe found 0 (none found)\")\n"
+)
+
+
+def check_safety(exec_fn=None, grade_fn=None):
+    """Run four tiny answers through the real box + grader path.
+
+    Prints one line each: a misspelled Part function -> api_error;
+    `import cadquery` -> refused (api_error, error text kept); a
+    urllib.request.urlopen("https://example.com") attempt -> fails, no
+    network; a listing of / and /work searching for files named like
+    jobs/expected/reference -> none found (the probe writes what it
+    found into an error so it shows in run_error). Prints `SAFETY OK`
+    only if all four hold, else `SAFETY FAIL`. Returns the lines.
     `exec_fn`/`grade_fn` are injected in tests; by default the real box
     and the cloud grader (needs the grader app context) are used.
     """
@@ -239,66 +426,80 @@ def check_hand(answer_paths, exec_fn=None, grade_fn=None, expected=None):
 
     _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import cloud_grade as _cloud_grade  # noqa: E402
+    import runner_fc as _runner_fc  # noqa: E402  (tags only, lazy: no cycle)
 
+    probes = [
+        ("typo", SAFETY_TYPO_SOURCE),
+        ("cadquery", SAFETY_CADQUERY_SOURCE),
+        ("network", SAFETY_NETWORK_SOURCE),
+        ("listing", SAFETY_LISTING_SOURCE),
+    ]
     lines = []
-    for path in answer_paths:
-        name = os.path.splitext(os.path.basename(path))[0]
-        with open(path, encoding="utf-8") as f:
-            source = f.read()
+    holds = {}
+    for name, source in probes:
         boxed = (exec_fn or run_answer_in_box)(source)
-        verdict, extra = "FAIL", ""
-        if boxed.get("step_bytes") is not None:
-            graded = (grade_fn or _cloud_grade.grade.remote)(
-                name, boxed["step_bytes"])
-            verdict = graded.get("verdict", "FAIL")
-            exp = (expected or {}).get(name)
-            got = graded.get("measurements") or {}
-            if exp and got:
-                parts = []
-                for key in ("bbox", "volume"):
-                    if key in exp and key in got:
-                        vals_e = exp[key] if isinstance(
-                            exp[key], list) else [exp[key]]
-                        vals_g = got[key] if isinstance(
-                            got[key], list) else [got[key]]
-                        diffs = [rel_diff(g, e) for g, e in
-                                 zip(vals_g, vals_e)]
-                        diffs = [d for d in diffs if d is not None]
-                        if diffs:
-                            parts.append("%s rel-diff %.2e" % (
-                                key, max(diffs)))
-                if parts:
-                    extra = " (" + ", ".join(parts) + ")"
+        run_error = boxed.get("run_error") or ""
+        step = boxed.get("step_bytes")
+        if step is not None:
+            try:
+                graded = (grade_fn or _cloud_grade.grade.remote)(
+                    "SAFETY_" + name, step)
+            except Exception as e:  # noqa: BLE001 -- grader path exercised
+                run_error = (run_error + " | grader: %s: %s"
+                             % (type(e).__name__, e)).strip(" |")
+                verdict, fails = "FAIL", []
+            else:
+                verdict, fails = graded.get("verdict", "FAIL"), []
+            tag = _runner_fc.tag_failure("stop", source, run_error,
+                                         True, fails or [verdict])
         else:
-            extra = " (%s)" % (boxed.get("run_error") or NO_STEP_PREFIX)
-        line = "%s: %s%s" % (name, verdict, extra)
+            tag = _runner_fc.tag_failure("stop", source, run_error,
+                                         False, [])
+        if name == "typo":
+            ok = step is None and tag == "api_error"
+        elif name == "cadquery":
+            ok = (step is None and tag == "api_error"
+                  and "refused import" in run_error)
+        elif name == "network":
+            ok = (step is None and "network reachable" not in run_error
+                  and bool(run_error))
+        else:
+            ok = step is None and "none found" in run_error
+        holds[name] = ok
+        line = "%s: %s (%s)" % (
+            name, "hold" if ok else "BROKEN",
+            (run_error[-160:] if run_error else "no error text"))
         print(line)
         lines.append(line)
+    tail = "SAFETY OK" if all(holds.values()) else "SAFETY FAIL"
+    print(tail)
+    lines.append(tail)
     return lines
 
 
 def main(argv=None):
     """CLI: --check-image prints freecadcmd --version from the built image;
-    --check-hand <answers...> grades hand answers in the box."""
+    --check-hand grades hand answers vs the Mac measurements;
+    --check-safety runs the four safety probes."""
     import argparse as _ap
 
     parser = _ap.ArgumentParser(description="FreeCAD cloud-box checks.")
     parser.add_argument("--check-image", action="store_true")
     parser.add_argument("--check-hand", nargs="*", default=None,
                         help="hand answer files to run in the box and grade")
+    parser.add_argument("--check-safety", action="store_true",
+                        help="run the four safety probes in the box")
     args = parser.parse_args(argv)
     if args.check_image:
         check_image()
         return 0
     if args.check_hand is not None:
-        check_hand(args.check_hand or sorted(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         "hand", n)
-            for n in sorted(os.listdir(os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), "hand")))
-            if n.endswith(".py")))
+        check_hand(args.check_hand or None)
         return 0
-    parser.error("need --check-image or --check-hand")
+    if args.check_safety:
+        check_safety()
+        return 0
+    parser.error("need --check-image, --check-hand, or --check-safety")
     return 2
 
 
