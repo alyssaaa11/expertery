@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-10-29 ~20:30
+**Last updated**: 2026-10-29 ~19:50
 
 ---
 
@@ -46,7 +46,7 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Modal smoke test | ≈ 1.06 | 6.76 → 7.82 |
 | Muse Code training fix | ≈ 1.11 | run.usage |
 | Muse Code Oct 29 evening (build 1.35 + fixes 1.14, 0.61, 0.44, 0.46) | ≈ 4.0 | run.usage |
-| **Total** | **≈ 23.9 of 30** (+ cents of Modal CPU checks) | |
+| **Total** | **≈ 25.7 of 30** (FreeCAD run ≈ $1.8 incl. checks) | |
 
 ## Open questions
 1. hypothesis: training on answer-only text (no reasoning) may teach Glimmer to skip reasoning: cheaper, maybe weaker
@@ -56,21 +56,11 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Next step
-1. **FreeCAD gap test** (decision, user 2026-10-29: test FreeCAD before the factory).
-   - decision (user, 2026-10-29): **teacher escalation**: Wonder answers only the jobs Spark failed; teacher T = S ∪
-     Wonder rescues; the rule is evaluated on T and on S alone (PLAN rule 5), and the report labels a decision that
-     rests on Wonder (closed API). Same `--escalate` in the factory, with a teacher tag per record.
-   - decision (Claude, following existing accounting): Meta credit for Wonder counts inside Forge's budget.
-   - verified (user saw the HerdShot key in their own Meta developer key list, 2026-10-29): Wonder uses
-     META_HERDSHOT_API_KEY on the user's own Meta account (verifier A6 closed).
-   - verified: modal 1.6.3 + cadquery 2.8.0 in the forge venv (verifier evidence/02, forge-freecad-escalation).
-   - Verifier: READY WITH 3 EDITS, rubric 6/7/5 (forge-freecad-escalation-2026-10-29); edits applied f999208 + 7854051.
-   - verified: Muse build + 4 fix rounds (6a67525 … 05786b2), pytest 107/107 outside Muse; real-code cloud checks
-     (results/freecad-checks-2026-10-29/): FreeCAD 1.1.4 image, HAND OK 5/2 (Mac vs cloud ≤ 6.4e-8; gate 1e-6,
-     disclosed), SAFETY OK, REFS 30/30. PLAN rule 6 (harness/INVALID > 5% → RUN INVALID) pre-registered.
-   - Verifier pre-run: GO WITH 4 FIXES (forge-freecad-prerun-2026-10-29), all applied (RUN.md 89123ba, round 4).
-   - **Next:** the user's "yes run" → experiments/freecad/RUN.md (pilot D1-D3 G,S → main 30 G,S cap $3.50 → W smoke
-     $0.50 → W rescues $3 → `runner_fc.py --summarize`).
+1. **FreeCAD gap test: DONE** ([[freecad-gap-2026-10-29]]). verified: Glimmer 28/30 (93%), Spark 30/30 (100%), Wonder 0
+   rescues (share 0%) → pre-registered rule 3: **stay on hard CadQuery jobs**. Both Glimmer misses = one API mistake
+   (makeCylinder keyword args). Run ≈ $1.8. Waiting for the verifier's finished-step check.
+   Next Muse round (small): runner adds its own folder to sys.path (the -I launch failure), dashboard live for runner_fc,
+   report's rule-5 label only on disagreement.
 2. Training pipeline: round 2 done (pytest green; `smoke --cap-dollars 2.0` → CAP REFUSED exit 2).
 3. Factory: plan READY (verifier); its target tool (FreeCAD or CadQuery hard jobs) follows from the gap test.
 
