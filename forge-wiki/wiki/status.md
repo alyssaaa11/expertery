@@ -64,7 +64,9 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 2. **Thinking exam in FreeCAD: pilot STOP, too easy** ([[thinking-exam-pilot-2026-10-29]]).
    - verified: Glimmer 8/9 and Spark 9/9 on calibration at 1e-6, with a 40-rule NDS-1 in the prompt. The
      pre-registered gate (G ≥ 8/9) stopped the main run.
-   - Glimmer is 9× slower per answer (167 s against 18 s) at about the same $ per answer.
+   - Glimmer is 9× slower (167 s against 18 s) and about 1.4-1.9× dearer per answer (Spark ≈ $0.017, 91% cached).
+   - Verifier: PASS WITH ISSUES, STOP stands (rubric 7/6/4).
+   - Pending code fix before the next paid Spark run: cached_tokens_of must read usage.prompt_tokens_details.cached_tokens.
    - hypothesis: the gap is in knowing the standard without it in the prompt (what training adds), not in applying
      written rules. Next is the user's choice.
 3. Training pipeline: round 2 done (pytest green; `smoke --cap-dollars 2.0` → CAP REFUSED exit 2).
