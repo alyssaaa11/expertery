@@ -231,7 +231,7 @@ JOBS = [
          text=T + "A plastic lid for an enclosure whose outside is 66 by 46 and whose walls are 2.5 thick."),
     # ---- hard
     dict(id="T6", level="hard", build=t6, wrong=[dict(boss_screw_factor=2.0), dict(hole_xy=(32.0, 19.5))],
-         text=T + "A plastic enclosure, open at the top, for a circuit board of 70 by 45. The board has an M3 "
+         text=T + "A plastic enclosure, open at the top, for a circuit board of 70 by 45, which sits centred in it. The board has an M3 "
               "mounting hole near each corner, 3.5 from both board edges, and is screwed onto four screw bosses "
               "that are 6 tall. The space inside the enclosure is 25 tall, measured from the floor."),
     dict(id="T7", level="hard", build=t7, wrong=[dict(wall=2.5), dict(counterbore=False)],
@@ -270,7 +270,7 @@ JOBS = [
               "heads sunk flush. Through its centre passes a cable gland of 22 outside diameter. On the plate's "
               "centre line at X = -20 and X = 20 stand two screw bosses for M3 screws, 10 tall."),
     dict(id="E6", level="medium", build=e6, wrong=[dict(t=2.5), dict(gap=0.15)],
-         text=T + "A lid for an aluminium enclosure whose inside space is 70 by 40, with a hole for an M5 handle "
+         text=T + "A lid for an aluminium enclosure whose inside space is 70 by 40 and 30 deep, with a hole for an M5 handle "
               "screw through the middle of the lid."),
     # ---- dry run (not scored)
     dict(id="D1", level="dry", build=d1, wrong=[dict(hole_d=4.0), dict(inset=4.0)],
@@ -279,7 +279,7 @@ JOBS = [
          text=T + "A plastic open-top enclosure whose inside space is 50 by 30 and 20 deep."),
     # ---- calibration (level dry: run in the pilot as the difficulty gate, never scored)
     dict(id="C1", level="dry", build=c1, wrong=[dict(top=5.0), dict(hole_xy=(25.0, 15.0))],
-         text=T + "A plastic enclosure, open at the top, for a circuit board of 50 by 30. The space inside is 15 "
+         text=T + "A plastic enclosure, open at the top, for a circuit board of 50 by 30, which sits centred in it. The space inside is 15 "
               "tall. The board has an M3 mounting hole near each corner, 4 from both board edges, and is screwed "
               "onto four screw bosses that are 5 tall."),
     dict(id="C2", level="dry", build=c2, wrong=[dict(bore_d=35.0), dict(slot_len=9.5)],

@@ -99,3 +99,7 @@ allows going above $30 (2026-10-29: "u can spend more"), within the $35 agreed f
   - Correction: k = 3 reduces within-job noise (by less than √3), not job-level noise. With 13 jobs, rule 2's
     "≥ 4 wins" condition carries the claim.
   - W cannot change the decision (S governs); it only gives the privacy share.
+- verified (2026-10-29, third blind Sonnet solve of all 18 jobs against the 40-rule standard): every threshold rule
+  was checked per job and none triggers. The closest are rule 34 on T7 (87.5% against 90%) and rule 35 on T2 (60
+  against 48). 17 of 18 jobs had one reading and matched the references. Fixed as text only (geometry unchanged,
+  selftest 18/18): E6 now states "30 deep" (rule 13 needs the depth), and T6 and C1 now say the board "sits centred".
