@@ -72,6 +72,11 @@ Revised after the verifier's check (forge-freecad-2026-10-29, READY WITH 3 EDITS
    are NOT escalated; they stay INVALID. Why: T gives each job two tries by two models against G's one (a pass@2 effect
    that leans towards "FreeCAD target"), and every Wonder rescue sends the job to a closed API, which weakens the
    "private" claim; the user must see when the decision rests on that.
+6. **Harness gate (verifier B3, forge-freecad-build-2026-10-29, added before any result): if harness errors (Sandbox,
+   exec, filesystem or grader failures, tagged `harness`, outcome INVALID) or INVALID answers exceed 5% of any arm's
+   answers → RUN INVALID** (fix the harness, re-run; no decision). Why: a broken box must not read as "Glimmer is weak
+   at FreeCAD", and it would skew rule 4's api_error share, the branch that decides going above $30.
+Pass rates are PASS ÷ (PASS + FAIL), as in the baseline; INVALID and harness answers are left out and counted.
 Failure tags: api_error = the answer raised, timed out, hit the memory limit or a PermissionError; wrong_geometry =
 built but failed the checker, or `result` was not a Part solid; cut off by the token limit = INVALID (as the baseline).
 Honest caveat for the report: FreeCAD's Part API has no counterbore/slot/polar-pattern helpers (CadQuery has them), so
