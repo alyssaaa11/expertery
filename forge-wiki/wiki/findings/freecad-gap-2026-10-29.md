@@ -42,15 +42,16 @@ pie title "Who made the team's 30 correct parts"
 - verified: Wonder's share of the team's passes = **0%** (the privacy headline's X), because Spark failed nothing.
 
 ## What it means (hypothesis, to discuss)
-- FreeCAD is **not** harder for Glimmer than CadQuery on these jobs (93% vs 87-88%; n = 30, k = 1, so ±17 points:
-  "about the same", not "better"). Same pattern as Keel: the tool is not what makes Glimmer fail.
+- FreeCAD is **not** harder for Glimmer than CadQuery on these jobs (93% vs 87-88%; n = 30, k = 1, ≈ ±9 points at 93%
+  per the verifier: "about the same", not "better"). Same pattern as Keel: the tool is not what makes Glimmer fail.
 - The open room is only on **harder jobs** than the current exam (CadQuery hard + hint: 76%). The factory should make
   harder practice jobs on CadQuery, as its plan already says.
 - Glimmer used ~10x more time per answer than Spark (≈ 106 s vs 7 s in the pilot; similar tokens per answer).
 
 ## Money (verified)
-Modal metered 7.68 → 8.81 = **$1.13** (both launches, the cloud checks, Glimmer GPU, grader); Baseten (Spark) ≈ $0.59
-main + ≈ $0.06 pilot; Wonder $0. Run total ≈ **$1.8**.
+Modal metered 7.68 → 8.81 = **$1.13** (verifier, billing hourly: run 2 Glimmer $0.83 + launch 1 deploy $0.18 + box/grader
+≈ $0.03). Baseten (Spark): the runner's $0.59 is an UNCACHED estimate; 97% of prompt tokens were cached, so ≈ **$0.43**
+if Baseten bills cached tokens at $0.15/M (main $0.38 + pilot $0.045). Wonder $0. Run total ≈ **$1.6**.
 
 ## How it ran (lessons)
 - Launch 1 died at import: `python -I` drops the script's folder, so runner_fc could not import cloud_exec; stopped
@@ -58,4 +59,9 @@ main + ≈ $0.06 pilot; Wonder $0. Run total ≈ **$1.8**.
   round (runner adds its own folder to sys.path).
 - The dashboard (built for the CadQuery runner) showed only the pilot during the run: runner_fc writes calls.jsonl at
   the end, and the GPU-time and safety-box counters do not read this runner. Fix in the next Muse round.
-- The report's "Governing rule" line always prints rule 5 even when T and S agree (label only; decision correct).
+- Report nits (verifier forge-freecad-result-2026-10-29, PASS WITH ISSUES, rubric 7/6/4, 0 WRONG): the "Governing rule:
+  PLAN rule 5" line prints although rule 3 decided; final/ costs show 0.0 (--summarize drops them); the empty W run
+  is headed "INVALID (no scored calls)"; the runner's Spark cost ignores cached tokens. Fix in the next Muse round.
+- Why a model with Intelligence Index 6 scores 93% (user question): the exam jobs give every coordinate, so they test
+  turning a full spec into code (dictation), not design reasoning. Glimmer's H1 answer is its own correct code and all
+  28 passes also pass at 1e-6. The exam is too easy to show the gap; the factory needs "thinking" jobs.

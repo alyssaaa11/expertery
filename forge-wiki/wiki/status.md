@@ -46,7 +46,7 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Modal smoke test | ≈ 1.06 | 6.76 → 7.82 |
 | Muse Code training fix | ≈ 1.11 | run.usage |
 | Muse Code Oct 29 evening (build 1.35 + fixes 1.14, 0.61, 0.44, 0.46) | ≈ 4.0 | run.usage |
-| **Total** | **≈ 25.7 of 30** (FreeCAD run ≈ $1.8 incl. checks) | |
+| **Total** | **≈ 25.5 of 30** (FreeCAD run ≈ $1.6 incl. checks) | |
 
 ## Open questions
 1. hypothesis: training on answer-only text (no reasoning) may teach Glimmer to skip reasoning: cheaper, maybe weaker
@@ -58,7 +58,7 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 ## Next step
 1. **FreeCAD gap test: DONE** ([[freecad-gap-2026-10-29]]). verified: Glimmer 28/30 (93%), Spark 30/30 (100%), Wonder 0
    rescues (share 0%) → pre-registered rule 3: **stay on hard CadQuery jobs**. Both Glimmer misses = one API mistake
-   (makeCylinder keyword args). Run ≈ $1.8. Waiting for the verifier's finished-step check.
+   (makeCylinder keyword args). Run ≈ $1.6. Verifier: PASS WITH ISSUES, result and decision stand (rubric 7/6/4, 0 WRONG).
    Next Muse round (small): runner adds its own folder to sys.path (the -I launch failure), dashboard live for runner_fc,
    report's rule-5 label only on disagreement.
 2. Training pipeline: round 2 done (pytest green; `smoke --cap-dollars 2.0` → CAP REFUSED exit 2).
