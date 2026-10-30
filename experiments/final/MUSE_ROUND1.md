@@ -10,6 +10,8 @@ frozen files).
   cadquery-ocp==7.9.3.1), `--check-refs`, `--regrade` with the measure-equality column.
 - **§2** the factory per experiments/factory/SPEC.md, with §2's changes: `generator.py`, `make_jobs.py`, `teacher.py`
   (teacher answers run in cloud_cq's box and are graded by its grader at 1e-6; nested cached_tokens; dev jobs file).
+- **§2c** the learning loop: experiments/factory/SPEC.md §4 (`patterns.py`, empty `teacher_notes.md`, the
+  `factory_version` field in teacher.py's calls).
 - **§4** the exam guard in experiments/train/forge_train.py uses cloud_cq's box for training-record code.
 - **§5** the cached_tokens fix in experiments/freecad/runner_fc.py.
 
@@ -26,5 +28,7 @@ come in round 2.
 - `teacher.py --ids pilot --out X --budget-dollars 1` with no BASETEN_KEY exits 2 with the missing-variable message,
   no network.
 - `forge_train.py smoke --cap-dollars 2.0` still prints CAP REFUSED and exits 2.
+
+- `patterns.py --runs <a folder with a fake calls.jsonl from the tests> --out X` writes patterns.md.
 
 Report at the end: files changed, the pytest line, the self-check table, and anything you did not follow.
