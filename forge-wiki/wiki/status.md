@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-10-30 ~09:30
+**Last updated**: 2026-10-30 (after Muse round 1 + verifier)
 
 ---
 
@@ -55,26 +55,23 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
    a short-prompt trained arm needs a small runner spec. BX's 11 missing answers are run in step 6a (user decision).
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
-## Where we stopped (2026-10-30 ~09:30; the user cleared the chat after this)
-- decision (user, Oct 30): **build order = factory first, demo last.** Muse work is split:
-  - Round 1 (READY, NOT STARTED: user said "dont start"): prompt `experiments/final/MUSE_ROUND1.md` = MUSE_SPEC §1 cloud
-    CadQuery box + grader, §2 factory (generator, make_jobs, teacher), §4 exam guard on the cloud box, §5 C1
-    cached-tokens fix. Expected ≈ $2-3 of Muse. Launch only on the user's explicit go.
-  - Round 2 (later): §3 exam runner (arm FT), §3b B-max finisher, §6 deploy/modal_forge.py + session script, §7 compare.py.
-  - Demo viewer: last (user).
-- Launch recipe (verified, tools-and-services): `envsave get <Meta key opaque id> | muse exec --api-key-stdin --model
-  muse-spark-1.3 --effort medium --workspace ~/projects/forge --approval-mode never --disable-web-tools
-  --max-model-steps 100 --no-foreign-personal-context --json --prompt-file experiments/final/MUSE_ROUND1.md
-  > results/muse-final-r1.jsonl 2> results/muse-final-r1.err`; cost from the `run.usage` event. Then pytest, then
-  the verifier, then report.
-- decision (user, Oct 29): budget **$50** (≈ $30.4 spent); every paid step still needs the user's yes + verifier.
-- decision (user, Oct 29): finish B-max to all 30 jobs (step 6a, 11 answers, 12 workers, cap $1).
-- Verifier: plan pre-build READY WITH 5 EDITS (applied 1861990), delta READY WITH 3 EDITS (applied 9602647).
-- The user is learning the training basics: explanations in [[forge-in-simple-words]] (LoRA = small notebook, why
-  freeze, one notebook for all pages). Use those simple words with the user.
-- Open recommendations not yet answered by the user (from [[morning-brief-2026-10-30]]): one yes for steps 4-6
-  (train → mock test → exam), make the repo public before submitting (after a secrets scan), drop the offline-Mac demo
-  (Mac 24 GB vs ≥ 48 GB recommended).
+## Where we stopped (2026-10-30, after Muse round 1)
+- verified: **Muse round 1 built the factory** (commit e24a9a7, 76 calls ≈ $2.4, 466 s). Claude re-ran: pytest 216
+  passed; make_jobs 200 jobs (10 × 20) + 20 dev (2/family), SELF-CHECK OK, byte-identical on re-run, max overlap 0.478;
+  teacher no key → exit 2; smoke CAP REFUSED exit 2; pilot 20 / train 180 contain 0 dev ids.
+- decision (user, Oct 30): **learning loop** in the factory: patterns.py groups repeating failures (our_bug /
+  our_wording / teacher_habit), **suggests** fixes, the user approves each, Muse applies; referee, box, dev split, exam
+  locked. Spec: experiments/factory/SPEC.md §4 (written after the build: Claude's first edit missed the file).
+- verified: **verifier FAIL for the pilot, GO for a fix round** (~/agents/verifier/reports/forge-factory-build-2026-10-30.md,
+  rubric 4/7/5). Blocker F1: teacher.py and forge_train's exam guard call cloud_cq `.remote` outside
+  `cloud_cq._app.run()` → "Function has not been hydrated" → every paid pilot answer would be harness INVALID.
+  F2 Wonder priced at Spark rates; F4 patterns.py is a counter only + factory_version constant "1"; F5 re-freeze dev files.
+- Next: **round 1b** prompt experiments/final/MUSE_ROUND1B.md (F1, F2, F4 + loop to §4; ≈ $0.5-1) → needs the user's
+  yes. Then F3 (free/cheap, before any Spark money): Claude's blind rebuild 10/10, `cloud_cq --check-refs` both exams,
+  `--regrade` 199 baseline answers (0 verdict changes, measures equal, ≈ $0.10). Then the pilot (cap $1) with the user's yes.
+- Open question to the user: picture gallery of one part per family (Muse, +$0.3, start of the demo viewer) + a free
+  factory diagram.
+- Money: ≈ $32.8 of $50.
 
 ## Training + final exam: PREPARED, NOT RUN
 - Plan experiments/final/PLAN.md, Muse spec experiments/final/MUSE_SPEC.md, diagrams [[forge-diagrams]] 8-11.

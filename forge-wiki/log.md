@@ -68,3 +68,9 @@
 - status: "Where we stopped" (factory first, demo last; Muse round 1 ready, NOT started; launch recipe; open recommendations).
 - project: where we are. experiments/final/MUSE_ROUND1.md committed (not run).
 
+
+## [2026-10-30] build | factory (Muse round 1) + learning loop + verifier
+- verified: Muse round 1 (e24a9a7): cloud_cq box + grader, generator/make_jobs (200 jobs), teacher, patterns.py v0,
+  exam guard on box, cached_tokens fix; ≈ $2.4. Claude re-checks all pass.
+- decision (user): learning loop, suggest-and-approve (SPEC §4, 27e8800 missed the file; written in e24a9a7, verifier items dac893d).
+- verified: verifier FAIL for pilot / GO for fix round (forge-factory-build-2026-10-30, 4/7/5); round 1b prompt ready, not launched.
