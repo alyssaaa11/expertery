@@ -312,7 +312,8 @@ def load_training_records(path):
 # lowercasing; exact-number ratios >= 0.9 refuse, number-collapsed ratios
 # >= 0.8 warn. Code side: the exam references are built in-process with
 # experiments/first-test/jobs.py (trusted code); only the training
-# record's code runs in the sandbox. bbox + volume are compared first at
+# record's code runs in cloud_cq's box (never on the Mac), measured
+# grader-side. bbox + volume are compared first at
 # 1e-6 and the full score runs only on a match. Refused records are
 # dropped; the run aborts only when more than 5% are refused. The saved
 # report holds counts only, never reference values.
@@ -418,44 +419,78 @@ def build_exam_shapes():
     return [(j["id"], j["build"]()) for j in mod.JOBS]
 
 
-def run_train_code(code, timeout=60.0, sandbox_dir=None):
-    """Run one training record's code; returns (shape, error).
-
-    Only the training record's code runs here (sandboxed when a macOS
-    sandbox profile is available, otherwise the plain runner path).
-    """
-    sys.path.insert(0, os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "..", "first-test"))
+def _final_cq():
+    """Import cloud_cq lazily (no Modal import at module load)."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "..", "final")
+    sys.path.insert(0, path)
     try:
-        import runner
-        profile = None
-        sb = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          "..", "b2-hint", "sandbox_cq.sb")
-        if sys.platform == "darwin" and os.path.isfile(sb):
-            profile = sb
-        return runner.run_code(code, timeout=timeout,
-                               sandbox_profile=profile,
-                               sandbox_dir=sandbox_dir)
+        import cloud_cq as _mod
     finally:
         try:
-            sys.path.remove(os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..", "first-test"))
+            sys.path.remove(path)
         except ValueError:
             pass
+    return _mod
+
+
+# The training record's code runs in cloud_cq's box, never on the Mac
+# (MUSE_SPEC section 4); only the exam references are built in-process
+# (trusted jobs.py). Both box steps are injectable for tests.
+_box_exec_fn = None  # (code) -> cloud_cq.run_answer_in_box dict
+_box_measure_fn = None  # (brep_bytes) -> grader-side measurements dict
+
+
+def set_box_fns(exec_fn=None, measure_fn=None):
+    """Inject fake box steps (tests). Returns the previous pair."""
+    global _box_exec_fn, _box_measure_fn
+    old = (_box_exec_fn, _box_measure_fn)
+    if exec_fn is not None:
+        _box_exec_fn = exec_fn
+    if measure_fn is not None:
+        _box_measure_fn = measure_fn
+    return old
+
+
+def default_box_exec(code, timeout=60.0):
+    """Real box call (needs modal). Tests inject a fake instead."""
+    return _final_cq().run_answer_in_box(code)
+
+
+def default_box_measure(brep_bytes):
+    """Real grader-side measure of a BREP (needs modal)."""
+    return _final_cq().measure_brep.remote(bytes(brep_bytes))
+
+
+def run_train_code(code, timeout=60.0, sandbox_dir=None):
+    """Run one training record's code in cloud_cq's box.
+
+    Returns (brep_bytes_or_None, error_or_None). The local sandbox path
+    is removed for training records: nothing the model wrote runs on
+    the Mac. `sandbox_dir` is ignored (kept for the old signature).
+    """
+    exec_fn = _box_exec_fn or default_box_exec
+    try:
+        boxed = exec_fn(code)
+    except Exception as e:  # noqa: BLE001 -- box down: no measurement
+        return None, "harness: %s: %s" % (type(e).__name__, e)
+    if boxed is None or boxed.get("brep_bytes") is None:
+        return None, (boxed or {}).get("run_error") or \
+            "the answer wrote no BREP"
+    return boxed["brep_bytes"], None
 
 
 def default_train_meas(code, timeout=60.0):
-    """Run a training record's code and measure the part (None on failure)."""
-    shape, err = run_train_code(code, timeout=timeout)
-    if shape is None:
+    """Run a training record's code in the box and measure the BREP
+    grader-side (None on failure)."""
+    brep, _err = run_train_code(code, timeout=timeout)
+    if brep is None:
         return None
-    ft = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                      "..", "first-test")
-    if ft not in sys.path:
-        sys.path.insert(0, ft)
-    import checks as _checks
-    return _checks.measure(shape)
+    measure_fn = _box_measure_fn or default_box_measure
+    try:
+        return measure_fn(brep)
+    except Exception:  # noqa: BLE001 -- grader down: no measurement
+        return None
 
 
 def guard_records(records, exam_texts=None, ref_meases=None,

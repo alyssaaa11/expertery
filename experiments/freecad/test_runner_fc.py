@@ -1494,3 +1494,18 @@ def test_suite_with_eight_workers_writes_every_record(tmp_path):
 
 def test_wonder_cached_input_priced_at_twenty_cents_per_m():
     assert runner_fc.COST_W_CACHED_PER_M == 0.20
+
+
+def test_cached_tokens_reads_nested_baseten_field_first():
+    assert runner_fc.cached_tokens_of({
+        "prompt_tokens": 8307, "completion_tokens": 3438,
+        "prompt_tokens_details": {"cached_tokens": 7552}}) == 7552
+    assert runner_fc.cached_tokens_of({"cached_tokens": 7}) == 7
+    assert runner_fc.cached_tokens_of({}) == 0
+    assert runner_fc.cached_tokens_of(None) == 0
+    assert runner_fc.cost_s_of_usage({
+        "prompt_tokens": 8307, "completion_tokens": 3438,
+        "prompt_tokens_details": {"cached_tokens": 7552}}) == pytest.approx(
+            (755 * runner_fc.runner.COST_C_IN_PER_M
+             + 3438 * runner_fc.runner.COST_C_OUT_PER_M
+             + 7552 * runner_fc.COST_S_CACHED_PER_M) / 1e6)

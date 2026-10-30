@@ -71,3 +71,25 @@ for every PASS at 1e-6 among non-dev ids (code = the teacher's extracted code).
 Generator determinism (same seed → same file), every reference valid, wrong variants fail, overlap check, dev split
 excluded from pilot/train records, budget guard math with cached tokens, a fake teacher reply that PASSes ends up in
 train_records.jsonl and a FAIL does not. Run `~/projects/forge/.venv/bin/python -m pytest -q experiments/factory`.
+
+## 4. Learning loop: `patterns.py` (decision, user 2026-10-30: "if it detects repeating broken patterns it could improve that part")
+Note: written into this file after Muse round 1 (Claude's edit missed this file; Muse built §2c from the round brief).
+Goal: find failures that repeat, so the cause is fixed in the factory before the next run instead of paying for the same
+failure again. The loop **suggests**; the user approves every fix (decision, user 2026-10-30); Muse Code applies it.
+CLI: `patterns.py --runs <teacher run dir> [<dir> ...] --out <dir> [--min-count 3]`.
+- Reads only calls.jsonl from factory teacher runs (refuses any path under blind/, experiments/option-a/,
+  experiments/first-test/; skips dev ids). No network, no model calls, edits no file; writes patterns.json + patterns.md.
+- Every FAIL or error gets a signature (category, key). Categories: `harness` (box error, timeout, no BREP, grader
+  exception), `no_code`, `run_error` (exception type + message with numbers replaced by N), `wrong_shape` (sorted failed checks).
+- A signature seen >= min-count times is a pattern. Kind: `our_bug` if harness; `our_wording` if wrong_shape and >= 80%
+  of its hits in one family; `teacher_habit` if run_error/no_code, or wrong_shape spread over >= 2 families.
+- patterns.md: one row per pattern: kind, signature, count, families, 2 example ids, where to fix
+  (our_bug -> factory/box code; our_wording -> that family in generator.py; teacher_habit -> teacher_notes.md).
+- `teacher_notes.md` (starts empty): notes added to the teacher prompt after the manual; never in Glimmer's training prompt.
+- Every teacher call logs `factory_version` = sha256 of generator.py + teacher.py + teacher_notes.md (first 12 hex).
+- Locked (never suggested or changed): checks.py tolerances (1e-6 / 0.2%), the cloud box and grader, the dev split, the
+  exam files, the overlap check. Why: changing the referee would raise the pass rate without better data.
+- When: after the pilot and before any retry or main run, never during a run. After a family text change: re-run the
+  make_jobs self-check + overlap check and Claude's blind rebuild for that family, then re-freeze (sha256).
+- Tests: 3 identical run errors over 2 families -> teacher_habit; 3 harness -> our_bug; 3 wrong_shape in one family ->
+  our_wording; 2 hits -> no pattern; dev ids ignored; forbidden path -> exit 2; factory_version changes with teacher_notes.md.

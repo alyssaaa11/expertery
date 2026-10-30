@@ -311,8 +311,21 @@ def over_budget_w(w_usages, budget_w):
 
 
 def cached_tokens_of(usage):
+    """Baseten cached input tokens: usage["prompt_tokens_details"]
+    ["cached_tokens"] when present, else usage["cached_tokens"], else 0.
+    Test with the real Baseten usage shape (numbers illustrative):
+    {"prompt_tokens": 8307, "completion_tokens": 3438,
+     "prompt_tokens_details": {"cached_tokens": 7552}}."""
+    usage = usage or {}
+    details = usage.get("prompt_tokens_details") or {}
+    if isinstance(details, dict) \
+            and details.get("cached_tokens") is not None:
+        try:
+            return int(details.get("cached_tokens") or 0)
+        except (TypeError, ValueError):
+            return 0
     try:
-        return int((usage or {}).get("cached_tokens", 0) or 0)
+        return int(usage.get("cached_tokens", 0) or 0)
     except (TypeError, ValueError):
         return 0
 

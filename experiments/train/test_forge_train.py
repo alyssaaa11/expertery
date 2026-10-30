@@ -348,3 +348,52 @@ def test_returns_are_plain_json():
     assert isinstance(out, dict)
     for v in out.values():
         assert isinstance(v, (dict, list, str, int, float, bool, type(None)))
+
+
+def test_train_code_runs_in_box_measured_grader_side():
+    """MUSE_SPEC section 4: the training record's code runs in cloud_cq's
+    box (fake here), measured grader-side; no BREP means no measurement.
+    """
+    meas = {"bbox": [0, 0, 0, 10, 10, 10], "volume": 1000.0}
+    old = forge_train.set_box_fns(
+        exec_fn=lambda code: {"brep_bytes": b"BREP:" + code.encode(),
+                              "measure": None, "log": "",
+                              "run_error": None},
+        measure_fn=lambda brep: dict(meas))
+    try:
+        brep, err = forge_train.run_train_code("CODE-A")
+        assert brep == b"BREP:CODE-A" and err is None
+        assert forge_train.default_train_meas("CODE-A") == meas
+        old2 = forge_train.set_box_fns(
+            exec_fn=lambda code: {"brep_bytes": None, "measure": None,
+                                  "log": "",
+                                  "run_error": "the answer wrote no BREP"},
+            measure_fn=lambda brep: (_ for _ in ()).throw(
+                AssertionError("grader must not run without a BREP")))
+        try:
+            brep, err = forge_train.run_train_code("CODE-B")
+            assert brep is None and "no BREP" in err
+            assert forge_train.default_train_meas("CODE-B") is None
+        finally:
+            forge_train.set_box_fns(*old2)
+    finally:
+        forge_train.set_box_fns(*old)
+
+
+def test_guard_uses_box_measure_for_code_side():
+    """The guard's code side refuses a training part whose box-measured
+    part matches an exam reference (fake box, fake refs)."""
+    ref = {"bbox": [0, 0, 0, 10, 10, 10], "volume": 1000.0}
+    old = forge_train.set_box_fns(
+        exec_fn=lambda code: {"brep_bytes": b"B", "measure": None,
+                              "log": "", "run_error": None},
+        measure_fn=lambda brep: dict(ref))
+    try:
+        recs = [{"text": "an unrelated widget", "code": "CODE-A"}]
+        kept, refused, report = forge_train.guard_records(
+            recs, exam_texts=["something entirely different"],
+            ref_meases=[dict(ref)])
+        assert refused == [0] and kept == []
+        assert report["n_refused_code"] == 1
+    finally:
+        forge_train.set_box_fns(*old)
