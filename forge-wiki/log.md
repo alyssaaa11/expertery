@@ -81,3 +81,4 @@
 - verified: Muse r1c (5edd84a) + r1d (ff7f3a4); cloud checks: REFS 200/200 + 30/30, regrade 199 same, blind rebuilds 10/10 + 10/10.
 - decision (user): precise volumes in factory grader; no Wonder output in training; updates via hivey/Slack.
 - Repo readiness 1-7 (f692227, 3f392d6), verifier reviewing.
+- 2026-10-30 verified: factory pilot 19/20 (95%), $0.52, 0 patterns (6274420); main run proposed (160 jobs).

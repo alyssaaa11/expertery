@@ -70,9 +70,13 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
   market examples openly.
 - Repo readiness list 1-7 done (f692227): README for judges, LICENSE Apache-2.0, defence/medical removed, licence check,
   history secret scan clean. Verifier review pending (m…219). Repo stays PRIVATE until the user decides.
-- Next: verifier on the factory → the user's yes for the **pilot** (20 jobs, Spark Open on Baseten, cap $1.20) → learning
+- verified: **factory pilot** (6274420, user yes + verifier GO): 19/20 PASS at 1e-6 (95%), 0 harness errors, $0.52,
+  113 s; F8-2 one teacher error (invalid shape); patterns.py 0 repeated patterns; 19 train records; cached tokens work
+  after the first calls. Yield rule p ≥ 0.83 → main run of the 160 remaining non-dev jobs (≈ $4.17; cap A $4.60 or B
+  $4.48, user to choose; verifier asked m…240).
+- (done) Next: verifier on the factory → the user's yes for the **pilot** (20 jobs, Spark Open on Baseten, cap $1.20) → learning
   loop report → main run. Muse round 2 (exam runner, BX finisher, deploy, compare) still to build.
-- Money: ≈ $36.7 of $50.
+- Money: ≈ $37.2 of $50.
 
 ## Training + final exam: PREPARED, NOT RUN
 - Plan experiments/final/PLAN.md, Muse spec experiments/final/MUSE_SPEC.md, diagrams [[forge-diagrams]] 8-11.
