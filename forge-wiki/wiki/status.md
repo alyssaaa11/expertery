@@ -44,7 +44,9 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Muse Code Oct 30: r1 2.40 + r1b 0.96 + r1c 1.62 + r1d 1.26 | ≈ 6.24 | run.usage of each round |
 | Modal Oct 30 (cloud checks, pilot box + grader) | ≈ 0.12 | `modal billing summary` (paid from Modal credit, $0 billed) |
 | Factory pilot (Baseten, Spark Open) | 0.52 | summary.json |
-| **Total** | **≈ 37.3 of 50** | |
+| Muse round 2 | 2.40 | run.usage |
+| Factory main run (Baseten) | 4.38 | summary.json |
+| **Total** | **≈ 43.6 of 50** (+ Modal for the main run, cents) | |
 
 Rest of the plan (verifier, forge-factory-pilot-2026-10-30): expected ≈ $48-49 total; worst case at every cap ≈ $54
 (main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. decision (user, 2026-10-30): **the $50 covers
@@ -76,6 +78,13 @@ everything together, credits included** (Baseten, Modal, Meta).
   113 s; F8-2 one teacher error (invalid shape); patterns.py 0 repeated patterns; 19 train records; cached tokens work
   after the first calls. Yield rule p ≥ 0.83 → main run of the 160 remaining non-dev jobs (≈ $4.17; cap A $4.60 or B
   $4.48, user to choose; verifier asked m…240).
+- verified: **factory main run** (e152895): 148/157 PASS at 1e-6 (94%), $4.38, budget stop 3 short ($0.0279/call vs pilot
+  $0.0261); F8 bezel 13/18 (separate solids), F5 15/18. patterns.py: 0 patterns (hypothesis: the loop's exact-fail-list
+  signature is too strict; F8's 'solids=N' cluster was missed). **Training set: 167 records** (19 + 148), 0 dev, 0 Wonder,
+  results/factory-train-2026-10-30/train_records.jsonl sha256 7181e73b…9217.
+- verified: **Muse round 2** (fd1d32c, $2.40): runner_final (FT + BX finisher), modal_forge + session, compare.py,
+  no-Wonder loader filter; pytest 286. Round 2b todo: E2 test + E3 calls.jsonl cross-check.
+- Next: verifier on main run + round 2 (m…265) → user's yes for **training** (step 4, cap $4).
 - (done) Next: verifier on the factory → the user's yes for the **pilot** (20 jobs, Spark Open on Baseten, cap $1.20) → learning
   loop report → main run. Muse round 2 (exam runner, BX finisher, deploy, compare) still to build.
 - Money: ≈ $37.2 of $50.
