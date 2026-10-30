@@ -57,7 +57,7 @@ Pilot = the 20 non-dev ids that come first per family (2 per family), never dev 
 `--ids train` skips every id that already has an answer in earlier runs' calls.jsonl (pass `--prior <dirs>`), and
 train_records.jsonl holds at most one record per id (the first PASS). Why: without this the pilot jobs get paid for
 twice and the same job could appear twice in training (verifier A6).
-`--escalate` (decision, user 2026-10-29): for every id Spark FAILED, ask Muse Wonder (`muse-wonder-1.0`, api.meta.ai,
+`--escalate` (**superseded 2026-10-30, user: no Wonder output in training data, Meta API terms §10.1; not run for the factory**; was: decision, user 2026-10-29): for every id Spark FAILED, ask Muse Wonder (`muse-wonder-1.0`, api.meta.ai,
 META_HERDSHOT_API_KEY, same prompt) once; keep its answer only if it PASSES at 1e-6. Each record gets `teacher: spark|wonder`;
 summary reports the share of records from Wonder (why: privacy reporting; Wonder is a closed API). Separate budget
 `--budget-w` (Meta credit).

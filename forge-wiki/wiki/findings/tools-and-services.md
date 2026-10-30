@@ -83,8 +83,9 @@ so re-check the live wording before the submission text quotes it.
   fine-tune, distill … any … model that competes with Meta's models or services" without Meta's prior written
   authorization; evaluation/benchmarking of your own systems is allowed (https://dev.meta.ai/legal/terms-of-service).
   "Competes" is not defined.
-- decision (Claude, recommended to the user 2026-10-30): **no Wonder output enters training data** unless Meta gives
-  written authorization; `--escalate` stays off for training records. Today no Wonder output is in any data (never run).
+- decision (user, 2026-10-30, "okay"): **no Wonder output ever enters training data** (Meta API terms §10.1);
+  `--escalate` is not run for the factory. Today no Wonder output is in any data (never run). Open: a code guard so
+  teacher.py refuses `--escalate` when writing train records (next Muse round).
 - verified: **Muse Spark Open**: Muse Model License allows derivatives "trained … distilled … using the Software or any
   outputs"; Meta claims no ownership of outputs; requires "Built with Muse Spark Open" in the UI or documentation; a
   separate agreement only above $20M/year model-as-a-service; include the licence + Usage Policy in copies
