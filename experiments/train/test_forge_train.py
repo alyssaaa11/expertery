@@ -178,25 +178,43 @@ def test_schedule_leftover_partial_group():
     assert s["optimizer_steps"] == 1 and s["micro_steps"] == 8
 
 
-def test_loader_accepts_jsonl_and_json_array(tmp_path):
-    # E3 (2026-10-30): records need "teacher": "spark" unless the file
-    # is the factory's train_records.jsonl.
-    recs = [{"text": "make a box", "code": "result = 1",
+def _write_calls(run_dir, calls):
+    """Fake sibling calls.jsonl: [(id, teacher, verdict)]."""
+    run_dir.mkdir(exist_ok=True)
+    (run_dir / "calls.jsonl").write_text(
+        "\n".join(json.dumps({"id": i, "teacher": t, "verdict": v})
+                   for i, t, v in calls) + "\n",
+        encoding="utf-8")
+
+
+def test_loader_accepts_jsonl_and_json_array(tmp_path, capsys):
+    # E3 (round 2b): records still need the calls.jsonl cross-check: a
+    # sibling calls.jsonl with a Spark PASS for each id keeps them.
+    run_dir = tmp_path / "run"
+    _write_calls(run_dir, [("a", "spark", "PASS"), ("b", "spark", "PASS")])
+    recs = [{"id": "a", "text": "make a box", "code": "result = 1",
              "teacher": "spark"},
-            {"text": "make a tube", "code": "result = 2",
+            {"id": "b", "text": "make a tube", "code": "result = 2",
              "teacher": "spark"}]
-    jl = tmp_path / "data.jsonl"
+    jl = run_dir / "data.jsonl"
     jl.write_text("\n".join(json.dumps(r) for r in recs) + "\n",
                   encoding="utf-8")
     assert forge_train.load_training_records(str(jl)) == recs
-    ja = tmp_path / "data.json"
+    ja = run_dir / "data.json"
     ja.write_text(json.dumps(recs), encoding="utf-8")
     assert forge_train.load_training_records(str(ja)) == recs
-    # The smoke examples file is a JSON array and loads with the same
-    # loader, but its records carry no teacher tag, so under E3 they
-    # are all refused (it is not the factory's train_records.jsonl).
+    out = capsys.readouterr().out
+    assert "CALLS_FILTER" in out and "kept=2" in out
+
+
+def test_smoke_examples_exempt_from_both_rules():
+    """B1 (round 2b): the trusted smoke examples (SMOKE_EXAMPLES, the
+    file run_smoke loads) are exempt by explicit path from BOTH the
+    calls.jsonl rule and the teacher-field rule: they carry no teacher
+    tag and sit next to no calls.jsonl, yet they all load."""
     smoke = forge_train.load_training_records(forge_train.SMOKE_EXAMPLES)
-    assert smoke == []
+    assert len(smoke) > 0  # today a real smoke run keeps 0 records
+    assert all(r.get("text") and r.get("code") for r in smoke)
 
 
 def test_loader_rejects_records_without_text_and_code(tmp_path):
@@ -210,12 +228,17 @@ def test_loader_rejects_records_without_text_and_code(tmp_path):
 def test_loader_drops_non_spark_teacher_and_counts(tmp_path, capsys):
     """E3 (user, 2026-10-30): any record whose teacher is not spark is
     dropped and counted in the log."""
+    run_dir = tmp_path / "run"
+    _write_calls(run_dir, [("s", "spark", "PASS")])
     recs = [
-        {"text": "spark box", "code": "result = 1", "teacher": "spark"},
-        {"text": "wonder box", "code": "result = 2", "teacher": "wonder"},
-        {"text": "human box", "code": "result = 3", "teacher": "human"},
+        {"id": "s", "text": "spark box", "code": "result = 1",
+         "teacher": "spark"},
+        {"id": "w", "text": "wonder box", "code": "result = 2",
+         "teacher": "wonder"},
+        {"id": "h", "text": "human box", "code": "result = 3",
+         "teacher": "human"},
     ]
-    path = tmp_path / "mixed.jsonl"
+    path = run_dir / "mixed.jsonl"
     path.write_text("\n".join(json.dumps(r) for r in recs) + "\n",
                     encoding="utf-8")
     kept = forge_train.load_training_records(str(path))
@@ -225,19 +248,92 @@ def test_loader_drops_non_spark_teacher_and_counts(tmp_path, capsys):
     assert "dropped_non_spark=2" in out
 
 
-def test_loader_refuses_missing_teacher_unless_factory_file(tmp_path):
-    """E3: records without the field are refused, unless the file is
-    the factory's train_records.jsonl (Spark PASS answers only)."""
-    recs = [{"text": "a box", "code": "result = 1"},
-            {"text": "a tube", "code": "result = 2"}]
-    other = tmp_path / "data.jsonl"
-    other.write_text("\n".join(json.dumps(r) for r in recs) + "\n",
-                     encoding="utf-8")
-    assert forge_train.load_training_records(str(other)) == []
-    factory = tmp_path / "train_records.jsonl"
+def test_loader_keeps_only_spark_pass_ids(tmp_path, capsys):
+    """E3 (round 2b): the calls.jsonl cross-check keeps only ids with
+    a PASS call whose teacher == "spark": a Spark FAIL, a Wonder PASS
+    and an id with no call at all are dropped, and both id lists print."""
+    run_dir = tmp_path / "run"
+    _write_calls(run_dir, [("keep", "spark", "PASS"),
+                           ("fail", "spark", "FAIL"),
+                           ("wonder", "wonder", "PASS")])
+    recs = [{"id": i, "text": "job " + i, "code": "result = 1"}
+            for i in ("keep", "fail", "wonder", "ghost")]
+    path = run_dir / "train_records.jsonl"
+    path.write_text("\n".join(json.dumps(r) for r in recs) + "\n",
+                    encoding="utf-8")
+    kept = forge_train.load_training_records(str(path))
+    assert [r["id"] for r in kept] == ["keep"]
+    out = capsys.readouterr().out
+    assert "CALLS_FILTER" in out and "kept=1" in out
+    assert "'keep'" in out  # the kept ids print
+    for dropped in ("'fail'", "'wonder'", "'ghost'"):
+        assert dropped in out  # the dropped ids print
+
+
+def test_loader_merged_file_uses_sources_json(tmp_path):
+    """E3 (round 2b): a merged file sits next to a sources.json listing
+    the run dirs; ids PASSing in any listed run are kept."""
+    run_a = tmp_path / "run-a"
+    run_b = tmp_path / "run-b"
+    _write_calls(run_a, [("F1-1", "spark", "PASS")])
+    _write_calls(run_b, [("F2-1", "spark", "PASS")])
+    merged_dir = tmp_path / "merged"
+    merged_dir.mkdir()
+    (merged_dir / "sources.json").write_text(
+        json.dumps(["../run-a", "../run-b"]), encoding="utf-8")
+    recs = [{"id": i, "text": "job " + i, "code": "result = 1"}
+            for i in ("F1-1", "F2-1", "F9-9")]
+    merged = merged_dir / "train_merged.jsonl"
+    merged.write_text("\n".join(json.dumps(r) for r in recs) + "\n",
+                      encoding="utf-8")
+    kept = forge_train.load_training_records(str(merged))
+    assert [r["id"] for r in kept] == ["F1-1", "F2-1"]
+
+
+def test_loader_refuses_without_calls_or_sources(tmp_path):
+    """E3 (round 2b): no sibling calls.jsonl and no sources.json next
+    to the file refuses (only the smoke examples are exempt)."""
+    lonely = tmp_path / "lonely.jsonl"
+    lonely.write_text(json.dumps({"id": "a", "text": "a box",
+                                  "code": "result = 1",
+                                  "teacher": "spark"}) + "\n",
+                      encoding="utf-8")
+    with pytest.raises(ValueError, match="no sibling calls.jsonl"):
+        forge_train.load_training_records(str(lonely))
+
+
+def test_loader_refuses_escalated_source_via_sources_json(tmp_path):
+    """E3 (round 2b): a merged file whose listed run used --escalate
+    (that run's summary.json shows Wonder output) is refused."""
+    run_a = tmp_path / "run-a"
+    _write_calls(run_a, [("F1-1", "wonder", "PASS")])
+    (run_a / "summary.json").write_text(json.dumps(
+        {"wonder_share": 1.0, "cost_w_dollars": 0.02}), encoding="utf-8")
+    merged_dir = tmp_path / "merged"
+    merged_dir.mkdir()
+    (merged_dir / "sources.json").write_text(
+        json.dumps(["../run-a"]), encoding="utf-8")
+    merged = merged_dir / "train_merged.jsonl"
+    merged.write_text(json.dumps({"id": "F1-1", "text": "job",
+                                  "code": "result = 1"}) + "\n",
+                      encoding="utf-8")
+    with pytest.raises(ValueError, match="--escalate"):
+        forge_train.load_training_records(str(merged))
+
+
+def test_loader_missing_teacher_verified_via_calls(tmp_path):
+    """E3 (round 2b): the file-name rule is gone: a record without the
+    teacher field is kept when the calls.jsonl shows a Spark PASS for
+    its id, and dropped otherwise."""
+    run_dir = tmp_path / "run"
+    _write_calls(run_dir, [("a", "spark", "PASS")])
+    recs = [{"id": "a", "text": "a box", "code": "result = 1"},
+            {"id": "b", "text": "a tube", "code": "result = 2"}]
+    factory = run_dir / "train_records.jsonl"
     factory.write_text("\n".join(json.dumps(r) for r in recs) + "\n",
                        encoding="utf-8")
-    assert forge_train.load_training_records(str(factory)) == recs
+    kept = forge_train.load_training_records(str(factory))
+    assert [r["id"] for r in kept] == ["a"]
 
 
 def test_loader_refuses_escalate_run(tmp_path):
@@ -253,11 +349,12 @@ def test_loader_refuses_escalate_run(tmp_path):
          "cost_w_dollars": 0.01}), encoding="utf-8")
     with pytest.raises(ValueError, match="--escalate"):
         forge_train.load_training_records(str(train))
-    # A Spark-only run's summary is no evidence: it loads.
+    # A Spark-only run's summary is no evidence: it loads (with a
+    # sibling calls.jsonl backing the id).
     clean_dir = tmp_path / "factory-clean"
-    clean_dir.mkdir()
+    _write_calls(clean_dir, [("a", "spark", "PASS")])
     clean_train = clean_dir / "train_records.jsonl"
-    clean_train.write_text(json.dumps({"text": "a box",
+    clean_train.write_text(json.dumps({"id": "a", "text": "a box",
                                        "code": "result = 1"}) + "\n",
                            encoding="utf-8")
     (clean_dir / "summary.json").write_text(json.dumps(

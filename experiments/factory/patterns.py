@@ -23,12 +23,16 @@ Every FAIL or error gets a signature (category, key). Categories:
     the call failed).
   no_code: the answer had no code.
   run_error: exception type + message with numbers replaced by N.
-  wrong_shape: the sorted failed checks.
+  wrong_shape: (family, first failed check with numbers replaced by
+    N), so one family's "solids=3 / solids=4" FAILs group into one
+    pattern even when their later checks differ.
 A signature seen >= min-count times is a pattern. Kind:
   our_bug if harness;
-  our_wording if wrong_shape and >= 80% of its hits are in one family;
-  teacher_habit if run_error/no_code, or wrong_shape spread over >= 2
-  families.
+  our_wording if wrong_shape (one family by construction) -- except a
+  wrong_shape whose first failed check is `solids=N` or `invalid
+  shape`, which is teacher_habit (the text was fine: blind rebuilds
+  passed those jobs);
+  teacher_habit if run_error/no_code.
 
 Each calls.jsonl record carries factory_version (see teacher.py), so
 patterns from different generator versions stay separable.
@@ -96,6 +100,27 @@ def is_valid_id(job_id):
     return bool(ID_RE.match(str(job_id or "")))
 
 
+# A wrong_shape whose first failed check is one of these is the
+# teacher's habit (the text was fine: blind rebuilds passed F8-1 and
+# F8-3), not our wording. Compared against the numbers-normalized
+# first check; the solids form also matches a longer tail ("solids=N,
+# ...").
+TEACHER_HABIT_SHAPES = ("solids=N", "invalid shape")
+
+
+def first_shape_key(fails):
+    """The numbers-normalized first failed check (list order)."""
+    return normalize_numbers(str(fails[0])).strip()[:200]
+
+
+def is_teacher_habit_shape(first):
+    """True for a solids-count or invalid-shape first failed check."""
+    if first == "invalid shape":
+        return True
+    return first == "solids=N" or first.startswith(
+        ("solids=N ", "solids=N,", "solids=N:", "solids=N;"))
+
+
 def signature_of(rec):
     """The (category, key) of one FAIL/error record, or None for PASS.
 
@@ -103,14 +128,15 @@ def signature_of(rec):
     no_code (the answer had no code), then harness (our side: box
     error, timeout, no BREP, grader exception, or a call that never
     returned an answer), then the generic run_error shape (the answer's
-    code raised).
+    code raised). A wrong_shape key is (family, first failed check
+    with numbers replaced by N).
     """
     if rec.get("verdict") == "PASS":
         return None
     fails = [f for f in (rec.get("fails") or []) if f]
     if fails and rec.get("verdict") == "FAIL":
-        return ("wrong_shape", " | ".join(sorted(set(str(f)
-                                                     for f in fails)))[:200])
+        return ("wrong_shape", "%s: %s" % (rec.get("family"),
+                                           first_shape_key(fails)))
     err = str(rec.get("run_error") or "")
     code = rec.get("code")
     if rec.get("verdict") == "INVALID" and not (code or "").strip() \
@@ -136,14 +162,20 @@ def signature_of(rec):
     return ("run_error", "(no error text)")
 
 
-def kind_of(category, families):
+def kind_of(category, families, key=None):
     """our_bug / our_wording / teacher_habit per SPEC section 4."""
     if category == "harness":
         return "our_bug"
     if category in ("run_error", "no_code"):
         return "teacher_habit"
-    # wrong_shape: one family (>= 80%) means our wording, spread means
-    # the teacher keeps missing the same check across families.
+    # wrong_shape groups (family, first check), so one pattern is one
+    # family by construction: our wording, unless the first check is a
+    # solids-count or invalid-shape complaint (teacher habit).
+    if category == "wrong_shape" and key is not None:
+        first = key.split(": ", 1)[1] if ": " in key else key
+        if is_teacher_habit_shape(first.strip()):
+            return "teacher_habit"
+        return "our_wording"
     if families and max(families.values()) / sum(families.values()) >= 0.8:
         return "our_wording"
     return "teacher_habit"
@@ -225,7 +257,7 @@ def summarize(records, min_count=3):
         if len(recs) < min_count:
             continue
         fams = Counter(str(r.get("family")) for r in recs)
-        kind = kind_of(category, fams)
+        kind = kind_of(category, fams, key)
         patterns.append({
             "kind": kind,
             "category": category,

@@ -116,7 +116,7 @@ def test_wrong_shape_in_one_family_is_our_wording(tmp_path):
     fails = ["bbox xmax mismatch", "mismatch 5.0%"]
     _fake_run(str(tmp_path / "run-a"), [
         _rec("F1-1", 1, "FAIL", fails),
-        _rec("F1-2", 1, "FAIL", list(reversed(fails))),
+        _rec("F1-2", 1, "FAIL", fails),
         _rec("F1-3", 1, "FAIL", fails),
     ])
     data, text = _run_patterns(tmp_path, [str(tmp_path)])
@@ -124,22 +124,74 @@ def test_wrong_shape_in_one_family_is_our_wording(tmp_path):
     pat = data["patterns"][0]
     assert pat["kind"] == "our_wording"
     assert pat["category"] == "wrong_shape"
-    assert pat["key"] == " | ".join(sorted(fails))  # sorted checks
+    assert pat["key"] == "1: bbox xmax mismatch"  # family + first check
     assert pat["families"] == ["1"]
     assert pat["where"] == "generator.py family 1"
     assert "our_wording" in text
 
 
-def test_wrong_shape_spread_is_teacher_habit(tmp_path):
+def test_wrong_shape_same_check_two_families_is_two_patterns(tmp_path):
+    """T4: the signature carries the family, so one check failing in
+    two families is two per-family patterns, not one spread pattern."""
     _fake_run(str(tmp_path / "run-a"), [
         _rec("F1-1", 1, "FAIL", ["bbox mismatch"]),
         _rec("F1-2", 1, "FAIL", ["bbox mismatch"]),
+        _rec("F1-3", 1, "FAIL", ["bbox mismatch"]),
         _rec("F2-1", 2, "FAIL", ["bbox mismatch"]),
         _rec("F2-3", 2, "FAIL", ["bbox mismatch"]),
+        _rec("F2-4", 2, "FAIL", ["bbox mismatch"]),
     ])
     data, _text = _run_patterns(tmp_path, [str(tmp_path)])
+    assert len(data["patterns"]) == 2
+    by_key = {p["key"]: p for p in data["patterns"]}
+    assert by_key["1: bbox mismatch"]["kind"] == "our_wording"
+    assert by_key["2: bbox mismatch"]["kind"] == "our_wording"
+
+
+def test_f8_solids_counts_group_into_one_pattern(tmp_path):
+    """T4: 3 F8 FAILs with solids=3, solids=4, solids=3 and different
+    later checks group into ONE pattern (numbers -> N)."""
+    _fake_run(str(tmp_path / "run-a"), [
+        _rec("F8-1", 8, "FAIL", ["solids=3", "volume", "area"]),
+        _rec("F8-2", 8, "FAIL", ["solids=4", "invalid shape", "bbox"]),
+        _rec("F8-3", 8, "FAIL", ["solids=3", "mismatch 140.1%"]),
+    ])
+    data, text = _run_patterns(tmp_path, [str(tmp_path)])
     assert len(data["patterns"]) == 1
-    assert data["patterns"][0]["kind"] == "teacher_habit"
+    pat = data["patterns"][0]
+    assert pat["category"] == "wrong_shape"
+    assert pat["key"] == "8: solids=N"
+    assert pat["count"] == 3
+    assert pat["families"] == ["8"]
+
+
+def test_solids_or_invalid_shape_first_check_is_teacher_habit(tmp_path):
+    """B2: a wrong_shape whose first failed check is `solids=N` or
+    `invalid shape` is kind teacher_habit (the text was fine)."""
+    assert patterns.is_teacher_habit_shape("solids=N") is True
+    assert patterns.is_teacher_habit_shape("invalid shape") is True
+    assert patterns.is_teacher_habit_shape("bbox xmax mismatch") is False
+    _fake_run(str(tmp_path / "run-a"), [
+        _rec("F8-1", 8, "FAIL", ["solids=3", "volume", "area"]),
+        _rec("F8-2", 8, "FAIL", ["solids=4", "invalid shape", "bbox"]),
+        _rec("F8-3", 8, "FAIL", ["solids=3", "mismatch 140.1%"]),
+    ])
+    data, text = _run_patterns(tmp_path, [str(tmp_path)])
+    assert len(data["patterns"]) == 1
+    pat = data["patterns"][0]
+    assert pat["key"] == "8: solids=N"
+    assert pat["kind"] == "teacher_habit"
+    assert pat["where"] == "teacher_notes.md"
+    assert "teacher_habit" in text
+    # An invalid-shape first check lands in the same kind.
+    _fake_run(str(tmp_path / "run-b"), [
+        _rec("F8-4", 8, "FAIL", ["invalid shape", "bbox", "volume"]),
+        _rec("F8-5", 8, "FAIL", ["invalid shape", "bbox", "area"]),
+        _rec("F8-7", 8, "FAIL", ["invalid shape", "volume", "area"]),
+    ])
+    data, _text = _run_patterns(tmp_path, [str(tmp_path)])
+    by_key = {p["key"]: p for p in data["patterns"]}
+    assert by_key["8: invalid shape"]["kind"] == "teacher_habit"
 
 
 def test_no_code_is_teacher_habit(tmp_path):

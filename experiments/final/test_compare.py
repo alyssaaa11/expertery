@@ -196,3 +196,91 @@ def test_refuses_when_6a_ended_incomplete(tmp_path):
         compare.main(["--ft", ftd, "--b2bx", b2bx, "--br", brd,
                       "--bx-extra", extra])
     assert exc.value.code == 2
+
+
+# ------------------------------------------------------- E2: 79 + 11 BX merge
+
+
+def _e2_world(tmp_path):
+    """E2 (round 2b): 30 jobs x 3 reps = 90 BX answers, 79 in the
+    baseline dir and 11 in the step-6a dir. Baseline BX tokens are heavy
+    (15000 each), 6a tokens light (1500 each), so bar (d) over the wrong
+    slice would show: baseline-only 15000, merged 13350."""
+    jobs = ["J%02d" % i for i in range(30)]
+    reps = (0, 1, 2)
+    missing = [(jobs[i], reps[i % 3]) for i in range(11)]
+    base_bx, extra_bx, b2, br, ft = [], [], [], [], []
+    for job in jobs:
+        for rep in reps:
+            b2.append(_rec(job, "B2", rep,
+                           "PASS" if rep == 0 else "FAIL",
+                           prompt=6000, completion=4000))
+            br.append(_rec(job, "BR", rep, "PASS"))
+            ft.append(_rec(job, "FT", rep, "PASS",
+                           prompt=3000, completion=1500))
+            rec = _rec(job, "BX", rep, "PASS", prompt=10000,
+                       completion=5000, bx=True)
+            if (job, rep) in missing:
+                rec["prompt_tokens_total"] = 1000
+                rec["completion_tokens_total"] = 500
+                extra_bx.append(rec)
+            else:
+                base_bx.append(rec)
+    assert len(base_bx) == 79 and len(extra_bx) == 11
+    b2bx = str(tmp_path / "b2bx")
+    _write_dir(b2bx, b2 + base_bx,
+               {"arm_timing": {"B2": {"seconds": 1000.0},
+                               "BX": {"seconds": 3000.0}}})
+    brd = str(tmp_path / "br")
+    _write_dir(brd, br, {"arm_timing": {"BR": {"seconds": 500.0}}})
+    ftd = str(tmp_path / "ft")
+    _write_dir(ftd, ft, {"arm": "FT", "wall_seconds": 800.0,
+                         "cold_start_s": 0.0})
+    extra = str(tmp_path / "extra")
+    _write_dir(extra, extra_bx,
+               {"arm": "BX", "status": "COMPLETE", "wall_seconds": 60.0,
+                "cold_start_s": 10.0})
+    return ftd, b2bx, brd, extra
+
+
+def test_e2_bar_d_uses_all_90_bx_answers(tmp_path):
+    ftd, b2bx, brd, extra = _e2_world(tmp_path)
+    lines, result = compare.decide(ftd, b2bx, brd, extra)
+    assert result["jobs"] == 30 and result["reps"] == 3
+    bar_d = result["bar_d"]
+    # Merged: (79 x 15000 + 11 x 1500) / 90 = 13350 tokens/correct.
+    assert bar_d["bx_tpc"] == pytest.approx(13350.0)
+    # Disclosure: the 79-answer baseline-only slice stays at 15000.
+    assert bar_d["bx_79_tpc"] == pytest.approx(15000.0)
+    assert bar_d["bx_tpc"] != pytest.approx(bar_d["bx_79_tpc"])
+    # BX wall = 3000 (baseline arm) + (60 - 10) (6a without cold start).
+    assert bar_d["bx_wall_s"] == pytest.approx(3050.0)
+    text = "\n".join(lines)
+    assert "all 90 answers" in text
+
+
+def test_e2_duplicate_across_79_and_11_refuses(tmp_path):
+    ftd, b2bx, brd, extra = _e2_world(tmp_path)
+    # (J00, 1) lives in the baseline 79: holding it in 6a too refuses.
+    dup = _rec("J00", "BX", 1, "PASS", bx=True)
+    with open(os.path.join(extra, "calls.jsonl"), "a",
+              encoding="utf-8") as f:
+        f.write(json.dumps(dup) + "\n")
+    with pytest.raises(ValueError, match="duplicate BX answer.*J00 rep 1"):
+        compare.decide(ftd, b2bx, brd, extra)
+
+
+def test_e2_incomplete_6a_with_11_records_refuses(tmp_path):
+    ftd, b2bx, brd, extra = _e2_world(tmp_path)
+    recs = [json.loads(line) for line in
+            open(os.path.join(extra, "calls.jsonl")) if line.strip()]
+    _write_dir(extra, recs,
+               {"arm": "BX", "status": "INCOMPLETE",
+                "wall_seconds": 60.0, "cold_start_s": 10.0,
+                "still_missing": []})
+    with pytest.raises(ValueError, match="did not end COMPLETE"):
+        compare.decide(ftd, b2bx, brd, extra)
+    with pytest.raises(SystemExit) as exc:
+        compare.main(["--ft", ftd, "--b2bx", b2bx, "--br", brd,
+                      "--bx-extra", extra])
+    assert exc.value.code == 2

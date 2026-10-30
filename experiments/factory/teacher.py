@@ -11,6 +11,10 @@ CLI: teacher.py --jobs jobs.jsonl --ids pilot|train|all --out <dir>
   --budget-dollars X [--k 1] [--retry-failed] [--prior <dirs>]
   [--escalate] [--budget-w Y]
 
+--escalate is refused by the CLI (exit 2): decision (user, 2026-10-30):
+no Wonder output in training data. run_suite keeps the flag for
+offline tests only.
+
 Pilot = the 20 non-dev ids that come first per family (2 per family),
 never dev ids. --ids train skips every id that already has an answer in
 earlier runs' calls.jsonl (pass --prior <dirs>), and train_records.jsonl
@@ -605,14 +609,15 @@ def build_train_records_from(records):
 
 
 def build_train_records(records, jobs_by_id):
-    """train_records.jsonl = {"id", "text", "code"} for the first PASS
-    at 1e-6 of each id (the teacher's extracted code, not the
-    reference)."""
+    """train_records.jsonl = {"id", "text", "code", "teacher"} for the
+    first PASS at 1e-6 of each id (the teacher's extracted code, not
+    the reference). The teacher tag travels with the row (decision,
+    user 2026-10-30: no Wonder output in training data)."""
     out = []
     for rec in build_train_records_from(records):
         job = jobs_by_id[rec["id"]]
         out.append({"id": rec["id"], "text": job["text"],
-                    "code": rec["code"]})
+                    "code": rec["code"], "teacher": rec["teacher"]})
     return out
 
 
@@ -636,6 +641,11 @@ def main(argv=None):
     parser.add_argument("--budget-w", type=float, default=None,
                         help="separate Meta-credit budget for Wonder calls")
     args = parser.parse_args(argv)
+    if args.escalate:
+        parser.error(
+            "--escalate is refused: decision (user, 2026-10-30): no "
+            "Wonder output in training data")
+        return 2
     baseten_key = os.environ.get("BASETEN_KEY", "")
     if not baseten_key:
         parser.error("missing environment variables: BASETEN_KEY")

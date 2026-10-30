@@ -138,7 +138,7 @@ def test_pass_ends_up_in_train_records_fail_does_not(tmp_path):
     kept = [json.loads(line) for line in open(
         os.path.join(out, "train_records.jsonl"), encoding="utf-8")]
     assert kept == [{"id": "F1-1", "text": "spool one",
-                     "code": "result = 1"}]
+                     "code": "result = 1", "teacher": "spark"}]
     by_id = {r["id"]: r for r in records}
     assert by_id["F1-1"]["verdict"] == "PASS"
     assert by_id["F1-2"]["verdict"] == "FAIL"
@@ -278,7 +278,7 @@ def test_train_records_keep_the_short_prompt_no_notes(tmp_path):
     kept = [json.loads(line) for line in open(
         os.path.join(out, "train_records.jsonl"), encoding="utf-8")]
     assert kept == [{"id": "F1-1", "text": "spool one",
-                     "code": "result = 1"}]
+                     "code": "result = 1", "teacher": "spark"}]
     assert post.calls[0]["messages"][1]["content"].count("some note") == 1
 
 
@@ -438,10 +438,31 @@ def test_missing_key_exits_2_with_message_no_network(monkeypatch, tmp_path,
 
 
 def test_escalate_without_meta_key_exits_2(monkeypatch, tmp_path, capsys):
+    """Round 2b: --escalate is refused by decision before any key check,
+    so even a missing META key reports the decision, not the key."""
     monkeypatch.setenv("BASETEN_KEY", "x")
     monkeypatch.delenv("META_HERDSHOT_API_KEY", raising=False)
     with pytest.raises(SystemExit) as exc:
         teacher.main(["--ids", "pilot", "--out", str(tmp_path),
                       "--budget-dollars", "1", "--escalate"])
     assert exc.value.code == 2
-    assert "META_HERDSHOT_API_KEY" in capsys.readouterr().err
+    assert "no Wonder output in training data" in capsys.readouterr().err
+
+
+def test_escalate_refused_by_decision_even_with_keys(
+        monkeypatch, tmp_path, capsys):
+    """Round 2b (decision, user 2026-10-30: no Wonder output in training
+    data): --escalate exits 2 with a message naming the decision, before
+    any key check or network."""
+    monkeypatch.setenv("BASETEN_KEY", "x")
+    monkeypatch.setenv("META_HERDSHOT_API_KEY", "y")
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("no network in tests")
+
+    monkeypatch.setattr(teacher, "run_suite", _boom)
+    with pytest.raises(SystemExit) as exc:
+        teacher.main(["--ids", "pilot", "--out", str(tmp_path),
+                      "--budget-dollars", "1", "--escalate"])
+    assert exc.value.code == 2
+    assert "no Wonder output in training data" in capsys.readouterr().err

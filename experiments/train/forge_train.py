@@ -309,18 +309,121 @@ def refuses_escalate_run(path):
     return wonder_share > 0 or cost_w > 0
 
 
+def _resolve_call_files(path):
+    """The calls.jsonl files a training file is cross-checked against.
+
+    A run's own file sits next to its sibling calls.jsonl (same
+    folder); a merged file sits next to a sources.json listing the run
+    dirs (relative entries resolve against the sources.json folder, and
+    each entry is a run dir holding calls.jsonl, or a calls.jsonl file
+    itself). Raises ValueError when neither is found.
+    """
+    folder = os.path.dirname(os.path.abspath(path))
+    sibling = os.path.join(folder, "calls.jsonl")
+    if os.path.isfile(sibling):
+        return [sibling]
+    sources_path = os.path.join(folder, "sources.json")
+    if os.path.isfile(sources_path):
+        with open(sources_path, encoding="utf-8") as f:
+            sources = json.load(f)
+        if isinstance(sources, dict):
+            for key in ("sources", "runs", "run_dirs"):
+                if isinstance(sources.get(key), list):
+                    sources = sources[key]
+                    break
+        if not isinstance(sources, list) or not sources:
+            raise ValueError(
+                "training data %r has a sources.json with no run dirs; "
+                "refusing to start" % (path,))
+        out = []
+        for entry in sources:
+            cand = (entry if os.path.isabs(str(entry))
+                    else os.path.join(folder, str(entry)))
+            if os.path.isfile(cand):
+                out.append(cand)
+            elif os.path.isfile(os.path.join(cand, "calls.jsonl")):
+                out.append(os.path.join(cand, "calls.jsonl"))
+            else:
+                raise ValueError(
+                    "training data %r lists run dir %r with no "
+                    "calls.jsonl; refusing to start" % (path, entry))
+        return out
+    raise ValueError(
+        "training data %r has no sibling calls.jsonl or sources.json; "
+        "refusing to start (only ids with a Spark PASS call are kept)"
+        % (path,))
+
+
+def _spark_pass_ids(call_files):
+    """Ids with a PASS call whose teacher == "spark"."""
+    out = set()
+    for call_file in call_files:
+        with open(call_file, encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                if (isinstance(rec, dict)
+                        and rec.get("verdict") == "PASS"
+                        and rec.get("teacher") == "spark"
+                        and rec.get("id") is not None):
+                    out.add(rec["id"])
+    return out
+
+
+def _refuses_escalate_sources(call_files):
+    """True when any cross-checked run's summary.json shows Wonder
+    output (Wonder share/cost above zero)."""
+    seen = set()
+    for call_file in call_files:
+        folder = os.path.dirname(os.path.abspath(call_file))
+        if folder in seen:
+            continue
+        seen.add(folder)
+        summary_path = os.path.join(folder, "summary.json")
+        if not os.path.isfile(summary_path):
+            continue
+        try:
+            with open(summary_path, encoding="utf-8") as f:
+                summary = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(summary, dict):
+            continue
+        try:
+            wonder_share = float(summary.get("wonder_share", 0) or 0)
+        except (TypeError, ValueError):
+            wonder_share = 0.0
+        try:
+            cost_w = float(summary.get("cost_w_dollars", 0) or 0)
+        except (TypeError, ValueError):
+            cost_w = 0.0
+        if wonder_share > 0 or cost_w > 0:
+            return True
+    return False
+
+
 def load_training_records(path):
     """Read training records from JSONL or a JSON array (both accepted).
 
     Validates each record has non-empty "text" and "code" strings.
     Decision guard (user, 2026-10-30: no Wonder output in training
     data, Meta API terms section 10.1): a file from a run with
-    --escalate (sibling summary.json with Wonder share/cost) is refused
-    with ValueError; any record whose "teacher" is not "spark" is
-    dropped and counted in the log (records without the field are
-    refused too, unless the file is the factory's train_records.jsonl,
-    which only holds Spark PASS answers). Returns the kept dicts.
-    Raises ValueError on bad records.
+    --escalate (a sibling or cross-checked summary.json with Wonder
+    share/cost) is refused with ValueError; any record whose "teacher"
+    is not "spark" is dropped and counted in the log. The real check
+    (round 2b, E3): the run's sibling calls.jsonl (same folder; for a
+    merged file, a sources.json next to it listing the run dirs) is
+    cross-checked, and only ids with a PASS call whose teacher ==
+    "spark" are kept (kept/dropped ids are printed); files with no
+    calls.jsonl/sources.json are refused. The trusted smoke examples
+    (SMOKE_EXAMPLES, loaded by run_smoke before the cap check) are
+    exempt by explicit path from both the calls.jsonl rule and the
+    teacher-field rule. Returns the kept dicts. Raises ValueError on
+    bad records.
     """
     if refuses_escalate_run(path):
         raise ValueError(
@@ -347,24 +450,46 @@ def load_training_records(path):
                 or not rec["code"].strip()):
             raise ValueError(
                 "record %d needs non-empty \"text\" and \"code\" strings" % i)
-    factory_train = (os.path.basename(path) == "train_records.jsonl")
-    kept, n_non_spark, n_no_teacher = [], 0, 0
+    if os.path.abspath(path) == os.path.abspath(SMOKE_EXAMPLES):
+        print("SMOKE_EXEMPT %s: kept=%d (trusted smoke examples)"
+              % (path, len(records)))
+        return records
+    call_files = _resolve_call_files(path)
+    if _refuses_escalate_sources(call_files):
+        raise ValueError(
+            "training data %r cross-checks a run with --escalate "
+            "(summary.json shows Wonder output); refusing to start "
+            "(no Wonder output in training data)" % (path,))
+    spark_ids = _spark_pass_ids(call_files)
+    pre_kept, n_non_spark = [], 0
     for rec in records:
         teacher = rec.get("teacher", None)
-        if teacher is None:
-            if factory_train:
-                kept.append(rec)
-                continue
-            n_no_teacher += 1
-            continue
-        if teacher != "spark":
+        if teacher is not None and teacher != "spark":
             n_non_spark += 1
             continue
-        kept.append(rec)
-    print("TEACHER_FILTER %s: kept=%d dropped_non_spark=%d "
-          "dropped_no_teacher=%d" % (path, len(kept), n_non_spark,
-                                     n_no_teacher))
+        pre_kept.append(rec)
+    print("TEACHER_FILTER %s: kept=%d dropped_non_spark=%d"
+          % (path, len(pre_kept), n_non_spark))
+    kept, dropped_ids = [], []
+    for rec in pre_kept:
+        if rec.get("id") in spark_ids:
+            kept.append(rec)
+        else:
+            dropped_ids.append(rec.get("id"))
+    print("CALLS_FILTER %s: kept=%d ids=%s dropped=%d ids=%s"
+          % (path, len(kept), sorted(kept_ids(kept), key=_sort_key),
+             len(dropped_ids), sorted(dropped_ids, key=_sort_key)))
     return kept
+
+
+def kept_ids(records):
+    """The ids of kept records (for the CALLS_FILTER log)."""
+    return [rec.get("id") for rec in records]
+
+
+def _sort_key(value):
+    """Sort helper: mixed None/str ids sort without TypeError."""
+    return (value is None, str(value))
 
 
 # ------------------------------------------------------------ exam guard
