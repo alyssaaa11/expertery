@@ -73,8 +73,19 @@ DEV_GATE_RATE = 0.80  # PLAN step 5: dev >= 80% at 0.2% -> GO, else STOP
 
 
 def ft_messages(job_text, manual_text=""):
-    """Arm FT messages = arm A's messages (system + job text)."""
-    return runner.build_messages("A", job_text, manual_text)
+    """Arm FT messages = arm A's messages (system + job text).
+
+    Claude small fix (2026-10-30, disclosed): if env FORGE_RULE_CARD names a
+    file, its text is appended to the system message (the rule-card check).
+    Unset (the default), the messages are unchanged."""
+    messages = runner.build_messages("A", job_text, manual_text)
+    card_path = os.environ.get("FORGE_RULE_CARD", "")
+    if card_path:
+        with open(card_path, encoding="utf-8") as f:
+            card = f.read().strip()
+        messages[0] = dict(messages[0],
+                           content=messages[0]["content"] + "\n\n" + card)
+    return messages
 
 
 def ft_body(messages, model=FT_MODEL):

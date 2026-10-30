@@ -70,6 +70,8 @@ proof of when each part was built.
   and a few early run scripts (`experiments/smoke/train_smoke.py`, `score_answer.py`,
   `experiments/bmax/run_session*.sh`, `glimmer_dashboard.py`, `experiments/option-a/audit/coverage_audit.py`). They
   are records of runs that already happened; Muse Code rebuilt the parts still in use.
+- **Small fixes by Claude (disclosed, user decision 2026-10-30):** `experiments/final/runner_final.py` `ft_messages`
+  (optional rule card in the system message via FORGE_RULE_CARD); `experiments/final/RULE_CARD.md` (content).
 - **Review:** a separate Claude verifier agent reviewed every step before money was spent.
 - **Published by Alyssa** (all commits are hers; most carry a "Co-Authored-By: Claude" line).
 
