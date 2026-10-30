@@ -51,7 +51,7 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Muse round 2b | 0.87 | run.usage |
 | Dev check (Modal) | 0.32 | billing 10.78 → 11.10 |
 | Oct 30 evening: Muse 3 + 3b + 3c (2.44+0.38+0.26), factory R3 (0.59+4.39), training R3 (1.99), dev R3 (2.22) | ≈ 12.3 | run.usage, summary.json, billing |
-| **Total** | **≈ 58.9 of 80** (+ base control running) | (verifier T2 recount: 44.06; + Modal cents) | |
+| **Total** | **≈ 58.9 of 80** (+ base control running) | earlier rows recounted by the verifier (T2) |
 
 Rest of the plan (verifier, forge-factory-pilot-2026-10-30): expected ≈ $48-49 total; worst case at every cap ≈ $54
 (main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. decision (user, 2026-10-30 evening, "total" to the $80 proposal): **budget $80 total**; extra room is for Modal + Baseten,
