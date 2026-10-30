@@ -410,6 +410,11 @@ def text5(p):
 def src5(p):
     # Diameters enter the program; radii only as (diameter)/2 inside it.
     # Bore overshoots are (printed value + 1), never precomputed literals.
+    # Round 1d: the main bore and the flange centre hole are ONE coaxial
+    # cut (the old two overlapping cuts are the same solid but their face
+    # structure makes the default Volume() noisy). The branch bore starts
+    # exactly at the printed branch end (-1): the old -2 start removed a
+    # disc of main-tube wall the text never describes.
     Dm, dm = round(p["Rm"] * 2, 1), round(p["rm"] * 2, 1)
     Db2, db2 = round(p["Rb2"] * 2, 1), round(p["rb2"] * 2, 1)
     Df2 = round(p["Rf2"] * 2, 1)
@@ -418,13 +423,12 @@ def src5(p):
         "branch = _ycyl((%s)/2, %s, 0, -1, %s)\n"
         "flange = _xcyl((%s)/2, 0, 0, -6, 0)\n"
         "s = main.fuse(branch, flange)\n"
-        "s = s.cut(_xcyl((%s)/2, 0, 0, -1, (%s + 1)))\n"
-        "s = s.cut(_ycyl((%s)/2, %s, 0, -2, (%s + 1)))\n"
-        "s = s.cut(_xcyl((%s)/2, 0, 0, -7, 1))\n"
+        "s = s.cut(_xcyl((%s)/2, 0, 0, (-6 - 1), (%s + 1)))\n"
+        "s = s.cut(_ycyl((%s)/2, %s, 0, -1, (%s + 1)))\n"
         "result = s\n"
         % (num(Dm), num(p["Lm"]), num(Db2), num(p["xb"]),
            num(p["Lb"]), num(Df2), num(dm), num(p["Lm"]),
-           num(db2), num(p["xb"]), num(p["Lb"]), num(dm)))
+           num(db2), num(p["xb"]), num(p["Lb"])))
 
 
 def wrong5(p):
@@ -816,6 +820,11 @@ def text10(p):
 
 def src10(p):
     c = _c10(p)
+    # Round 1d: the rim is its own ring (outer minus inner, Z H to H+rh)
+    # fused onto the top face. The old inner cut started at (H - 1) and
+    # removed body material below the top face that the text never
+    # describes. No cutter reaches below Z = H except the recess and the
+    # spout bore, both described by the text.
     return src(
         "body = Solid.makeCone((%s)/2, (%s)/2, %s, Vector(0, 0, 0), "
         "Vector(0, 0, 1))\n"
@@ -825,8 +834,9 @@ def src10(p):
         "s = body.fuse(spout)\n"
         "s = s.cut(rec)\n"
         "s = s.cut(_zcyl((%s)/2, 0, 0, %s, %s))\n"
-        "s = s.fuse(_zcyl((%s)/2, 0, 0, %s, (%s + %s)))\n"
-        "s = s.cut(_zcyl((%s)/2, 0, 0, (%s - 1), ((%s + %s) + 1)))\n"
+        "rim = _zcyl((%s)/2, 0, 0, %s, (%s + %s))\n"
+        "rim = rim.cut(_zcyl((%s)/2, 0, 0, %s, ((%s + %s) + 1)))\n"
+        "s = s.fuse(rim)\n"
         "result = s\n"
         % (num(c["Db"]), num(c["Dt"]), num(c["H"]), num(c["Drb"]),
            num(c["Drt"]), num(c["zt"]), num(c["tf"]), num(c["tf"]),

@@ -258,13 +258,78 @@ def grade_result(check_fails, mismatch, measurements):
     }
 
 
-def score_shapes(answer_shape, ref_shape, expected):
+PRECISE_VOLUME_EPS = 1e-9  # factory H1 (2026-10-30)
+
+
+def precise_volume(shape):
+    """BRepGProp volume at eps 1e-9 (factory H1, 2026-10-30).
+
+    The default Shape.Volume() is noisy on some factory solids (F5 up
+    to 6.1e-4, F9 2.7e-6), so text-faithful answers failed 1e-6. Only
+    the volumes feeding the factory mismatch use this; every other
+    measurement keeps checks.measure as today.
+    """
+    from OCP.BRepGProp import BRepGProp as _BRepGProp
+    from OCP.GProp import GProp_GProps as _GProp
+
+    top = shape.wrapped if hasattr(shape, "wrapped") else shape
+    props = _GProp()
+    _BRepGProp.VolumeProperties_s(top, props, PRECISE_VOLUME_EPS)
+    return props.Mass()
+
+
+def factory_mismatch(answer_shape, ref_shape):
+    """Answer-XOR-reference fraction with precise volumes (factory H1).
+
+    Mirrors checks.mismatch exactly except the three volumes (answer,
+    reference, intersection) come from precise_volume.
+    """
+    import sys as _sys
+
+    if FIRST_TEST_DIR not in _sys.path:
+        _sys.path.insert(0, FIRST_TEST_DIR)
+    import checks as _checks
+
+    a, r = _checks.to_shape(answer_shape), _checks.to_shape(ref_shape)
+    inter = a.intersect(r)
+    va, vr, vi = (precise_volume(s) for s in (a, r, inter))
+    return (va + vr - 2 * vi) / vr
+
+
+def factory_score(answer, reference, expected):
+    """checks.score for factory answers with a precise mismatch (H1).
+
+    Mirrors checks.score line for line except the mismatch fraction
+    uses factory_mismatch. Tolerance behavior (checks.TOL_DIFF) is
+    unchanged: 1e-6 tight, 0.2% verdict.
+    """
+    import sys as _sys
+
+    if FIRST_TEST_DIR not in _sys.path:
+        _sys.path.insert(0, FIRST_TEST_DIR)
+    import checks as _checks
+
+    m = _checks.measure(answer)
+    fails = _checks.compare(m, expected)
+    try:
+        d = factory_mismatch(answer, reference)
+    except Exception as e:  # a broken shape can't be intersected
+        d, fails = None, fails + [("mismatch error %r" % (e,))[:120]]
+    m["mismatch"] = None if d is None else round(d, 5)
+    if d is not None and d > _checks.TOL_DIFF:
+        fails.append("mismatch %.1f%%" % (100.0 * d))
+    return (not fails), fails, m
+
+
+def score_shapes(answer_shape, ref_shape, expected, precise_mismatch=False):
     """Score built shapes at both tolerances (needs cadquery + checks).
 
     The reference shapes are trusted code (exam jobs.py, the generator);
     only model answers must stay out of this process. Returns the
     grade_result dict plus "mismatch". `checks` is imported lazily from
-    the frozen first-test copy.
+    the frozen first-test copy. With precise_mismatch=True (the factory
+    grader, H1) the mismatch uses precise BRepGProp volumes; the
+    default False path calls checks.score exactly as before.
     """
     import sys as _sys
 
@@ -275,11 +340,20 @@ def score_shapes(answer_shape, ref_shape, expected):
     old = _checks.TOL_DIFF
     try:
         _checks.TOL_DIFF = TOL_VERDICT
-        passed, fails, m = _checks.score(answer_shape, ref_shape, expected)
+        if precise_mismatch:
+            passed, fails, m = factory_score(answer_shape, ref_shape,
+                                             expected)
+        else:
+            passed, fails, m = _checks.score(answer_shape, ref_shape,
+                                             expected)
         d = m.get("mismatch")
         _checks.TOL_DIFF = TOL_TIGHT
-        passed_t, fails_t, _m2 = _checks.score(answer_shape, ref_shape,
-                                              expected)
+        if precise_mismatch:
+            passed_t, fails_t, _m2 = factory_score(answer_shape, ref_shape,
+                                                  expected)
+        else:
+            passed_t, fails_t, _m2 = _checks.score(answer_shape, ref_shape,
+                                                  expected)
     finally:
         _checks.TOL_DIFF = old
     out = grade_result(fails, d, {k: m.get(k) for k in
@@ -383,7 +457,8 @@ def grade_shapes_for_exam(exam, job_id, answer_shape, first_jobs=None,
             job_id, factory_jobs or load_factory_jobs())
         ref_shape = build_reference_shape(job["reference"])
         exp = _checks.measure(ref_shape)
-        return score_shapes(answer_shape, ref_shape, exp)
+        return score_shapes(answer_shape, ref_shape, exp,
+                            precise_mismatch=True)
     if first_jobs is None:
         import importlib.util as _ilu
 
@@ -494,10 +569,18 @@ if modal is not None:
         old = _checks.TOL_DIFF
         try:
             _checks.TOL_DIFF = TOL_VERDICT
-            passed, fails, m = _checks.score(answer, ref, expected)
+            if exam == "factory":
+                passed, fails, m = factory_score(answer, ref, expected)
+            else:
+                passed, fails, m = _checks.score(answer, ref, expected)
             d = m.get("mismatch")
             _checks.TOL_DIFF = TOL_TIGHT
-            passed_t, fails_t, _m2 = _checks.score(answer, ref, expected)
+            if exam == "factory":
+                passed_t, fails_t, _m2 = factory_score(answer, ref,
+                                                      expected)
+            else:
+                passed_t, fails_t, _m2 = _checks.score(answer, ref,
+                                                      expected)
         finally:
             _checks.TOL_DIFF = old
         return {

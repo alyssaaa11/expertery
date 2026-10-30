@@ -253,6 +253,70 @@ def test_score_shapes_both_tolerances():
     assert moved["verdict"] == "FAIL" and moved["tight"] == "FAIL"
 
 
+def _f5_one_and_two_bore():
+    """F5 first-job shapes: the fixed one-bore cut vs the old two-bore
+    cuts (the same solid; trusted generator code built locally)."""
+    pytest.importorskip("cadquery")
+    import sys as _sys
+
+    _sys.path.insert(0, os.path.join(HERE, "..", "factory"))
+    import generator as _gen
+
+    p = _gen.first_params(5)
+    new = _gen.FAMILIES[5]["src"](p)
+    dm = _gen.num(round(p["rm"] * 2, 1))
+    Lm = _gen.num(p["Lm"])
+    single = ("s = s.cut(_xcyl((%s)/2, 0, 0, (-6 - 1), (%s + 1)))"
+              % (dm, Lm))
+    assert single in new
+    two = ("s = s.cut(_xcyl((%s)/2, 0, 0, -1, (%s + 1)))\n"
+           "s = s.cut(_xcyl((%s)/2, 0, 0, -7, 1))") % (dm, Lm, dm)
+    return (_gen.build_source(new),
+            _gen.build_source(new.replace(single, two)))
+
+
+def test_factory_precise_mismatch_one_vs_two_bore():
+    # H1 (user option A): the factory path computes mismatch volumes
+    # with precise BRepGProp, so F5's one-bore and two-bore solids (the
+    # same solid) agree below 1e-9 and score tight PASS.
+    pytest.importorskip("cadquery")
+    import sys as _sys
+
+    _sys.path.insert(0, cloud_cq.FIRST_TEST_DIR)
+    import checks
+
+    one, two = _f5_one_and_two_bore()
+    assert abs(cloud_cq.factory_mismatch(one, two)) < 1e-9
+    exp = checks.measure(two)
+    out = cloud_cq.score_shapes(one, two, exp, precise_mismatch=True)
+    assert out["verdict"] == "PASS" and out["tight"] == "PASS"
+    assert abs(out["mismatch"]) < 1e-6
+
+
+def test_first_test_path_ignores_precise_scorer(monkeypatch):
+    # H1 changes only the factory path: with the precise scorer broken,
+    # the default (first-test) path still grades exactly as before.
+    cq = pytest.importorskip("cadquery")
+    import sys as _sys
+
+    _sys.path.insert(0, cloud_cq.FIRST_TEST_DIR)
+    import checks
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("first-test path must not call this")
+
+    monkeypatch.setattr(cloud_cq, "factory_score", _boom)
+    monkeypatch.setattr(cloud_cq, "factory_mismatch", _boom)
+    ref = cq.Solid.makeBox(10, 20, 30)
+    exp = checks.measure(ref)
+    same = cloud_cq.score_shapes(
+        cq.Solid.makeBox(10, 20, 30), ref, exp)
+    assert same["verdict"] == "PASS" and same["tight"] == "PASS"
+    moved = cloud_cq.score_shapes(
+        cq.Solid.makeBox(10, 20, 30).translate(cq.Vector(5, 0, 0)), ref, exp)
+    assert moved["verdict"] == "FAIL" and moved["tight"] == "FAIL"
+
+
 def test_remote_entry_points_refuse_offline(monkeypatch):
     # The remote entry points refuse without modal; the test fakes that.
     monkeypatch.setattr(cloud_cq, "modal", None)
