@@ -135,3 +135,7 @@ keep Spark as teacher, train on its worked solution (reasoning_content + code).
    max_tokens 8,192 (drops ≈ 36) with the user's yes.
 9. **User yes (2026-10-30, "okay in modal and base"):** after R3 training, the dev re-check (FORGE_MODEL_NAME=r3) and the
    base Glimmer arm-A control, both on Modal.
+10. **Reading the base control (verifier D3a, written before the runs):** the 80% gate is read on FT alone (complete 60,
+    budget_stopped false). The control A is read per job: FT − A pass rate; FT < A overall means training hurts; FT ≥ A + 10
+    points means training helps; in between = no clear effect. Both disclosed. The served model path must be /vol/r3/merged
+    (checked before GO).
