@@ -1,0 +1,1 @@
+.venv/bin/python experiments/train/forge_train.py format-check --data results/format-check-2026-10-30/fake_record.jsonl

@@ -1,0 +1,23 @@
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-TUHw9iWVHjQazIsZLfOQnM
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/train/forge_train.py
+├── ✓ Created Function train.
+├── ✓ Created Function format_check_tokenizer.
+├── ✓ Created Function merge.
+└── ✓ Created Function serve_merged.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+FORMAT_CHECK PASS thinking_first=True answer_after_thinking=True prompt_matches_ft=True
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-TUHw9iWVHjQazIsZLfOQnM
+FORMAT_FULL <|begin_of_text|><|start|>system<|message|>You write CadQuery Python code. Units are millimetres. Assign the final solid to a variable named result. Reply with exactly one Python code block and nothing else.
+
+Reasoning strength: high.
+
+# Valid recipients: "self", "user".<|eot|><|start|>user<|message|>Units: millimetres. Z is up. A spool (bobbin) on the Z axis, centred at X = 0, Y = 0. Bottom flange: diameter 42.4, Z from 0 to 3.5. Core: diameter 21.8, Z from 3.5 to 23.2. Top flange: diameter 42.4, Z from 23.2 to 26.7. A centre bore of diameter 6.8 goes through everything along the Z axis. A wire slot 4.4 wide cuts through the bottom flange along X: X from -22.2 to 22.2, Y from -2.2 to 2.2, Z from 0 to 3.5.<|eot|><|start|>assistant to=self<|message|>FAKE REASONING: the spool sits on the Z axis, so I build cylinders along Z and fuse them.<|eom|><|start|>assistant to=user<|message|>```python
+import cadquery as cq
+result = cq.Workplane('XY').box(1,1,1)
+```<|eot|>
+FORMAT_LOSS_TOKENS [" to", "=self", "<|message|>", "FA", "KE", " RE", "ASON", "ING", ":", " the", " spool", " sits", " on", " the", " Z", " axis", ",", " so", " I", " build", " cylinders", " along", " Z", " and", " fuse", " them", ".", "<|eom|>", "<|start|>", "assistant", " to", "=user", "<|message|>", "```", "python", "\n", "import", " cad", "query", " as"]
+FORMAT_CHECK PASS thinking_first=True answer_after_thinking=True prompt_matches_ft=True
