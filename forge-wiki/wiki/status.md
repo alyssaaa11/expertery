@@ -73,7 +73,8 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
   forge-rulecard-check-go-2026-10-30): (1) R3 + card → results/check-r3card-2026-10-30 (FORGE_MODEL_NAME=r3,
   FORGE_RULE_CARD=~/projects/forge/experiments/final/RULE_CARD.md, cap $4.50, deploy 22:30), then (2) A + card
   → results/check-acard-2026-10-30 (cap $3.00); one shell chain under caffeinate, ends ≈ 00:15, ≈ $3.3.
-  - To do on the first records (verifier C2): prompt_tokens ≈ 650-700 (card present), stop if ≈ 240.
+  - verified (C2 done, 22:38): served root /vol/r3/merged; first records prompt_tokens 838/830 (≈ 240 without the card)
+    → the card IS in the prompt; first two answers PASS.
   - Reading pre-registered in experiments/final/PLAN.md "Rule-card check": R3+card crashes (non-empty run_error) ≤ 8 →
     manual-gap diagnosis holds; 9-14 unclear; ≥ 15 wrong; pass rates within ±10 points = no clear difference.
   - After it: report to Alyssa in Slack (hivey msg send human --from hivey/hivey), commit results, verifier review, then
