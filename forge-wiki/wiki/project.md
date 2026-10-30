@@ -39,7 +39,8 @@ Meta hackathon, Indie track, Push the Frontier. Submit by Nov 4.
 
 ## Where we are (Oct 30)
 - Prepared, not run: experiments/final/PLAN.md + MUSE_SPEC.md, verifier READY after edits.
-- Waiting for the user: yes to the Muse build ([[morning-brief-2026-10-30]]).
+- Order (user): factory first, demo last. Muse round 1 (factory) is ready in experiments/final/MUSE_ROUND1.md but NOT
+  started: waiting for the user's go. Details: [[status]] "Where we stopped".
 
 ## Where things are
 | What | Where |

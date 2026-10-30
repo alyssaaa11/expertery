@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-10-29 ~22:50
+**Last updated**: 2026-10-30 ~09:30
 
 ---
 
@@ -55,18 +55,33 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
    a short-prompt trained arm needs a small runner spec. BX's 11 missing answers are run in step 6a (user decision).
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
-**Morning Oct 30: read [[morning-brief-2026-10-30]] first (3 yes/no questions).**
+## Where we stopped (2026-10-30 ~09:30; the user cleared the chat after this)
+- decision (user, Oct 30): **build order = factory first, demo last.** Muse work is split:
+  - Round 1 (READY, NOT STARTED: user said "dont start"): prompt `experiments/final/MUSE_ROUND1.md` = MUSE_SPEC §1 cloud
+    CadQuery box + grader, §2 factory (generator, make_jobs, teacher), §4 exam guard on the cloud box, §5 C1
+    cached-tokens fix. Expected ≈ $2-3 of Muse. Launch only on the user's explicit go.
+  - Round 2 (later): §3 exam runner (arm FT), §3b B-max finisher, §6 deploy/modal_forge.py + session script, §7 compare.py.
+  - Demo viewer: last (user).
+- Launch recipe (verified, tools-and-services): `envsave get <Meta key opaque id> | muse exec --api-key-stdin --model
+  muse-spark-1.3 --effort medium --workspace ~/projects/forge --approval-mode never --disable-web-tools
+  --max-model-steps 100 --no-foreign-personal-context --json --prompt-file experiments/final/MUSE_ROUND1.md
+  > results/muse-final-r1.jsonl 2> results/muse-final-r1.err`; cost from the `run.usage` event. Then pytest, then
+  the verifier, then report.
+- decision (user, Oct 29): budget **$50** (≈ $30.4 spent); every paid step still needs the user's yes + verifier.
+- decision (user, Oct 29): finish B-max to all 30 jobs (step 6a, 11 answers, 12 workers, cap $1).
+- Verifier: plan pre-build READY WITH 5 EDITS (applied 1861990), delta READY WITH 3 EDITS (applied 9602647).
+- The user is learning the training basics: explanations in [[forge-in-simple-words]] (LoRA = small notebook, why
+  freeze, one notebook for all pages). Use those simple words with the user.
+- Open recommendations not yet answered by the user (from [[morning-brief-2026-10-30]]): one yes for steps 4-6
+  (train → mock test → exam), make the repo public before submitting (after a secrets scan), drop the offline-Mac demo
+  (Mac 24 GB vs ≥ 48 GB recommended).
 
-## Training + final exam: PREPARED, NOT RUN (user 2026-10-29: "prepare the training, not run")
-- Plan experiments/final/PLAN.md, Muse spec experiments/final/MUSE_SPEC.md (commit 19c261d), diagram
-  forge-wiki/wiki/assets/diagrams/forge-training-exam-plan.png (ffa6fcd). Sent to the verifier (pre-build check, waiting).
+## Training + final exam: PREPARED, NOT RUN
+- Plan experiments/final/PLAN.md, Muse spec experiments/final/MUSE_SPEC.md, diagrams [[forge-diagrams]] 8-11.
 - verified: the CadQuery path (factory spec, exam guard, first-test runner) still runs answer code on the Mac
-  (sandbox-exec, experiments/first-test/runner.py:423, forge_train.py run_train_code); the spec moves it to a Modal box.
+  (sandbox-exec, experiments/first-test/runner.py:423, forge_train.py run_train_code); round 1 moves it to a Modal box.
 - verified: Spark Open = 816B (42B active), needs >= 700 GB VRAM (https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B);
   Glimmer 30B 4-bit < 20 GB (https://huggingface.co/meta-models/Muse-Glimmer-30B).
-- decision (user, 2026-10-29 ~23:10): **budget raised to $50**; each paid step still needs the user's yes + verifier.
-- decision (user): BX's 11 missing answers are run ("finish until the 30 jobs"), step 6a, cap $1.
-- pending (user): yes to the Muse build (asked "what is it going to build?").
 
 ## Next step
 1. **FreeCAD gap test: DONE** ([[freecad-gap-2026-10-29]]). verified: Glimmer 28/30 (93%), Spark 30/30 (100%), Wonder 0

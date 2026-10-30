@@ -63,3 +63,8 @@
 ## [2026-10-30] explain | simple words
 - Created wiki/forge-in-simple-words.md (story, word list) + 2 simple diagrams (10, 11 in forge-diagrams). Lesson added.
 
+## [2026-10-30 ~09:30] save | before the user cleared the chat
+- forge-in-simple-words: added the user's questions + answers (LoRA, the notebook, why freeze, one notebook vs pages, what is built).
+- status: "Where we stopped" (factory first, demo last; Muse round 1 ready, NOT started; launch recipe; open recommendations).
+- project: where we are. experiments/final/MUSE_ROUND1.md committed (not run).
+

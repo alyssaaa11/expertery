@@ -57,5 +57,36 @@ understand any diagram, the words I didn't see before".
 | Cloud box / sandbox | a locked computer in the cloud where model-written code runs, never on your Mac |
 | CadQuery / FreeCAD | the CAD programs (tools to draw machine parts with code) |
 
+## Questions the user asked (Oct 30), with the answers
+**What is LoRA?** The small notebook stuck onto Glimmer's brain ("Low-Rank Adaptation"). The brain (about 30 billion
+numbers) is frozen; only the notebook (about 105 million numbers, 1 for every 300) learns. When Glimmer answers it uses
+brain + notebook together: the brain gives its normal answer, the notebook adds a small correction. At the end the
+notebook is glued in ("merge"), because the program that runs Glimmer crashed when loading it separately (test run).
+
+**What is that notebook?** A file full of numbers, not words (in the test run: `adapter_model.safetensors`; about
+200 MB this time, an estimate). Glimmer's brain is 52 layers of big tables of numbers; a word becomes a list of numbers
+that passes through table after table. The notebook puts a small extra table next to each big table; the two results
+are added. Each small table is really two very thin tables (6,700 × 16 and 16 × 20,000 instead of 6,700 × 20,000):
+"16" = it can learn 16 kinds of adjustment per table. Enough for habits, too little to rewrite what Glimmer knows.
+What it learned can't be read, only seen in Glimmer's answers (like bike riding living in your muscles).
+
+**Why freeze the brain?**
+1. Memory: changing a number needs 3-4 extra copies of notes; for 30 billion numbers that is hundreds of GB (several
+   big GPUs). For the notebook only, it fits one rented GPU (even then, one 8,192-token example used all 80 GB).
+2. Forgetting: ~150 CAD examples would overwrite other skills; Glimmer is already 87-95% right, so keep it safe.
+3. Memorising: a whole brain could memorise 150 answers; the small notebook only has room for general habits.
+4. Safe and cheap: empty notebook = exactly the old Glimmer; throw it away to undo; ~20 min, $2-3.
+
+**Is each correct Spark solution a notebook?** No: there is ONE notebook. Each correct solution is one practice page
+(~150 pages). Glimmer goes through all pages twice; every page makes a tiny change to the same notebook, so it learns
+what the pages have in common (the general skill). More notebooks only make sense per company or per tool (Company A
+and Company B each get their own notebook for the same Glimmer: Forge's privacy idea). Wrong solutions are thrown
+away by the checker, because one wrong page teaches a wrong habit.
+
+**Do we have to build the loop?** The learning loop is already built and tested (Oct 29 test run: "how wrong" score
+1.03 → 0.33, the trained Glimmer solved a new problem in 3 seconds). Still to build: the practice-page maker
+(factory), the locked cloud box + checker for CadQuery, the exam runner, the B-max finisher, the scoreboard, and
+last the demo viewer.
+
 ## Where the technical versions are
 [[how-training-changes-weights-2026-10-30]] (training with details), [[forge-diagrams]] (all diagrams), [[project]].
