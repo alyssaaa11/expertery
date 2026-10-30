@@ -127,3 +127,7 @@ keep Spark as teacher, train on its worked solution (reasoning_content + code).
    verifier's sharper estimate: (mean 5,916 + 250) / 0.8 ≈ 7.7k > 7,105 at 80% (≈ 6.85k at 90%), so the token form of
    bar (d) LIKELY FAILS unless the pass rate is ≥ ~90%; the wall-clock form may decide; bar (c) stays easy; the "many times
    cheaper" headline weakens to "≈ 2.8-3× fewer tokens than B-max, no manual, one try".
+
+7. **Training stop rule (verifier T2, before R3 training):** if train.json shows `stopped_at_deadline: true` or fewer
+   optimizer steps than planned, /vol/r3/merged is NOT dev-checked; training is re-run. Cap $5 (ceiling; expected spend
+   ≈ $1.3-1.8, H200 timeout ≈ 40 min). Output name `r3` → dev session with FORGE_MODEL_NAME=r3.
