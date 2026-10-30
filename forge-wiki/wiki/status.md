@@ -68,7 +68,8 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
   F2 Wonder priced at Spark rates; F4 patterns.py is a counter only + factory_version constant "1"; F5 re-freeze dev files.
 - Next: **round 1b** prompt experiments/final/MUSE_ROUND1B.md (F1, F2, F4 + loop to §4; ≈ $0.5-1) → needs the user's
   yes. Then F3 (free/cheap, before any Spark money): Claude's blind rebuild 10/10, `cloud_cq --check-refs` both exams,
-  `--regrade` 199 baseline answers (0 verdict changes, measures equal, ≈ $0.10). Then the pilot (cap $1) with the user's yes.
+  `--regrade` 199 baseline answers (0 verdict changes, measures equal, ≈ $0.10). Then the pilot with the user's yes: cap $1 completes at ≈ $0.024/answer but cuts off above ≈ $0.033 average;
+  verifier suggests **$1.20** (user to decide).
 - Open question to the user: picture gallery of one part per family (Muse, +$0.3, start of the demo viewer) + a free
   factory diagram.
 - Money: ≈ $32.8 of $50.
