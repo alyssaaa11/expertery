@@ -55,19 +55,22 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
    a short-prompt trained arm needs a small runner spec. BX's 11 missing answers are run in step 6a (user decision).
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
-## Where we stopped (2026-10-30, after Muse round 1b + verifier)
-- verified: factory built (Muse r1 e24a9a7 ≈ $2.4) and fixed (r1b d304368 ≈ $0.96): F1 app context, F2 Wonder rates,
-  learning loop per SPEC §4 (suggest-and-approve, user decision), factory_version sha (697f468b4ec7), gallery
-  results/factory-gallery/index.html (user yes). Claude re-ran: pytest 237; jobs byte-identical; patterns.py rejects
-  baseline runs (373 bad ids).
-- verified: verifier on r1b (~/agents/verifier/reports/forge-factory-fix-2026-10-30.md, 7/6/4): F1/F2/F4 fixed;
-  **G1: job text ≠ reference in 4 families** (F3 17/20, F4 9/20 + unstated square ends, F7 13/20, F10 20/20) → those
-  jobs are impossible at 1e-6; **NO-GO for the pilot until fixed**. G2: --regrade must use a filtered copy (done:
-  results/regrade-2026-10-30, 30 + 169 = 199). G3: blind run without F4-1 (done, 9 answers).
-- Next, each needs the user's yes: (1) Muse round 1c experiments/final/MUSE_ROUND1C.md (generator rounds first, TEXT=REF
-  self-check, unclipped gallery; ≈ $0.5-1); (2) Modal checks ≈ $0.10: check-refs both exams, regrade 199, blind run
-  (after 1c for F3/F4/F7/F10); (3) pilot, cap $1 or $1.20 (verifier suggests $1.20).
-- Money: ≈ $33.8 of $50.
+## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
+- verified: factory built by Muse in 4 rounds (r1 e24a9a7 ≈ $2.4, r1b d304368 ≈ $0.96, r1c 5edd84a ≈ $1.62, r1d ff7f3a4
+  ≈ $1.26). Claude re-ran: pytest 259 passed; make_jobs SELF-CHECK OK with TEXT=REF and CUTS 20/20 in all 10 families.
+- verified (results/cloud-checks-2-2026-10-30.log, Modal credits, $0 billed): check-refs factory 200/200, first-test 30/30;
+  regrade of the 199 baseline answers in the cloud box: 30 + 169 same verdicts, measures equal (exam path unchanged
+  after 1d); **blind rebuild 2 (10 new jobs, one per family, from text only) 10/10 at 1e-6**; blind rebuild 1 now 10/10.
+- What the checks found on the way (each fixed by Muse before any teacher money): cloud grader outside its app (F1),
+  job text ≠ reference in F3/F4/F7/F8/F10, overlapping coaxial cuts in F5, hidden rim cut in F10, default-volume noise
+  (F5/F9; fixed by user option A: precise volumes in the factory grader only).
+- decision (user, Oct 30): learning loop = suggest-and-approve; precise volumes (option A); **no Wonder output in training
+  data** (Meta API terms §10.1); talk to the user via hivey/Slack (`hivey msg send human --from hivey/hivey`).
+- Repo readiness list 1-7 done (f692227): README for judges, LICENSE Apache-2.0, defence/medical removed, licence check,
+  history secret scan clean. Verifier review pending (m…219). Repo stays PRIVATE until the user decides.
+- Next: verifier on the factory → the user's yes for the **pilot** (20 jobs, Spark Open on Baseten, cap $1.20) → learning
+  loop report → main run. Muse round 2 (exam runner, BX finisher, deploy, compare) still to build.
+- Money: ≈ $36.7 of $50.
 
 ## Training + final exam: PREPARED, NOT RUN
 - Plan experiments/final/PLAN.md, Muse spec experiments/final/MUSE_SPEC.md, diagrams [[forge-diagrams]] 8-11.

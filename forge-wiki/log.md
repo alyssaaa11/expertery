@@ -76,3 +76,8 @@
 - verified: verifier FAIL for pilot / GO for fix round (forge-factory-build-2026-10-30, 4/7/5); round 1b prompt ready, not launched.
 - 2026-10-30 verified: Muse r1b (d304368, ≈ $0.96) fixed F1/F2/F4 + gallery; verifier FAIL for pilot (G1 text≠reference in
   4 families), GO for cheap Modal checks with filtered inputs. Round 1c prompt ready (00394af), not launched.
+
+## [2026-10-30 afternoon] factory ready (pending verifier) + repo readiness
+- verified: Muse r1c (5edd84a) + r1d (ff7f3a4); cloud checks: REFS 200/200 + 30/30, regrade 199 same, blind rebuilds 10/10 + 10/10.
+- decision (user): precise volumes in factory grader; no Wonder output in training; updates via hivey/Slack.
+- Repo readiness 1-7 (f692227, 3f392d6), verifier reviewing.
