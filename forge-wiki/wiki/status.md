@@ -50,7 +50,8 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Dashboard (Muse) | 0.43 | run.usage |
 | Muse round 2b | 0.87 | run.usage |
 | Dev check (Modal) | 0.32 | billing 10.78 → 11.10 |
-| **Total** | **≈ 46.6 of 65** (verifier T2 recount: 44.06; + Modal cents) | |
+| Oct 30 evening: Muse 3 + 3b + 3c (2.44+0.38+0.26), factory R3 (0.59+4.39), training R3 (1.99), dev R3 (2.22) | ≈ 12.3 | run.usage, summary.json, billing |
+| **Total** | **≈ 58.9 of 80** (+ base control running) | (verifier T2 recount: 44.06; + Modal cents) | |
 
 Rest of the plan (verifier, forge-factory-pilot-2026-10-30): expected ≈ $48-49 total; worst case at every cap ≈ $54
 (main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. decision (user, 2026-10-30 evening, "total" to the $80 proposal): **budget $80 total**; extra room is for Modal + Baseten,
@@ -111,6 +112,14 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
   dev jobs, ≈ $0.5-0.8) then self-distillation: generate WITH manual (+hint), train WITHOUT it, on reasoning + code.
 - hypothesis: training on answer-only code (no reasoning turn, no manual) taught the short format but not the care;
   open question 1 answered in the bad direction. Missing baseline: base Glimmer on the same 20 dev jobs.
+- verified: **R3 dev re-check = STOP** (40420ed; verifier forge-r3-dev-result-2026-10-30): trained-on-Spark-thinking Glimmer
+  29/60 = 48.3% at 0.2% (tight 48.3%), COMPLETE, served /vol/r3/merged; pass@3 85%; ≈ 7.1k tokens/answer, 14.8k per
+  correct; F8 0/6. 15 of 31 fails = crashes from invented API arguments. Disclosure (E5): the pilot's reasoning gate was
+  passed on reasoning_len (frozen field) because the new reasoning_chars reads only reasoning_content (shows 0).
+- hypothesis (verifier lead): Spark's reasoning names real CadQuery args (yDir in 61/159, inPlane in 62/159 records) that
+  Glimmer then attaches to the wrong calls.
+- Next: base control (running) → R4 idea = rule card (experiments/final/RULE_CARD.md) in the prompt + more data + 3
+  epochs, with the verifier's E1-E4 (A+card control; pre-register; bar (d) token form cannot pass at ≈ 7.1k/answer).
 - Next: Muse round 2b (E2 test, E3 calls.jsonl cross-check) + verifier review of round 2 + 2b → **dev check** (step 5,
   cap $1, gate ≥ 80% at 0.2%).
 - (done) Next: verifier on the factory → the user's yes for the **pilot** (20 jobs, Spark Open on Baseten, cap $1.20) → learning
