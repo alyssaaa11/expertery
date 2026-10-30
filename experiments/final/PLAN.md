@@ -115,8 +115,8 @@ keep Spark as teacher, train on its worked solution (reasoning_content + code).
 1. **Teacher pilot gate:** ≥ 95% of pilot PASS answers have non-empty reasoning, else STOP. Then the usual yield rule.
 2. **Training config frozen:** epochs 2, r 16, alpha 32, lr 1e-4, GA 8; only changes: reasoning in the thinking turn,
    max 12,288 tokens, H200, GPU stop 135 GB. Over 12,288 → dropped and counted. Format check PASS (H3) before training.
-3. **Manual mentions:** keep every passing record and report the share whose reasoning mentions "manual" (decision:
-   user to confirm; verifier's suggestion).
+3. **Manual mentions:** keep every passing record and report the share whose reasoning mentions "manual" (decision,
+   user 2026-10-30 "yes").
 4. **Dev re-check:** the same 20 dev jobs, k = 3, factory grader, gate ≥ 80% at 0.2% only on a COMPLETE 60-answer run;
    disclosed as the second look at dev. Session with the budget fix (4b) and cap ≈ $2.00 (or $3.50 if unfixed); D3
    (vLLM default sampling + image digest) captured in that session.
