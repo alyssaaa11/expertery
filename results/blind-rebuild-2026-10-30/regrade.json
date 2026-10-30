@@ -31,14 +31,10 @@
  {
   "job": "F10-1",
   "old_verdict": "BLIND",
-  "new_verdict": "FAIL",
-  "new_tight": "FAIL",
-  "fails": [
-   "mismatch 0.3%"
-  ],
-  "fails_tight": [
-   "mismatch 0.3%"
-  ],
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
   "run_error": null,
   "measure_same": false,
   "measurements": {
@@ -152,11 +148,9 @@
   "job": "F5-2",
   "old_verdict": "BLIND",
   "new_verdict": "PASS",
-  "new_tight": "FAIL",
+  "new_tight": "PASS",
   "fails": [],
-  "fails_tight": [
-   "mismatch 0.0%"
-  ],
+  "fails_tight": [],
   "run_error": null,
   "measure_same": false,
   "measurements": {

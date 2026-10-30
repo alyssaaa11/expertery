@@ -1,0 +1,22 @@
+=== cloud_cq.py --check-refs --exam factory
+REFS 200/200 PASS
+exit 0
+=== cloud_cq.py --check-refs --exam first-test
+REFS 30/30 PASS
+exit 0
+=== cloud_cq.py --regrade results/regrade-2026-10-30/BR --exam first-test
+MEASURE same=30 changed=0
+REGRADE same=30 changed=0
+exit 0
+=== cloud_cq.py --regrade results/regrade-2026-10-30/B2BX --exam first-test
+MEASURE same=169 changed=0
+REGRADE same=169 changed=0
+exit 0
+=== cloud_cq.py --regrade results/blind-rebuild-2-2026-10-30 --exam factory
+MEASURE same=0 changed=10
+REGRADE same=0 changed=10
+exit 0
+=== cloud_cq.py --regrade results/blind-rebuild-2026-10-30 --exam factory
+MEASURE same=0 changed=10
+REGRADE same=0 changed=10
+exit 0
