@@ -37,16 +37,18 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 - Earlier: Keel private tool NO ROOM (Glimmer + manual 97.8%) ([[keel-v2-baseline-2026-10-28]]) → difficulty, not
   privacy, drives the gap.
 
-## Money (verified)
+## Money (verified, updated 2026-10-30 after the pilot)
 | Item | $ | Source |
 |---|---|---|
-| Spent before Oct 29 | ≈ 9.8 | earlier status |
-| Muse Code Oct 29 (sandbox+BX 1.45, fixes 1.15, rebuild 0.51) | ≈ 3.1 | run.usage × $1.25/$0.15/$4.25 per M |
-| Modal baseline run | ≈ 4.5 | `modal billing summary` 2.22 → 6.75 |
-| Modal smoke test | ≈ 1.06 | 6.76 → 7.82 |
-| Muse Code training fix | ≈ 1.11 | run.usage |
-| Muse Code Oct 29 evening (build 1.35 + fixes 1.14, 0.61, 0.44, 0.46) | ≈ 4.0 | run.usage |
-| **Total** | **≈ 30.4 of 35** (incl. FreeCAD run ≈ $1.6, thinking exam + Muse rounds ≈ $4.9) | |
+| Spent through Oct 29 | ≈ 30.4 | earlier table (Muse, Modal, FreeCAD, thinking exam) |
+| Muse Code Oct 30: r1 2.40 + r1b 0.96 + r1c 1.62 + r1d 1.26 | ≈ 6.24 | run.usage of each round |
+| Modal Oct 30 (cloud checks, pilot box + grader) | ≈ 0.12 | `modal billing summary` (paid from Modal credit, $0 billed) |
+| Factory pilot (Baseten, Spark Open) | 0.52 | summary.json |
+| **Total** | **≈ 37.3 of 50** | |
+
+Rest of the plan (verifier, forge-factory-pilot-2026-10-30): expected ≈ $48-49 total; worst case at every cap ≈ $54
+(main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. Open user question: do
+Baseten/Modal/Meta spends paid from the hackathon credits ($100 Baseten, $100 Modal, $150 Meta) count towards the $50?
 
 ## Open questions
 1. hypothesis: training on answer-only text (no reasoning) may teach Glimmer to skip reasoning: cheaper, maybe weaker
