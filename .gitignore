@@ -16,3 +16,5 @@ results/**/sandbox_*/
 .obsidian/workspace.json
 .archify/
 .DS_Store
+# local dashboard output (contains local paths + verifier lines)
+results/dashboard/
