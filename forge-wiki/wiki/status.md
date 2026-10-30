@@ -40,7 +40,7 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 ## Money (verified, updated 2026-10-30 after the pilot)
 | Item | $ | Source |
 |---|---|---|
-| Spent through Oct 29 | ≈ 30.4 | earlier table (Muse, Modal, FreeCAD, thinking exam) |
+| Spent through Oct 29 | ≈ 30.4 | earlier table; **unreconciled** (verifier: its rows sum to ≈ 23.6; the 30.4 also counted FreeCAD ≈ 1.6 + thinking ≈ 4.9 in a footnote). Upper estimate kept on purpose |
 | Muse Code Oct 30: r1 2.40 + r1b 0.96 + r1c 1.62 + r1d 1.26 | ≈ 6.24 | run.usage of each round |
 | Modal Oct 30 (cloud checks, pilot box + grader) | ≈ 0.12 | `modal billing summary` (paid from Modal credit, $0 billed) |
 | Factory pilot (Baseten, Spark Open) | 0.52 | summary.json |
