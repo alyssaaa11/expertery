@@ -25,6 +25,10 @@ keys, never open blind/ or experiments/option-a/, never print any expected*.json
   allows; report whether they did). factory_version changes automatically.
 - Tests: a family whose text prints 21.2 while its reference uses 21.3 fails TEXT=REF; every family passes TEXT=REF on
   the generated file.
+- `patterns.py` (verifier note, forge-factory-fix-2026-10-30): an API/HTTP error from the teacher model (no answer
+  produced because the call failed) is kind `our_bug` (category `harness`), not `teacher_habit`. Test for it.
+- `experiments/train/forge_train.py` exam guard (verifier note): open `cloud_cq._app.run()` once for the whole guard
+  pass, not once per record (slow). Keep the F1 test passing.
 - `gallery.py`: the SVG must not be clipped (fit the viewBox to the drawing with a margin). Small.
 
 ## Done when
