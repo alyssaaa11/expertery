@@ -1,5 +1,6 @@
 # Muse Code round 3: teach HOW, not only the answer (Spark's reasoning in the training data)
-# (user decision 2026-10-30 after the dev check STOP: "start with Spark"; waits for the verifier)
+# (user decision 2026-10-30 after the dev check STOP: "start with Spark"; verifier READY WITH 3 EDITS, applied:
+# forge-round3-prebuild-2026-10-30)
 
 Why: the first training used {job text → Spark's code} only. Every example's first loss tokens were ` to` `=user`
 (answer directly), so Glimmer learned to skip its thinking turn and copy Spark's style: dev 38% (gate 80%). Baseten
@@ -27,14 +28,28 @@ split.json, anything under results/, or frozen files.
    `reasoning`/`thinking` field on the assistant message; do NOT hand-write special tokens if the template can render
    it). Loss on both turns (thinking + answer), never on the prompt. Records without `reasoning` keep today's format.
    The prompt (system + job text, no manual) is unchanged and must equal what runner_final's FT sends at serve time.
+   - **H1:** `render_full`'s fallback (prompt + answer + eos when the template output does not start with the prompt)
+     must RAISE for records with reasoning, never silently drop the thinking turn.
    - New `--format-check` mode (offline, needs only the tokenizer files; if they are not available locally, make the
      check run inside the Modal train function's first lines and print it before training): render one record and
-     print the full rendered text + the first 40 loss tokens. Expected: the first loss tokens open the THINKING turn,
-     not ` to=user`.
+     print the full rendered text + the first 40 loss tokens.
+     **H2:** it must work on a FAKE reasoning record (`--format-check --fake`), so it can run BEFORE the factory re-run
+     (many templates strip reasoning from history; we must know first). If it needs Modal (tokenizer only there), make
+     it a tiny CPU Modal function that loads only the tokenizer (no GPU, no weights).
+     **H3, pass condition (print PASS/FAIL):** (a) the first loss tokens open the thinking turn (the template's
+     analysis/to=self turn), (b) the code turn follows it, (c) the rendered prompt is byte-equal to the prompt
+     runner_final's FT arm sends (build it with runner_final's own function).
 3. **Memory for long examples:** train on **H200** (gpu="H200", $ rate constant `H200_RATE = 4.54` used by the cost
    model and caps), keep gradient checkpointing, raise the per-example limit to `max_tokens=12288`, and set
    GPU_MEM_STOP_GB to 135 for H200. Examples longer than the limit are dropped and counted (as today). Merge stays as
    it is (or H200 if simpler; say which).
+4a. **Base control arm A (verifier P5):** runner_final gets `--arms A`: base Glimmer, the SAME short prompt and body as
+   FT except model name `muse-glimmer`, endpoint GLIMMER_URL/GLIMMER_KEY (served by deploy/modal_glimmer.py, same vLLM
+   flags). Same factory/first-test grader routing and records as FT. Test: A's messages/body equal FT's except the model.
+   And a matching session script `experiments/final/run_base_session.sh` (copy of run_final_session.sh for app
+   forge-glimmer and deploy/modal_glimmer.py).
+4b. **Budget fix (verifier D1):** in run_final_session.sh (and run_base_session.sh) `run()` passes `--budget "$CAP"`
+   (budget_left stays only as the refuse-to-start check), so time and reserve are no longer subtracted twice. Test.
 4. **Serving check:** runner_final FT keeps the same body (no reasoning_strength, max_tokens 16000); add
    `reasoning_chars` (length of `message.reasoning_content`) to every FT calls.jsonl record.
 5. Tests (offline, fake HTTP/tokenizer): reasoning stored and carried into train_records; empty reasoning excluded and

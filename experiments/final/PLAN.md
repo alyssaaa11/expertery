@@ -108,3 +108,21 @@ image digest for every session (base and trained).
 
 ## Freeze (sha256 recorded here before step 6)
 runner_final.py, cloud_cq.py, the grader, deploy/modal_forge.py, the merged model's file list, this PLAN.
+
+## Retry R3: Spark's reasoning in the training data (pre-registered 2026-10-30, before any R3 money; verifier P1-P6)
+Context: dev check STOP (38.3%, results/dev-2026-10-30): answer-only training removed the thinking turn. User decision:
+keep Spark as teacher, train on its worked solution (reasoning_content + code).
+1. **Teacher pilot gate:** ≥ 95% of pilot PASS answers have non-empty reasoning, else STOP. Then the usual yield rule.
+2. **Training config frozen:** epochs 2, r 16, alpha 32, lr 1e-4, GA 8; only changes: reasoning in the thinking turn,
+   max 12,288 tokens, H200, GPU stop 135 GB. Over 12,288 → dropped and counted. Format check PASS (H3) before training.
+3. **Manual mentions:** keep every passing record and report the share whose reasoning mentions "manual" (decision:
+   user to confirm; verifier's suggestion).
+4. **Dev re-check:** the same 20 dev jobs, k = 3, factory grader, gate ≥ 80% at 0.2% only on a COMPLETE 60-answer run;
+   disclosed as the second look at dev. Session with the budget fix (4b) and cap ≈ $2.00 (or $3.50 if unfixed); D3
+   (vLLM default sampling + image digest) captured in that session.
+5. **Control:** base Glimmer arm A on the same 20 dev jobs, k = 3, through the same Modal vLLM stack (≈ $0.3-0.5), so a
+   pass or fail can be attributed.
+6. **Expected effect, said now:** with ≈ 5.5k completion tokens per answer (Spark's reasoning median 5,177), FT's
+   tokens per correct part at 80-90% ≈ 6.4-7.2k vs bar (d) ≈ 7,105 (79-answer BX; the 90-answer value will be higher):
+   the token form of bar (d) becomes borderline and the wall-clock form decides; bar (c) stays easy; the "many times
+   cheaper" headline weakens to "about 3× fewer tokens than B-max, no manual, one try".
