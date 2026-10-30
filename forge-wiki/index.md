@@ -2,6 +2,7 @@
 
 Project folder: `~/projects/forge` (README routes to code, results and everything else).
 
+- [project](wiki/project.md): **the project on one page**: what Forge is, the claim, how it works (diagram), rules, where things are
 - [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
 
 ## findings
@@ -19,13 +20,13 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [glimmer-test-1-2026-10-28](wiki/findings/glimmer-test-1-2026-10-28.md): first live Glimmer run: cube ✅, L-bracket ❌ (wall off the base); $0.57
 - [forge-design-2026-10-28](wiki/findings/forge-design-2026-10-28.md): what Forge is, the design, why, demo idea
 - [forge-questions-2026-10-28](wiki/findings/forge-questions-2026-10-28.md): privacy per company, why CadQuery, why test Glimmer first, selling without credits, Spark Open vs 1.3
-- [forge-diagrams](wiki/findings/forge-diagrams.md): all 7 Archify diagrams (what it is, design, use cases, checklist, plan, factory, final plan)
+- [forge-diagrams](wiki/findings/forge-diagrams.md): all 9 Archify diagrams with pictures (… final plan, training + exam plan, how training changes the weights)
 - [final-pick-research-2026-10-28](wiki/findings/final-pick-research-2026-10-28.md): why Forge was picked: claude.ai 90 + GPT-6 92 merged, prior art, risk paper 2607.08938
 
 ## decisions
 - [morning-brief-2026-10-30](wiki/decisions/morning-brief-2026-10-30.md): read first Oct 30: overnight work, direction review 6/10, 3 yes/no questions
 - [submission-draft-2026-10-30](wiki/decisions/submission-draft-2026-10-30.md): submission story, verified numbers, blanks, 3-min demo outline, must-dos (public repo)
-- final plan: `experiments/final/PLAN.md` + `MUSE_SPEC.md` (prepared, not run; verifier READY after edits); diagram attachments/final-plan-diagram.html
+- final plan: `experiments/final/PLAN.md` + `MUSE_SPEC.md` (prepared, not run; verifier READY after edits); diagram forge-wiki/wiki/assets/diagrams/forge-training-exam-plan.png
 - [option-a-plan-2026-10-29](wiki/decisions/option-a-plan-2026-10-29.md): plan for Oct 29: hidden standards in ~300 past designs, arms B / B-search / C, Spark context check, blind rule check, B2 CadQuery test in parallel
 - [night-prep-2026-10-28](wiki/decisions/night-prep-2026-10-28.md): night prep for Oct 29: Spark context, training recipe, verifier pre-review, drafts, risks and second plans, morning decisions
 - [coverage-audit-2026-10-29](wiki/findings/coverage-audit-2026-10-29.md): free retrieval-coverage audit: 83% of exam jobs covered by top-5 → Option A skipped

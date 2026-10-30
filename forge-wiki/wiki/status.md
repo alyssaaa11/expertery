@@ -59,7 +59,7 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 
 ## Training + final exam: PREPARED, NOT RUN (user 2026-10-29: "prepare the training, not run")
 - Plan experiments/final/PLAN.md, Muse spec experiments/final/MUSE_SPEC.md (commit 19c261d), diagram
-  forge-wiki/attachments/final-plan-diagram.html (ffa6fcd). Sent to the verifier (pre-build check, waiting).
+  forge-wiki/wiki/assets/diagrams/forge-training-exam-plan.png (ffa6fcd). Sent to the verifier (pre-build check, waiting).
 - verified: the CadQuery path (factory spec, exam guard, first-test runner) still runs answer code on the Mac
   (sandbox-exec, experiments/first-test/runner.py:423, forge_train.py run_train_code); the spec moves it to a Modal box.
 - verified: Spark Open = 816B (42B active), needs >= 700 GB VRAM (https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B);

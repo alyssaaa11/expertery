@@ -1,4 +1,4 @@
-# Forge diagrams: all five Archify diagrams in one place
+# Forge diagrams: all Archify diagrams in one place
 
 **Summary**: Every diagram made for the Forge project on 2026-10-28, in reading order: what Forge is, the design, who
 uses it, what to prepare, and the day-by-day plan. Each shows as a picture here. The interactive version (zoom, dark
@@ -7,7 +7,7 @@ mode, export) is the `.html` file next to it; open it in a browser.
 **Sources**: Archify workflow diagrams made in the main session on 2026-10-28. Originals and their check receipts are
 in `~/agents/.archify/workflow-forge-*`. All five passed `finalize --quality showcase` and `visual-check`.
 
-**Last updated**: 2026-10-28
+**Last updated**: 2026-10-30
 
 ---
 
@@ -46,3 +46,15 @@ tested).
 Interactive: `forge-wiki/wiki/assets/diagrams/forge-final-plan.html`. It shows the $30 cap and the stages: free prep →
 first test (~$2, 30 jobs, 3 contestants) → STOP (~$27 left) or GO → Spark Open teaches (Baseten) → one LoRA run
 (Modal) → scoreboard → video + submit on Nov 4. Diagram 5 is out of date (60 jobs, OpenSCAD, $12 training).
+
+## 8. Training + final exam plan (current, Oct 30; replaces 7)
+![[assets/diagrams/forge-training-exam-plan.png]]
+Interactive: `forge-wiki/wiki/assets/diagrams/forge-training-exam-plan.html`. Steps 0-7 of `experiments/final/PLAN.md`:
+Muse build → fairness check → factory (Spark teacher + strict referee) → LoRA training → dev check (≥ 80%) → final
+exam with bars a-d. Prepared, not run. Step 6a (finish B-max to 30 jobs) was added after this picture was drawn.
+
+## 9. How training changes Glimmer's weights (LoRA)
+![[assets/diagrams/forge-how-training.png]]
+Interactive: `forge-wiki/wiki/assets/diagrams/forge-how-training.html`. One training step, repeated: example → guess →
+loss → gradient → nudge only the patch A, B → merge. Explained in [[how-training-changes-weights-2026-10-30]].
+

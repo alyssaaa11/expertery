@@ -2,7 +2,7 @@
 
 **Summary**: plain-words guide (user asked 2026-10-29 night: "how to change the weights, important to know to drive it
 correctly"). What one training step does, what LoRA changes, every knob in our pipeline with its value, and what to
-do when a number looks wrong. Diagram: `forge-wiki/attachments/how-training-works.html`.
+do when a number looks wrong. Diagram: `forge-wiki/wiki/assets/diagrams/forge-how-training.png`.
 
 **Sources**: experiments/train/forge_train.py (lr 1e-4, r 16, alpha 32 at lines 566-568; cosine schedule lines
 687-693); Glimmer sizes from ~/models/muse-glimmer-30b-radixark-q4-mlx/config.json (hidden 6,656, MLP 19,968,
@@ -12,6 +12,9 @@ do when a number looks wrong. Diagram: `forge-wiki/attachments/how-training-work
 **Last updated**: 2026-10-30
 
 ---
+
+![[assets/diagrams/forge-how-training.png]]
+Interactive (zoom, dark mode): `forge-wiki/wiki/assets/diagrams/forge-how-training.html`.
 
 ## 1. What "weights" are
 Glimmer is ~29.6 billion numbers (weights) arranged in big tables (matrices), 7 tables in each of its 52 layers.

@@ -138,4 +138,5 @@
 - **Check the hackathon's banned topics before choosing pitch examples** (Oct 29). How learned: I used
   "medical-device makers" as an example; the rules ban health/medical ideas
   (~/.hivey/agent/hiveyAgent-wiki/wiki/user/meta-hackathon-2026.md). Check: read that list before writing pitch text.
+- **Diagrams must follow the wiki's picture convention** (Oct 30). How learned: the user could not find the training diagram: I saved HTML only in forge-wiki/attachments/, which Obsidian does not show. Check: every diagram = PNG + HTML in forge-wiki/wiki/assets/diagrams/, embedded with ![[...png]] on its page and listed in [[forge-diagrams]].
 

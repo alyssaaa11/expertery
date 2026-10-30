@@ -6,7 +6,7 @@
 - verified: final plan + Muse spec ready (experiments/final/PLAN.md, MUSE_SPEC.md). Verifier pre-build: READY WITH 5
   EDITS + 1 decision (rubric 5/7/6); all 5 edits applied (1861990). Your decisions recorded: budget $50, finish B-max
   to 30 jobs (step 6a, a58d416). Verifier re-check of that change: READY WITH 3 EDITS (rubric 5/5/5, 0 wrong), all applied (9602647): 12 workers so the 11 answers run in one wave, stop if incomplete; bar (d) recomputed over 90 answers and disclosed; step 1 also checks measurements match.
-- Diagrams: forge-wiki/attachments/final-plan-diagram.html (the plan) and how-training-works.html (how the
+- Diagrams: forge-wiki/wiki/assets/diagrams/forge-training-exam-plan.png (the plan) and forge-how-training.png (assets/diagrams) (how the
   weights change) + page [[how-training-changes-weights-2026-10-30]].
 - Submission draft with verified numbers and blanks: [[submission-draft-2026-10-30]].
 - Independent direction review (fresh agent, no access to my reasoning): **6/10, keep going but rebalance**. The
