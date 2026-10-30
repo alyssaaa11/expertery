@@ -18,6 +18,8 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
   that is delivered AND has a real chance to win**; if not, rethink (another project) before spending more. Proposed
   check point (to confirm with the user): after the factory pilot + the dev-set result, an honest score against the
   judging rubric (Impact 30 / Meta tooling 25 / Depth 20 / Demo 25) decides "final project + raise" vs "rethink".
+- decision (user, 2026-10-30 evening): **Claude may make small code fixes** (a few lines, each disclosed in the README);
+  Muse still builds the big parts; **never Claude inside the product** (Glimmer's answers are never fixed by Claude).
 - decision (user, 2026-10-29): **all code is written by Muse Code** from Claude's specs (incl. run scripts, training,
   dashboards, checks); Claude writes specs, plans, exams/references, wiki, and checks results.
 - decision (user, 2026-10-29): **the Mac is the office, the cloud is the workshop**: no AI-written code runs on the
