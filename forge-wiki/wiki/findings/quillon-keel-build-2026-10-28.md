@@ -18,7 +18,7 @@ runner, sandbox, blind/), Muse Code logs `results/muse-*.jsonl`, verifier report
 ## Why (decisions)
 - decision (user, ~22:00): after the first test, move from public CadQuery to a **non-public tool**, so no model
   could have learned it from the internet.
-- decision (user, ~22:30): the company is a **space company making satellite parts** (export-controlled designs →
+- decision (user, ~22:30): the company is a **space company making satellite parts** (confidential designs →
   needs an on-prem model, the Forge story), with an **internal dashboard like a real company**.
 - decision (user, ~23:30): make the tool **more realistic** (v1 was close to plain CAD).
 

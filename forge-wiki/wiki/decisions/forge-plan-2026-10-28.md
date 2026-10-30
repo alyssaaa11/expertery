@@ -38,7 +38,7 @@ today's status), and the Oct 28 → Nov 4 schedule with one stop-or-go test on O
 | Hackathon demo (built) | OpenSCAD | designs parts that fit | small model beats big, offline |
 | Factory / engineering | CAD / CNC programs | drafts parts, engineer reviews | designs stay secret |
 | Software company | internal CLI / API | right command first try | cheap, private, relearns on change |
-| Hospital / bank / lab | records or lab software | runs the tool for staff | must stay offline; practises on fake data |
+| Bank / insurer / research lab | records or lab software | runs the tool for staff | must stay offline; practises on fake data |
 - Common pattern: a tool the public AI doesn't know, a way to check results automatically, and data that must stay private.
 
 ![[assets/diagrams/forge-prepare.png]]

@@ -14,7 +14,7 @@ bbox, volume, area, centre of mass, overlap mismatch ≤ 0.2%) still judges ever
 ## 2. The company (story shown in the dashboard)
 - **Quillon Orbital Works**: builds structural parts for small satellites (brackets, mounting plates, panel frames,
   standoffs, harness clips) for its smallsat bus **"Petrel"** (programmes Petrel-1, Petrel-2).
-- Designs are **export-controlled** (fictional "QX-2" control level): they may not be sent to cloud AI. That is why
+- Designs are **confidential company IP** (fictional "QX-2" confidentiality level): they may not be sent to cloud AI. That is why
   the AI design assistant runs on one in-house GPU ("on-prem"), which is the Forge story.
 - Small team (fictional): Structures, Avionics Integration, Quality. Engineers file **design requests** like
   "BRK-0412: base plate 60 × 40 × 4, four KF-M4 clearance holes 6 mm in from each corner, north wall 25 high".

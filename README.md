@@ -3,7 +3,8 @@
 **Teach a small open model to use a company's CAD tool as well as a big model with every trick, but many times
 cheaper, faster and fully private.** Built with Muse Spark Open.
 
-Meta Global AI Developer Hackathon 2026 · Indie track, Push the Frontier · submission due Nov 4, 18:00 CET.
+Meta Global AI Developer Hackathon 2026 · Indie track, Push the Frontier · kickoff Oct 26, build period Oct 27 - Nov 4,
+official deadline Nov 4, 9 PM ET (our internal deadline: Nov 4, 18:00 CET).
 
 ## The idea in one minute
 1. **A factory makes practice jobs** ("make a pipe tee: main tube 27.6 mm …") and a correct reference part for each one.
@@ -28,11 +29,13 @@ may not send them to a cloud AI. A small model that runs on their own GPU and al
 The one page with every claim and its source: [`forge-wiki/wiki/status.md`](forge-wiki/wiki/status.md). All numbers so
 far: [`forge-wiki/wiki/findings/scoreboard.md`](forge-wiki/wiki/findings/scoreboard.md).
 
-## Built during the hackathon (Oct 27 - Nov 4)
-Everything in this repository was made during the hackathon. The first commit is from Oct 28.
+## Built during the hackathon (kickoff Oct 26, build period Oct 27 - Nov 4)
+Everything in this repository was made during the hackathon. The first commit is from Oct 28. The one piece with an
+older origin: `deploy/modal_glimmer.py` was adapted from the Modal deploy script of our earlier hackathon project
+HerdShot, which was written on Oct 26 (kickoff day).
 | Date | What was built |
 |---|---|
-| Oct 28 | Project setup; Glimmer served on Modal ([`deploy/modal_glimmer.py`](deploy/modal_glimmer.py), **adapted on Oct 28 from the deploy script of our earlier hackathon project HerdShot**, with its own app, secret and volumes); a fictional company tool "Keel" and its 30-job exam: Glimmer already scored 97.8%, so there was no room to improve and that direction was dropped |
+| Oct 28 | Project setup; Glimmer served on Modal ([`deploy/modal_glimmer.py`](deploy/modal_glimmer.py), **adapted on Oct 28 from the HerdShot deploy script (written Oct 26)**, with its own app, secret and volumes); a fictional company tool "Keel" and its 30-job exam: Glimmer already scored 97.8%, so there was no room to improve and that direction was dropped |
 | Oct 29 | Coverage audit; the main baseline (87% / 88% / 95%); training smoke test; FreeCAD gap test (no gap); "thinking" exam pilot (too easy, stopped) |
 | Oct 30 | The factory: generator, teacher runner, cloud box and referee, learning loop, gallery; four repair rounds found by our own checks before any teacher money was spent |
 | Oct 31 - Nov 4 | (planned) factory run, training, dev check, final exam, demo |
@@ -48,16 +51,22 @@ The full day-by-day log is in [`forge-wiki/log.md`](forge-wiki/log.md).
 | Muse Wonder (api.meta.ai) | optional backup teacher (`--escalate`); **never used for training data** | [Meta Model API Terms](https://dev.meta.ai/legal/terms-of-service) §10.1 forbid training competing models on outputs without Meta's written authorization, so Wonder outputs stay out of training |
 
 ## Who wrote what (honest version)
-- **Code:** written by **Muse Code** (Meta's coding agent) from written specs. Each build round's full event log and a
-  readable diary are in [`results/`](results/) (`muse-*.jsonl`, `muse-*.diary.md`): every file Muse read, edited and
-  ran. Muse Code cannot commit, so its work was committed by Alyssa.
-- **Specs, plans, exams and reference answers, the wiki, and review:** Claude (Anthropic) as planning assistant, and a
-  separate Claude verifier agent that reviewed every step before money was spent. Exams were written by Claude on
-  purpose, so the AI being tested never writes its own test.
-- **Exceptions (disclosed):** a few early scripts were written by Claude, not Muse Code (`experiments/smoke/train_smoke.py`,
-  `score_answer.py`, `experiments/bmax/run_session*.sh`, `glimmer_dashboard.py`,
-  `experiments/option-a/audit/coverage_audit.py`). They are records of runs that already happened; Muse Code rebuilt
-  the parts still in use.
+- **Product code** (factory, teacher runner, learning loop, gallery, cloud box and referee, runners, training pipeline,
+  the Keel company tool and dashboard, their tests): written by **Muse Code** (Meta's coding agent) from written specs.
+  Each build round's full event log and a readable diary are in [`results/`](results/) (`muse-*.jsonl`; diaries
+  `muse-final-r1*.diary.md` for the factory rounds): every file Muse read, edited and ran. Muse Code cannot commit, so
+  its work was committed by Alyssa.
+- **Written by Claude (Anthropic), on purpose:** specs and plans (`*SPEC*.md`, `PLAN.md`), the wiki, and **all exam
+  content and referees**, so the AI being tested never writes its own test:
+  `experiments/first-test/` (`jobs.py`, `checks.py`, `expected.json`, `selftest.py`, `blind/`, `run_live.sh`),
+  `experiments/keel-exam/` and `keel-exam-v2/` (`jobs.py`, `referee.py`, `selftest.py`, `score_blind.py`, `blind/`),
+  `experiments/thinking/` (`thinking_jobs.py`, `selftest.py`, `hand/`), `experiments/option-a/` drafts,
+  `experiments/bmax/examples.py`, `scripts/`, and the blind-rebuild answers in `results/blind-rebuild*`.
+- **Also written by Claude (disclosed):** `deploy/modal_glimmer.py` (adapted from HerdShot, later edited by Muse Code),
+  and a few early run scripts (`experiments/smoke/train_smoke.py`, `score_answer.py`,
+  `experiments/bmax/run_session*.sh`, `glimmer_dashboard.py`, `experiments/option-a/audit/coverage_audit.py`). They
+  are records of runs that already happened; Muse Code rebuilt the parts still in use.
+- **Review:** a separate Claude verifier agent reviewed every step before money was spent.
 - **Published by Alyssa** (all commits are hers; most carry a "Co-Authored-By: Claude" line).
 
 ## Run it
@@ -70,7 +79,8 @@ python3.12 -m venv .venv && .venv/bin/pip install cadquery==2.8.0 cadquery-ocp==
 .venv/bin/python experiments/factory/make_jobs.py      # 200 jobs + the self-check table, offline
 .venv/bin/python experiments/factory/gallery.py --out results/factory-gallery   # pictures of 10 parts
 ```
-Cloud steps (cost money, need your own keys): `experiments/final/cloud_cq.py --check-refs --exam factory`
+Cloud steps (cost money, need `modal setup` and your own keys in environment variables `BASETEN_KEY`,
+`META_HERDSHOT_API_KEY`, `GLIMMER_URL`/`GLIMMER_KEY`; our `*_session.sh` wrappers read them from envsave): `experiments/final/cloud_cq.py --check-refs --exam factory`
 (Modal CPU, cents), `experiments/factory/teacher.py --ids pilot --out <dir> --budget-dollars 1.2` (Baseten).
 Every paid script refuses to run past its money cap.
 
@@ -91,4 +101,14 @@ Every paid script refuses to run past its money cap.
 Training rule: never `modal run forge_train.py::train` directly; it bypasses the exam guard and the money cap.
 
 ## Licence
-Apache-2.0, see [LICENSE](LICENSE).
+This repository's own code and docs: Apache-2.0, see [LICENSE](LICENSE).
+
+**Trained models:** a Glimmer trained on Spark Open's answers is a "Derivative" under the Muse Model License. Any
+trained weights or LoRA we share will ship with the Muse Spark Open LICENSE and Usage Policy, Glimmer's Apache-2.0
+licence and Usage Policy, and the notice "Built with Muse Spark Open". No weights are in this repository.
+
+**Third-party documentation included:**
+- `experiments/first-test/manual.md` (and the copies used as prompts): excerpts of the CadQuery 2.8 documentation,
+  Apache-2.0 (https://github.com/CadQuery/cadquery).
+- `experiments/freecad/manual.md`: excerpts of the FreeCAD documentation (FreeCAD wiki), CC-BY-3.0
+  (https://wiki.freecad.org), attributed to the FreeCAD documentation authors.
