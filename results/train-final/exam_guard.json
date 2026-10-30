@@ -1,0 +1,10 @@
+{
+ "n_records": 167,
+ "n_refused_text": 0,
+ "n_warned_text": 0,
+ "n_refused_code": 0,
+ "n_refused": 0,
+ "n_kept": 167,
+ "refused_frac": 0.0,
+ "aborted": false
+}

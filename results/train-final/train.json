@@ -1,0 +1,447 @@
+{
+ "transformers": "5.15.0",
+ "torch": "2.13.0+cu130",
+ "timeout_s": 1907,
+ "deadline_s": 1667,
+ "lora_pattern": ".*language_model.*\\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)",
+ "trainable_params": 104792064,
+ "examples": 167,
+ "dropped": 0,
+ "first_example": {
+  "prompt": "<|begin_of_text|><|start|>system<|message|>You write CadQuery Python code. Units are millimetres. Assign the final solid to a variable named result. Reply with exactly one Python code block and nothing else.\n\nReasoning strength: high.\n\n# Valid recipients: \"self\", \"user\".<|eot|><|start|>user<|message|>Units: millimetres. Z is up. A spool (bobbin) on the Z axis, centred at X = 0, Y = 0. Bottom flange: diameter 42.4, Z from 0 to 3.5. Core: diameter 21.8, Z from 3.5 to 23.2. Top flange: diameter 42.4, Z from 23.2 to 26.7. A centre bore of diameter 6.8 goes through everything along the Z axis. A wire slot 4.4 wide cuts through the bottom flange along X: X from -22.2 to 22.2, Y from -2.2 to 2.2, Z from 0 to 3.5.<|eot|><|start|>assistant",
+  "full": "<|begin_of_text|><|start|>system<|message|>You write CadQuery Python code. Units are millimetres. Assign the final solid to a variable named result. Reply with exactly one Python code block and nothing else.\n\nReasoning strength: high.\n\n# Valid recipients: \"self\", \"user\".<|eot|><|start|>user<|message|>Units: millimetres. Z is up. A spool (bobbin) on the Z axis, centred at X = 0, Y = 0. Bottom flange: diameter 42.4, Z from 0 to 3.5. Core: diameter 21.8, Z from 3.5 to 23.2. Top flange: diameter 42.4, Z from 23.2 to 26.7. A centre bore of diameter 6.8 goes through everything along the Z axis. A wire slot 4.4 wide cuts through the bottom flange along X: X from -22.2 to 22.2, Y from -2.2 to 2.2, Z from 0 to 3.5.<|eot|><|start|>assistant to=user<|message|>```python\nimport cadquery as cq\n\n# Bottom flange: diameter 42.4, Z 0 to 3.5\nbottom_flange = cq.Workplane(\"XY\").circle(42.4 / 2).extrude(3.5)\n\n# Core: diameter 21.8, Z 3.5 to 23.2 (height 19.7)\ncore = cq.Workplane(\"XY\", origin=(0, 0, 3.5)).circle(21.8 / 2).extrude(23.2 - 3.5)\n\n# Top flange: diameter 42.4, Z 23.2 to 26.7 (height 3.5)\ntop_flange = cq.Workplane(\"XY\", origin=(0, 0, 23.2)).circle(42.4 / 2).extrude(26.7 - 23.2)\n\n# Union all three parts of the spool\nresult = bottom_flange.union(core).union(top_flange)\n\n# Centre bore: diameter 6.8 through entire height 26.7 along Z axis\nbore_cutter = cq.Workplane(\"XY\").circle(6.8 / 2).extrude(26.7)\nresult = result.cut(bore_cutter)\n\n# Wire slot in bottom flange: X -22.2 to 22.2 (44.4), Y -2.2 to 2.2 (4.4), Z 0 to 3.5\nslot_cutter = cq.Workplane(\"XY\").box(44.4, 4.4, 3.5, centered=(True, True, False))\nresult = result.cut(slot_cutter)\n```<|eot|>"
+ },
+ "first_loss_tokens": [
+  " to",
+  "=user",
+  "<|message|>",
+  "```",
+  "python",
+  "\n",
+  "import",
+  " cad",
+  "query",
+  " as",
+  " cq",
+  "\n\n",
+  "#",
+  " Bottom",
+  " flange",
+  ":",
+  " diameter",
+  " ",
+  "42",
+  ".",
+  "4",
+  ",",
+  " Z",
+  " ",
+  "0",
+  " to",
+  " ",
+  "3",
+  ".",
+  "5",
+  "\n",
+  "bottom",
+  "_fl",
+  "ange",
+  " =",
+  " cq",
+  ".Work",
+  "plane",
+  "(\"",
+  "XY"
+ ],
+ "schedule": {
+  "micro_steps": 334,
+  "optimizer_steps": 42,
+  "groups": [
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   6
+  ]
+ },
+ "steps": [
+  {
+   "step": 1,
+   "micro_steps": 8,
+   "tokens": 6190,
+   "loss": 0.4229,
+   "lr": 5e-05,
+   "seconds": 0.53
+  },
+  {
+   "step": 2,
+   "micro_steps": 8,
+   "tokens": 4664,
+   "loss": 0.3751,
+   "lr": 0.0001,
+   "seconds": 0.55
+  },
+  {
+   "step": 3,
+   "micro_steps": 8,
+   "tokens": 4826,
+   "loss": 0.3389,
+   "lr": 0.0001,
+   "seconds": 0.53
+  },
+  {
+   "step": 4,
+   "micro_steps": 8,
+   "tokens": 4755,
+   "loss": 0.2544,
+   "lr": 9.98458666866564e-05,
+   "seconds": 0.76
+  },
+  {
+   "step": 5,
+   "micro_steps": 8,
+   "tokens": 5736,
+   "loss": 0.2327,
+   "lr": 9.938441702975689e-05,
+   "seconds": 0.64
+  },
+  {
+   "step": 6,
+   "micro_steps": 8,
+   "tokens": 6190,
+   "loss": 0.1635,
+   "lr": 9.861849601988383e-05,
+   "seconds": 0.55
+  },
+  {
+   "step": 7,
+   "micro_steps": 8,
+   "tokens": 6641,
+   "loss": 0.1184,
+   "lr": 9.755282581475769e-05,
+   "seconds": 0.63
+  },
+  {
+   "step": 8,
+   "micro_steps": 8,
+   "tokens": 6251,
+   "loss": 0.1343,
+   "lr": 9.619397662556435e-05,
+   "seconds": 0.51
+  },
+  {
+   "step": 9,
+   "micro_steps": 8,
+   "tokens": 4629,
+   "loss": 0.3592,
+   "lr": 9.45503262094184e-05,
+   "seconds": 0.56
+  },
+  {
+   "step": 10,
+   "micro_steps": 8,
+   "tokens": 4824,
+   "loss": 0.3051,
+   "lr": 9.263200821770461e-05,
+   "seconds": 0.43
+  },
+  {
+   "step": 11,
+   "micro_steps": 8,
+   "tokens": 4610,
+   "loss": 0.2313,
+   "lr": 9.045084971874738e-05,
+   "seconds": 0.88
+  },
+  {
+   "step": 12,
+   "micro_steps": 8,
+   "tokens": 4576,
+   "loss": 0.2355,
+   "lr": 8.802029828000156e-05,
+   "seconds": 0.58
+  },
+  {
+   "step": 13,
+   "micro_steps": 8,
+   "tokens": 4885,
+   "loss": 0.2678,
+   "lr": 8.535533905932738e-05,
+   "seconds": 0.46
+  },
+  {
+   "step": 14,
+   "micro_steps": 8,
+   "tokens": 5237,
+   "loss": 0.2441,
+   "lr": 8.247240241650918e-05,
+   "seconds": 0.58
+  },
+  {
+   "step": 15,
+   "micro_steps": 8,
+   "tokens": 5446,
+   "loss": 0.2195,
+   "lr": 7.938926261462366e-05,
+   "seconds": 0.44
+  },
+  {
+   "step": 16,
+   "micro_steps": 8,
+   "tokens": 5187,
+   "loss": 0.2262,
+   "lr": 7.612492823579745e-05,
+   "seconds": 0.45
+  },
+  {
+   "step": 17,
+   "micro_steps": 8,
+   "tokens": 5130,
+   "loss": 0.2762,
+   "lr": 7.269952498697734e-05,
+   "seconds": 0.83
+  },
+  {
+   "step": 18,
+   "micro_steps": 8,
+   "tokens": 6076,
+   "loss": 0.2266,
+   "lr": 6.91341716182545e-05,
+   "seconds": 0.64
+  },
+  {
+   "step": 19,
+   "micro_steps": 8,
+   "tokens": 6669,
+   "loss": 0.1832,
+   "lr": 6.545084971874738e-05,
+   "seconds": 0.55
+  },
+  {
+   "step": 20,
+   "micro_steps": 8,
+   "tokens": 3399,
+   "loss": 0.3001,
+   "lr": 6.167226819279528e-05,
+   "seconds": 0.55
+  },
+  {
+   "step": 21,
+   "micro_steps": 8,
+   "tokens": 3840,
+   "loss": 0.3049,
+   "lr": 5.782172325201155e-05,
+   "seconds": 0.43
+  },
+  {
+   "step": 22,
+   "micro_steps": 8,
+   "tokens": 6266,
+   "loss": 0.1569,
+   "lr": 5.392295478639225e-05,
+   "seconds": 0.43
+  },
+  {
+   "step": 23,
+   "micro_steps": 8,
+   "tokens": 4857,
+   "loss": 0.149,
+   "lr": 5e-05,
+   "seconds": 0.71
+  },
+  {
+   "step": 24,
+   "micro_steps": 8,
+   "tokens": 4533,
+   "loss": 0.169,
+   "lr": 4.607704521360776e-05,
+   "seconds": 0.41
+  },
+  {
+   "step": 25,
+   "micro_steps": 8,
+   "tokens": 4768,
+   "loss": 0.1555,
+   "lr": 4.2178276747988446e-05,
+   "seconds": 0.4
+  },
+  {
+   "step": 26,
+   "micro_steps": 8,
+   "tokens": 5995,
+   "loss": 0.1299,
+   "lr": 3.832773180720475e-05,
+   "seconds": 0.54
+  },
+  {
+   "step": 27,
+   "micro_steps": 8,
+   "tokens": 6059,
+   "loss": 0.1076,
+   "lr": 3.4549150281252636e-05,
+   "seconds": 0.45
+  },
+  {
+   "step": 28,
+   "micro_steps": 8,
+   "tokens": 6751,
+   "loss": 0.0701,
+   "lr": 3.086582838174551e-05,
+   "seconds": 0.51
+  },
+  {
+   "step": 29,
+   "micro_steps": 8,
+   "tokens": 6052,
+   "loss": 0.0915,
+   "lr": 2.7300475013022663e-05,
+   "seconds": 0.42
+  },
+  {
+   "step": 30,
+   "micro_steps": 8,
+   "tokens": 4694,
+   "loss": 0.1974,
+   "lr": 2.3875071764202563e-05,
+   "seconds": 0.44
+  },
+  {
+   "step": 31,
+   "micro_steps": 8,
+   "tokens": 4746,
+   "loss": 0.1729,
+   "lr": 2.061073738537635e-05,
+   "seconds": 0.41
+  },
+  {
+   "step": 32,
+   "micro_steps": 8,
+   "tokens": 4614,
+   "loss": 0.152,
+   "lr": 1.7527597583490822e-05,
+   "seconds": 0.41
+  },
+  {
+   "step": 33,
+   "micro_steps": 8,
+   "tokens": 4617,
+   "loss": 0.1853,
+   "lr": 1.4644660940672627e-05,
+   "seconds": 0.43
+  },
+  {
+   "step": 34,
+   "micro_steps": 8,
+   "tokens": 4972,
+   "loss": 0.1778,
+   "lr": 1.1979701719998453e-05,
+   "seconds": 0.46
+  },
+  {
+   "step": 35,
+   "micro_steps": 8,
+   "tokens": 5208,
+   "loss": 0.1674,
+   "lr": 9.549150281252633e-06,
+   "seconds": 0.44
+  },
+  {
+   "step": 36,
+   "micro_steps": 8,
+   "tokens": 5414,
+   "loss": 0.1568,
+   "lr": 7.367991782295391e-06,
+   "seconds": 0.64
+  },
+  {
+   "step": 37,
+   "micro_steps": 8,
+   "tokens": 5139,
+   "loss": 0.1739,
+   "lr": 5.449673790581611e-06,
+   "seconds": 0.43
+  },
+  {
+   "step": 38,
+   "micro_steps": 8,
+   "tokens": 5106,
+   "loss": 0.2018,
+   "lr": 3.8060233744356633e-06,
+   "seconds": 0.41
+  },
+  {
+   "step": 39,
+   "micro_steps": 8,
+   "tokens": 6318,
+   "loss": 0.1609,
+   "lr": 2.4471741852423237e-06,
+   "seconds": 0.52
+  },
+  {
+   "step": 40,
+   "micro_steps": 8,
+   "tokens": 6210,
+   "loss": 0.1481,
+   "lr": 1.3815039801161721e-06,
+   "seconds": 0.41
+  },
+  {
+   "step": 41,
+   "micro_steps": 8,
+   "tokens": 3454,
+   "loss": 0.1964,
+   "lr": 6.15582970243117e-07,
+   "seconds": 0.4
+  },
+  {
+   "step": 42,
+   "micro_steps": 6,
+   "tokens": 2820,
+   "loss": 0.262,
+   "lr": 1.5413331334360182e-07,
+   "seconds": 0.41
+  }
+ ],
+ "peak_gb": 64.3,
+ "gpu_total_gb": 85.0,
+ "adapter": "/vol/final/adapter",
+ "train_total_s": 231.4,
+ "stopped_at_deadline": false
+}
