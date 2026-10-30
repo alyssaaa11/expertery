@@ -131,3 +131,7 @@ keep Spark as teacher, train on its worked solution (reasoning_content + code).
 7. **Training stop rule (verifier T2, before R3 training):** if train.json shows `stopped_at_deadline: true` or fewer
    optimizer steps than planned, /vol/r3/merged is NOT dev-checked; training is re-run. Cap $5 (ceiling; expected spend
    ≈ $1.3-1.8, H200 timeout ≈ 40 min). Output name `r3` → dev session with FORGE_MODEL_NAME=r3.
+8. **Memory rule (verifier T3):** on mem_stop (nothing saved, ≈ $0.3-0.4 lost) do not retry the same settings; retry once at
+   max_tokens 8,192 (drops ≈ 36) with the user's yes.
+9. **User yes (2026-10-30, "okay in modal and base"):** after R3 training, the dev re-check (FORGE_MODEL_NAME=r3) and the
+   base Glimmer arm-A control, both on Modal.
