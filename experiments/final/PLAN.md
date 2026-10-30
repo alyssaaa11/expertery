@@ -139,3 +139,9 @@ keep Spark as teacher, train on its worked solution (reasoning_content + code).
     budget_stopped false). The control A is read per job: FT − A pass rate; FT < A overall means training hurts; FT ≥ A + 10
     points means training helps; in between = no clear effect. Both disclosed. The served model path must be /vol/r3/merged
     (checked before GO).
+
+## Rule-card check (pre-registered 2026-10-30 before the runs; superintel §c + verifier C3)
+Old dev set (4th look, disclosed; the card was written from R3 dev crashes). Arms: R3 + card, A + card, k = 3.
+- Main signal = crashes (any non-empty run_error) of R3 + card: <= 8 → manual-gap diagnosis holds; 9-14 → unclear (say
+  so); >= 15 → diagnosis wrong (the card must be trained in, not only served).
+- Pass rates within ±10 points = no clear difference (paired SE ≈ 6-9). A + card pass rate = expected generator yield.
