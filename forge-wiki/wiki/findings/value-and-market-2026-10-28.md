@@ -35,13 +35,15 @@ and `modal billing summary`; Spark Open facts in [[tools-and-services]].
 |---|---|---|
 | Low volume, no secrets | cloud big model | simple, cheap at low use |
 | High volume | Forge | ~3× cheaper per job when busy |
-| Secret designs (aerospace, defence, medical, valuable IP) | Forge | not allowed to send data to the cloud: "allowed vs not allowed", not price |
+| Secret designs (automotive and industrial suppliers, valuable company IP) | Forge | not allowed to send data to the cloud: "allowed vs not allowed", not price |
 | Offline sites (factory floor) | Forge | no cloud |
 - The strongest reason is **privacy**; cost is second and only at high volume.
 
 ## Example: a space company (user question)
-- Fits well: export-control rules (ITAR/EAR) often forbid sending designs to cloud AI; special tools (CAD scripting,
-  orbit or stress simulators, internal CLIs); mistakes are expensive.
+- Fits well: supplier contracts and company policy often forbid sending unreleased designs to cloud AI; special tools
+  (CAD scripting, stress simulators, internal CLIs); mistakes are expensive.
+- Note (2026-10-30): defence/export-control and medical examples were removed; the hackathon rules ban war/political
+  and health/medical topics.
 - Conditions for any tool: (1) controlled by code, (2) results checkable automatically (measure, simulate, test),
   (3) practice jobs can be generated without real secret data.
 - The teacher must then also run inside (self-hosted Spark Open) or only see fake practice data.
