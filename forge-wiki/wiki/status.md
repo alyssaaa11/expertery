@@ -46,7 +46,9 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Factory pilot (Baseten, Spark Open) | 0.52 | summary.json |
 | Muse round 2 | 2.40 | run.usage |
 | Factory main run (Baseten) | 4.38 | summary.json |
-| **Total** | **≈ 44.1 of 65** (verifier T2 recount: 44.06; + Modal cents) | |
+| Training (Modal) | 0.89 | billing before/after |
+| Dashboard (Muse) | 0.43 | run.usage |
+| **Total** | **≈ 45.4 of 65** (verifier T2 recount: 44.06; + Modal cents) | |
 
 Rest of the plan (verifier, forge-factory-pilot-2026-10-30): expected ≈ $48-49 total; worst case at every cap ≈ $54
 (main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. decision (user, 2026-10-30): **budget raised to $65**, covering
@@ -84,7 +86,13 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
   results/factory-train-2026-10-30/train_records.jsonl sha256 7181e73b…9217.
 - verified: **Muse round 2** (fd1d32c, $2.40): runner_final (FT + BX finisher), modal_forge + session, compare.py,
   no-Wonder loader filter; pytest 286. Round 2b todo: E2 test + E3 calls.jsonl cross-check.
-- Next: verifier on main run + round 2 (m…265) → user's yes for **training** (step 4, cap $4).
+- verified: **training done** (step 4, user yes + verifier GO, --out final): 167 examples, 0 dropped; exam guard 167
+  kept / 0 refused; 42 optimizer steps; loss 0.42 → 0.15-0.26; train 231 s, peak 64.3 GB of 85; merged to
+  /vol/final/merged (174 s); Modal ≈ $0.89 (billing 9.89 → 10.78). No serve test (no prompt given).
+  Note: the training prompt rendered "Reasoning strength: high." from the chat template while answers have no reasoning
+  (open question 1).
+- Next: Muse round 2b (E2 test, E3 calls.jsonl cross-check) + verifier review of round 2 + 2b → **dev check** (step 5,
+  cap $1, gate ≥ 80% at 0.2%).
 - (done) Next: verifier on the factory → the user's yes for the **pilot** (20 jobs, Spark Open on Baseten, cap $1.20) → learning
   loop report → main run. Muse round 2 (exam runner, BX finisher, deploy, compare) still to build.
 - Money: ≈ $37.2 of $50.
