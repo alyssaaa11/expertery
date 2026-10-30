@@ -53,7 +53,8 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Muse round 2b | 0.87 | run.usage |
 | Dev check (Modal) | 0.32 | billing 10.78 → 11.10 |
 | Oct 30 evening: Muse 3 + 3b + 3c (2.44+0.38+0.26), factory R3 (0.59+4.39), training R3 (1.99), dev R3 (2.22) | ≈ 12.3 | run.usage, summary.json, billing |
-| **Total** | **≈ 58.9 of 80** (+ base control running) | earlier rows recounted by the verifier (T2) |
+| Base control (Modal, incl. aborted attempt) | 2.33 | billing 15.31 → 17.64 |
+| **Total** | **≈ 61.2 of 80** | earlier rows recounted by the verifier (T2) |
 
 Rest of the plan (verifier, forge-factory-pilot-2026-10-30): expected ≈ $48-49 total; worst case at every cap ≈ $54
 (main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. decision (user, 2026-10-30 evening, "total" to the $80 proposal): **budget $80 total**; extra room is for Modal + Baseten,
@@ -120,7 +121,10 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
   passed on reasoning_len (frozen field) because the new reasoning_chars reads only reasoning_content (shows 0).
 - hypothesis (verifier lead): Spark's reasoning names real CadQuery args (yDir in 61/159, inPlane in 62/159 records) that
   Glimmer then attaches to the wrong calls.
-- Next: base control (running) → R4 idea = rule card (experiments/final/RULE_CARD.md) in the prompt + more data + 3
+- verified: **base control** (results/dev-base-2026-10-30, COMPLETE): untrained Glimmer, short prompt: 31/60 = **51.7%**
+  (tight 50%), pass@3 85%, 9.2k tokens/correct, 7 crashes. FT R3 48.3% < A 51.7% → pre-registered reading (PLAN R3 item
+  10): **training did not help**; the trained model invents more API args (15 vs 7 crashes).
+- (superseded) Next: base control (running) → R4 idea = rule card (experiments/final/RULE_CARD.md) in the prompt + more data + 3
   epochs, with the verifier's E1-E4 (A+card control; pre-register; bar (d) token form cannot pass at ≈ 7.1k/answer).
 - Next: Muse round 2b (E2 test, E3 calls.jsonl cross-check) + verifier review of round 2 + 2b → **dev check** (step 5,
   cap $1, gate ≥ 80% at 0.2%).
