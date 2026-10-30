@@ -69,10 +69,21 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **NOW (21:40):** two trainings done, neither beats untrained Glimmer on dev (A 51.7%, R1 38.3%, R3 48.3%); diagnosis
-  and next recipe in [[training-experiments-2026-10-30]]. Nothing running. Waiting for the user: cheap check (R3 + card,
-  A + card on the old dev, ≈ $1.5-2) → card-conditioned self-distillation (≈ $14-21) with 100 fresh dev jobs.
-  Money ≈ $61.2 of $80. Deadline Nov 4 (internal: trained result by Nov 1 evening).
+- **NOW (2026-10-30 ~22:40, before the user cleared the chat):** the **rule-card check** is RUNNING (user yes, verifier GO
+  forge-rulecard-check-go-2026-10-30): (1) R3 + card → results/check-r3card-2026-10-30 (FORGE_MODEL_NAME=r3,
+  FORGE_RULE_CARD=~/projects/forge/experiments/final/RULE_CARD.md, cap $4.50, deploy 22:30), then (2) A + card
+  → results/check-acard-2026-10-30 (cap $3.00); one shell chain under caffeinate, ends ≈ 00:15, ≈ $3.3.
+  - To do on the first records (verifier C2): prompt_tokens ≈ 650-700 (card present), stop if ≈ 240.
+  - Reading pre-registered in experiments/final/PLAN.md "Rule-card check": R3+card crashes (non-empty run_error) ≤ 8 →
+    manual-gap diagnosis holds; 9-14 unclear; ≥ 15 wrong; pass rates within ±10 points = no clear difference.
+  - After it: report to Alyssa in Slack (hivey msg send human --from hivey/hivey), commit results, verifier review, then
+    (if confirmed) card-conditioned self-distillation per raw/superintel-answer-training-diagnosis-2026-10-30.md
+    (≈ $15-23, 120 fresh dev jobs, needs user yes + verifier + Muse spec). D3 (served sampling + digest) still open.
+  - Results so far on dev: untrained 51.7%, R1 38.3%, R3 48.3% ([[training-experiments-2026-10-30]]).
+  - Money ≈ $61.2 of $80 before the check (Modal billing 17.53 at the start of the check).
+  - Working rules (user): Slack via hivey; verifier before every paid step; Muse writes big code, Claude only small
+    disclosed fixes (README "Small fixes by Claude"), never Claude inside the product; no Wonder data in training; budget
+    $80 total incl. credits; keep the git history; never use `tr` in the shell (aliased to Trash).
 - verified: factory built by Muse in 4 rounds (r1 e24a9a7 ≈ $2.4, r1b d304368 ≈ $0.96, r1c 5edd84a ≈ $1.62, r1d ff7f3a4
   ≈ $1.26). Claude re-ran: pytest 259 passed; make_jobs SELF-CHECK OK with TEXT=REF and CUTS 20/20 in all 10 families.
 - verified (results/cloud-checks-2-2026-10-30.log, Modal credits, $0 billed): check-refs factory 200/200, first-test 30/30;

@@ -89,3 +89,7 @@
 - raw: second-opinion brief/answer, superintel task/answer (training diagnosis).
 - Created: wiki/findings/training-experiments-2026-10-30.md. Updated: status (now), scoreboard §4, lessons (+6), index.
 - verified: R1 38.3%, R3 48.3%, untrained 51.7% on dev; decision pending: cheap check, then self-distillation.
+
+## [2026-10-30 22:40] save | before the user cleared the chat
+- status NOW: rule-card check running (R3+card, then A+card), reading pre-registered, next steps, working rules.
+- Claude small fix bb5e080 (FORGE_RULE_CARD) disclosed in README.
