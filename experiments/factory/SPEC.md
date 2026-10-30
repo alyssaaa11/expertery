@@ -98,3 +98,13 @@ CLI: `patterns.py --runs <teacher run dir> [<dir> ...] --out <dir> [--min-count 
   read exam and baseline runs).
 - Tests: 3 identical run errors over 2 families -> teacher_habit; 3 harness -> our_bug; 3 wrong_shape in one family ->
   our_wording; 2 hits -> no pattern; dev ids ignored; forbidden path -> exit 2; factory_version changes with teacher_notes.md.
+
+## Notes from the verifier before the pilot (forge-factory-r1d-2026-10-30)
+- TEXT=REF (round 1d) exempts only 0, ±1 and the `/2` of a printed diameter; `(printed ± 1)` is accepted only as a
+  through-cut overshoot at a cutter bound. A future family whose valid overshoot uses another form will fail the
+  self-check on purpose: then extend the rule in make_jobs.py, do not loosen it.
+- Claude's blind-rebuild-1 answers sit on pilot ids: they are never teacher data and never read by patterns.py
+  (patterns.py reads only teacher run dirs).
+- During the pilot and the main run: no fixes mid-run; patterns.py only on finished run dirs; gate = 0 harness errors,
+  then the yield rule (PLAN.md).
+
