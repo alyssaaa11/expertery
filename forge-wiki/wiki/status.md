@@ -46,7 +46,7 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Factory pilot (Baseten, Spark Open) | 0.52 | summary.json |
 | Muse round 2 | 2.40 | run.usage |
 | Factory main run (Baseten) | 4.38 | summary.json |
-| **Total** | **≈ 43.6 of 50** (+ Modal for the main run, cents) | |
+| **Total** | **≈ 44.1 of 50** (verifier T2 recount: 44.06; + Modal cents) | |
 
 Rest of the plan (verifier, forge-factory-pilot-2026-10-30): expected ≈ $48-49 total; worst case at every cap ≈ $54
 (main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. decision (user, 2026-10-30): **the $50 covers
