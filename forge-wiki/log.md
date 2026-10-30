@@ -60,3 +60,6 @@
 ## [2026-10-30] fix | diagrams visible in Obsidian + project page
 - Moved the 2 new diagrams from attachments/ (HTML only, not shown in Obsidian) to wiki/assets/diagrams/ with PNGs (8, 9 in forge-diagrams); embedded in the training page; created wiki/project.md (one-page overview).
 
+## [2026-10-30] explain | simple words
+- Created wiki/forge-in-simple-words.md (story, word list) + 2 simple diagrams (10, 11 in forge-diagrams). Lesson added.
+

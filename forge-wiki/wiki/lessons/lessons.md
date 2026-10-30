@@ -139,4 +139,5 @@
   "medical-device makers" as an example; the rules ban health/medical ideas
   (~/.hivey/agent/hiveyAgent-wiki/wiki/user/meta-hackathon-2026.md). Check: read that list before writing pitch text.
 - **Diagrams must follow the wiki's picture convention** (Oct 30). How learned: the user could not find the training diagram: I saved HTML only in forge-wiki/attachments/, which Obsidian does not show. Check: every diagram = PNG + HTML in forge-wiki/wiki/assets/diagrams/, embedded with ![[...png]] on its page and listed in [[forge-diagrams]].
+- **Explain with the user's words, not ours** (Oct 30). How learned: the user said "I don't understand any diagram, the words I didn't see before" after diagrams full of LoRA, loss, gradient, 1e-6, k=3, B-max. Check: every diagram for the user gets a simple-words version (school comparison: student, teacher, checker, notebook) and new terms go in the word list of [[forge-in-simple-words]].
 

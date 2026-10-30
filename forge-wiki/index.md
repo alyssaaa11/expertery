@@ -2,6 +2,7 @@
 
 Project folder: `~/projects/forge` (README routes to code, results and everything else).
 
+- [forge-in-simple-words](wiki/forge-in-simple-words.md): **the project in everyday words**: school comparison, 2 simple diagrams, word list for every technical word
 - [project](wiki/project.md): **the project on one page**: what Forge is, the claim, how it works (diagram), rules, where things are
 - [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
 
@@ -20,7 +21,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [glimmer-test-1-2026-10-28](wiki/findings/glimmer-test-1-2026-10-28.md): first live Glimmer run: cube ✅, L-bracket ❌ (wall off the base); $0.57
 - [forge-design-2026-10-28](wiki/findings/forge-design-2026-10-28.md): what Forge is, the design, why, demo idea
 - [forge-questions-2026-10-28](wiki/findings/forge-questions-2026-10-28.md): privacy per company, why CadQuery, why test Glimmer first, selling without credits, Spark Open vs 1.3
-- [forge-diagrams](wiki/findings/forge-diagrams.md): all 9 Archify diagrams with pictures (… final plan, training + exam plan, how training changes the weights)
+- [forge-diagrams](wiki/findings/forge-diagrams.md): all 11 Archify diagrams (10-11 in simple words) with pictures (… final plan, training + exam plan, how training changes the weights)
 - [final-pick-research-2026-10-28](wiki/findings/final-pick-research-2026-10-28.md): why Forge was picked: claude.ai 90 + GPT-6 92 merged, prior art, risk paper 2607.08938
 
 ## decisions

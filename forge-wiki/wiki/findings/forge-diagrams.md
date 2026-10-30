@@ -58,3 +58,11 @@ exam with bars a-d. Prepared, not run. Step 6a (finish B-max to 30 jobs) was add
 Interactive: `forge-wiki/wiki/assets/diagrams/forge-how-training.html`. One training step, repeated: example → guess →
 loss → gradient → nudge only the patch A, B → merge. Explained in [[how-training-changes-weights-2026-10-30]].
 
+## 10. How Glimmer learns (simple words)
+![[assets/diagrams/forge-simple-how-glimmer-learns.png]]
+Same as 9 without technical words. Word list in [[forge-in-simple-words]].
+
+## 11. The plan from today to the exam (simple words)
+![[assets/diagrams/forge-simple-plan.png]]
+Same as 8 without technical words.
+
