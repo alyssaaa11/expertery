@@ -126,4 +126,4 @@ keep Spark as teacher, train on its worked solution (reasoning_content + code).
    tokens per correct part at 80-90% ≈ 6.4-7.2k vs bar (d) ≈ 7,105 (79-answer BX; the 90-answer value will be higher):
    verifier's sharper estimate: (mean 5,916 + 250) / 0.8 ≈ 7.7k > 7,105 at 80% (≈ 6.85k at 90%), so the token form of
    bar (d) LIKELY FAILS unless the pass rate is ≥ ~90%; the wall-clock form may decide; bar (c) stays easy; the "many times
-   cheaper" headline weakens to "about 3× fewer tokens than B-max, no manual, one try".
+   cheaper" headline weakens to "≈ 2.8-3× fewer tokens than B-max, no manual, one try".
