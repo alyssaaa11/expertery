@@ -38,7 +38,8 @@ split.json, anything under results/, or frozen files.
      it a tiny CPU Modal function that loads only the tokenizer (no GPU, no weights).
      **H3, pass condition (print PASS/FAIL):** (a) the first loss tokens open the thinking turn (the template's
      analysis/to=self turn), (b) the code turn follows it, (c) the rendered prompt is byte-equal to the prompt
-     runner_final's FT arm sends (build it with runner_final's own function).
+     runner_final's FT arm sends (build it with runner_final's own function), including the template's default
+     'Reasoning strength: high.' line.
 3. **Memory for long examples:** train on **H200** (gpu="H200", $ rate constant `H200_RATE = 4.54` used by the cost
    model and caps), keep gradient checkpointing, raise the per-example limit to `max_tokens=12288`, and set
    GPU_MEM_STOP_GB to 135 for H200. Examples longer than the limit are dropped and counted (as today). Merge stays as

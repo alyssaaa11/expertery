@@ -124,5 +124,6 @@ keep Spark as teacher, train on its worked solution (reasoning_content + code).
    pass or fail can be attributed.
 6. **Expected effect, said now:** with ≈ 5.5k completion tokens per answer (Spark's reasoning median 5,177), FT's
    tokens per correct part at 80-90% ≈ 6.4-7.2k vs bar (d) ≈ 7,105 (79-answer BX; the 90-answer value will be higher):
-   the token form of bar (d) becomes borderline and the wall-clock form decides; bar (c) stays easy; the "many times
+   verifier's sharper estimate: (mean 5,916 + 250) / 0.8 ≈ 7.7k > 7,105 at 80% (≈ 6.85k at 90%), so the token form of
+   bar (d) LIKELY FAILS unless the pass rate is ≥ ~90%; the wall-clock form may decide; bar (c) stays easy; the "many times
    cheaper" headline weakens to "about 3× fewer tokens than B-max, no manual, one try".
