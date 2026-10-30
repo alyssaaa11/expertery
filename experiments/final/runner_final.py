@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Trained arm FT + the BX finisher on the cloud CadQuery box (MUSE_SPEC sections 3, 3b).
+"""Trained arm FT (+ base control arm A, round 3) + the BX finisher on the
+cloud CadQuery box (MUSE_SPEC sections 3, 3b).
 
 Arm FT = arm A's messages (system + job text, no manual, no hint) and arm
 A's body (max_tokens 16000, temperature 1.0, top_p 0.95, top_k 64), with
@@ -59,8 +60,10 @@ except (ImportError, AttributeError):
 
 FT_MODEL = "forge"
 FT_ARM = "FT"
+A_MODEL = "muse-glimmer"
+A_ARM = "A"
 BX_ARM = "BX"
-VALID_FINAL_ARMS = (FT_ARM, BX_ARM)
+VALID_FINAL_ARMS = (FT_ARM, A_ARM, BX_ARM)
 GPU_DOLLARS_PER_HOUR = runner.GPU_DOLLARS_PER_HOUR  # 2.50, same yardstick
 CALL_TIMEOUT = runner.CALL_TIMEOUT
 DEV_GATE_RATE = 0.80  # PLAN step 5: dev >= 80% at 0.2% -> GO, else STOP
@@ -77,6 +80,31 @@ def ft_messages(job_text, manual_text=""):
 def ft_body(messages, model=FT_MODEL):
     """Arm FT body = arm A's body, with model "forge"."""
     return runner.build_body(model, messages)
+
+
+def a_messages(job_text, manual_text=""):
+    """Arm A messages = arm FT messages (system + job text)."""
+    return ft_messages(job_text, manual_text)
+
+
+def a_body(messages, model=A_MODEL):
+    """Arm A body = arm FT body, with model "muse-glimmer"."""
+    return runner.build_body(model, messages)
+
+
+def reasoning_chars_of(data):
+    """Length of message.reasoning_content (round 3 serving check)."""
+    try:
+        choice = (data.get("choices") or [{}])[0] or {}
+    except (AttributeError, IndexError, TypeError):
+        return 0
+    if not isinstance(choice, dict):
+        return 0
+    msg = choice.get("message") or {}
+    if not isinstance(msg, dict):
+        return 0
+    val = msg.get("reasoning_content")
+    return len(val) if isinstance(val, str) else 0
 
 
 def _usage_pair(usage):
@@ -219,14 +247,15 @@ def out_of_money(cap_dollars, gpu_start, reserve=RESERVE, now=None):
 # ------------------------------------------------------- one FT answer
 
 
-def _invalid_ft(job, rep, model, start, end, seconds, run_error, exam):
+def _invalid_ft(job, rep, model, start, end, seconds, run_error, exam,
+                arm=FT_ARM, reasoning_chars=0):
     """An INVALID FT record (cut off, empty reply, or a failed call)."""
     return {
         "job": job["id"],
         "rep": rep,
         "sample": rep,
         "level": job.get("level"),
-        "arm": FT_ARM,
+        "arm": arm,
         "model": model,
         "grader": exam,
         "start": start,
@@ -241,6 +270,7 @@ def _invalid_ft(job, rep, model, start, end, seconds, run_error, exam):
         "content": "",
         "reasoning_len": 0,
         "reasoning_length": 0,
+        "reasoning_chars": reasoning_chars,
         "code": "",
         "extracted_code": "",
         "verdict": "INVALID",
@@ -255,15 +285,17 @@ def _invalid_ft(job, rep, model, start, end, seconds, run_error, exam):
 
 
 def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
-               exec_fn, grade_fn, call_timeout=CALL_TIMEOUT, rep=0):
+               exec_fn, grade_fn, call_timeout=CALL_TIMEOUT, rep=0,
+               arm=FT_ARM):
     """Run one (job, rep) pair once: POST the FT prompt, extract the code,
     run it in the cloud box, grade the BREP in the cloud grader.
 
     Never raises for a bad answer; a failed model call is INVALID, an
     answer that writes no BREP is FAIL, the grader's 0.2% verdict is the
-    outcome (tight at 1e-6 is recorded alongside).
+    outcome (tight at 1e-6 is recorded alongside). Arm A runs the same
+    call with the base Glimmer model (round 3 control arm).
     """
-    body = ft_body(ft_messages(job["text"]))
+    body = ft_body(ft_messages(job["text"]), model=model)
     start = runner.utcnow_iso()
     t0 = time.monotonic()
     try:
@@ -275,21 +307,25 @@ def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
         seconds = time.monotonic() - t0
         end = runner.utcnow_iso()
         return _invalid_ft(job, rep, model, start, end, seconds,
-                           "%s: %s" % (type(e).__name__, e), exam)
+                           "%s: %s" % (type(e).__name__, e), exam,
+                           arm=arm)
     content, finish_reason, usage, reasoning_len = \
         runner.parse_response(data)
+    reasoning_chars = reasoning_chars_of(data)
     if finish_reason == "length" or not (content or "").strip():
         seconds = time.monotonic() - t0
         end = runner.utcnow_iso()
         err = "cut off by the token limit" if finish_reason == "length" \
             else "empty reply"
-        return _invalid_ft(job, rep, model, start, end, seconds, err, exam)
+        return _invalid_ft(job, rep, model, start, end, seconds, err, exam,
+                           arm=arm, reasoning_chars=reasoning_chars)
     code = runner.extract_code(content)
     if not (code or "").strip():
         seconds = time.monotonic() - t0
         end = runner.utcnow_iso()
         return _invalid_ft(job, rep, model, start, end, seconds,
-                           "empty reply", exam)
+                           "empty reply", exam,
+                           arm=arm, reasoning_chars=reasoning_chars)
     brep, run_error, _sc = run_box_code(exec_fn, code)
     if brep is None:
         outcome, tight, fails, fails_tight, measurements = \
@@ -321,7 +357,7 @@ def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
         "rep": rep,
         "sample": rep,
         "level": job.get("level"),
-        "arm": FT_ARM,
+        "arm": arm,
         "model": model,
         "grader": exam,
         "start": start,
@@ -338,6 +374,7 @@ def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
         "content": content,
         "reasoning_len": reasoning_len,
         "reasoning_length": reasoning_len,
+        "reasoning_chars": reasoning_chars,
         "code": code,
         "extracted_code": code,
         "verdict": outcome,
@@ -839,8 +876,9 @@ def run_pairs(pairs, call_one, out_dir, arm, exam, budget, gpu_start,
 
 def run_ft_suite(jobs, out_dir, endpoint, model, key, exam, post_fn,
                  sleep_fn, exec_fn, grade_fn, server_info_fn=None,
-                 k=3, workers=8, budget=5.0, gpu_start=None):
-    """Arm FT over jobs x k reps. Returns (records, summary)."""
+                 k=3, workers=8, budget=5.0, gpu_start=None, arm=FT_ARM):
+    """Arm FT (or the base control arm A) over jobs x k reps. Returns
+    (records, summary)."""
     secrets = [key] if key else []
     server_info = (server_info_fn or
                    (lambda: fetch_server_info(endpoint, key)))()
@@ -848,10 +886,10 @@ def run_ft_suite(jobs, out_dir, endpoint, model, key, exam, post_fn,
 
     def _call(job, rep):
         rec = do_ft_call(job, model, endpoint, secrets, exam, post_fn,
-                         sleep_fn, exec_fn, grade_fn, rep=rep)
+                         sleep_fn, exec_fn, grade_fn, rep=rep, arm=arm)
         return rec, []
 
-    return run_pairs(pairs, _call, out_dir, FT_ARM, exam, budget,
+    return run_pairs(pairs, _call, out_dir, arm, exam, budget,
                      gpu_start, workers, server_info, k)
 
 
@@ -992,7 +1030,9 @@ def main(argv=None):
                         help="factory dev jobs file (exam factory)")
     parser.add_argument("--out", required=True)
     parser.add_argument("--arms", default=FT_ARM,
-                        help="comma list of FT,BX (default FT)")
+                        help="comma list of FT,A,BX (default FT; exactly "
+                             "one serving arm (FT|A) per run, or --arms BX "
+                             "with --fill-missing)")
     parser.add_argument("--fill-missing", default=None, metavar="DIR",
                         help="baseline dir whose missing BX (job, rep) "
                              "pairs to run (needs --arms BX)")
@@ -1033,6 +1073,9 @@ def main(argv=None):
     need = []
     if FT_ARM in arms and args.fill_missing is None:
         need += [("FORGE_URL", forge_url), ("FORGE_KEY", forge_key)]
+    if A_ARM in arms:
+        need += [("GLIMMER_URL", glimmer_url),
+                 ("GLIMMER_KEY", glimmer_key)]
     if BX_ARM in arms:
         need += [("GLIMMER_URL", glimmer_url),
                  ("GLIMMER_KEY", glimmer_key)]
@@ -1083,20 +1126,32 @@ def main(argv=None):
         exam = "first-test"
         if not jobs:
             parser.error("no jobs for --jobs %s" % args.jobs)
-    endpoint = forge_url.rstrip("/") + "/v1/chat/completions"
-    post_fn = _real_post_fn(lambda _e: (endpoint, forge_key))
+    # One serving arm per run: FT (trained model) or A (base Glimmer
+    # control, round 3: same short prompt and body as FT, served by
+    # deploy/modal_glimmer.py with the same vLLM flags).
+    serving = [a for a in arms if a in (FT_ARM, A_ARM)]
+    if len(serving) != 1:
+        parser.error("need exactly one serving arm (FT|A), got %r "
+                     "(--arms BX needs --fill-missing)" % (arms,))
+    if serving == [A_ARM]:
+        endpoint = glimmer_url.rstrip("/") + "/v1/chat/completions"
+        run_key, run_model, run_arm = glimmer_key, A_MODEL, A_ARM
+    else:
+        endpoint = forge_url.rstrip("/") + "/v1/chat/completions"
+        run_key, run_model, run_arm = forge_key, FT_MODEL, FT_ARM
+    post_fn = _real_post_fn(lambda _e: (endpoint, run_key))
     with cloud_cq.modal.enable_output():
         with cloud_cq._app.run():
             _records, summary = run_ft_suite(
-                jobs, args.out, endpoint, FT_MODEL, forge_key, exam,
+                jobs, args.out, endpoint, run_model, run_key, exam,
                 post_fn=post_fn, sleep_fn=time.sleep,
                 exec_fn=lambda code: cloud_cq.run_answer_in_box(code),
                 grade_fn=lambda exam_arg, jid, brep: cloud_cq.grade.remote(
                     exam_arg, jid, brep),
                 k=args.k, workers=args.workers, budget=args.budget,
-                gpu_start=args.gpu_start)
-    print("FT %s: %d answers, pass rate at 0.2%%: %s" % (
-        exam, summary.get("n", 0), summary.get("pass_rate")))
+                gpu_start=args.gpu_start, arm=run_arm)
+    print("%s %s: %d answers, pass rate at 0.2%%: %s" % (
+        run_arm, exam, summary.get("n", 0), summary.get("pass_rate")))
     if exam == "factory":
         print(dev_gate_line(summary))
     return 0

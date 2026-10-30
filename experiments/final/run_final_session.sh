@@ -1,11 +1,12 @@
 #!/bin/zsh
 # Final-exam session for the trained model: deploy deploy/modal_forge.py
 # (app forge-trained), wait for ready, run runner_final.py calls one after
-# another, each with --budget = money LEFT = cap - GPU time since deploy x
-# $2.50/h minus the $0.30 reserve (refuse to start when <= $0.05), optional
-# pilot + GO/STOP file pause, always stops the app and prints whether it
-# stopped. Same behaviour as experiments/freecad/run_fc_session.sh, for
-# runner_final.py with app forge-trained.
+# another, each with --budget = the whole cap (the runner's own guard stops
+# new calls at the $0.30 reserve; budget_left.py below is only the
+# refuse-to-start check, so time and reserve are not subtracted twice),
+# optional pilot + GO/STOP file pause, always stops the app and prints
+# whether it stopped. Same behaviour as experiments/freecad/run_fc_session.sh,
+# for runner_final.py with app forge-trained.
 # Usage: run_final_session.sh <absolute-out-dir> [cap-$] [--pilot <spec>] [--run <spec> ...]
 # Each spec is "<jobs>:<subdir>:<arms>:<k>" (e.g. "main:main-FT:FT:3").
 # jobs "dev" means the factory dev file (experiments/factory/jobs_dev.jsonl);
@@ -82,9 +83,11 @@ fi
 PY=~/projects/forge/.venv/bin/python
 DEV_JOBS=~/projects/forge/experiments/factory/jobs_dev.jsonl
 run() {
-  B=$($PY -I "$COMMON/budget_left.py" "$CAP" "$GPU_START" 2>&1) || { echo "budget left for this runner call: CAP REACHED"; echo "CAP REACHED, not starting runner"; return 1; }
-  echo "budget left for this runner call: \$$B"
-  FORGE_URL="$URL" FORGE_KEY="$K" $PY -I ~/projects/forge/experiments/final/runner_final.py --workers 8 --budget "$B" --gpu-start "$GPU_START" "$@" & RPID=$!
+  # Refuse-to-start check only (verifier D1): the runner gets the whole
+  # cap and enforces the reserve itself, so time and reserve are no
+  # longer subtracted twice.
+  "$PY" -I "$COMMON/budget_left.py" "$CAP" "$GPU_START" >/dev/null 2>&1 || { echo "budget left for this runner call: CAP REACHED"; echo "CAP REACHED, not starting runner"; return 1; }
+  FORGE_URL="$URL" FORGE_KEY="$K" $PY -I ~/projects/forge/experiments/final/runner_final.py --workers 8 --budget "$CAP" --gpu-start "$GPU_START" "$@" & RPID=$!
   wait $RPID
   rc=$?
   RPID=""

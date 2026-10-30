@@ -24,8 +24,12 @@ import runner_final
 # ------------------------------------------------------- fakes
 
 
-def _resp(content, finish="stop", prompt=100, completion=50):
-    return {"choices": [{"message": {"content": content},
+def _resp(content, finish="stop", prompt=100, completion=50,
+          reasoning=None):
+    msg = {"content": content}
+    if reasoning is not None:
+        msg["reasoning_content"] = reasoning
+    return {"choices": [{"message": msg,
                          "finish_reason": finish}],
             "usage": {"prompt_tokens": prompt,
                       "completion_tokens": completion}}
@@ -444,7 +448,9 @@ def test_modal_forge_matches_glimmer_settings():
 
 
 def test_run_final_session_script():
-    """Section 6: deploy, wait ready, cap with reserve, trap stops app."""
+    """Section 6: deploy, wait ready, cap with reserve, trap stops app.
+    Round 3 (verifier D1): run() passes the whole cap (--budget "$CAP");
+    budget_left.py stays only as the refuse-to-start check."""
     src = open(os.path.join(HERE, "run_final_session.sh"),
                encoding="utf-8").read()
     assert "deploy/modal_forge.py" in src
@@ -452,6 +458,138 @@ def test_run_final_session_script():
     assert "budget_left.py" in src  # whole-session cap with reserve
     assert "app stop forge-trained" in src
     assert "trap" in src and "GO" in src and "STOP" in src
+    assert '--budget "$CAP"' in src
+    assert '--budget "$B"' not in src
+
+
+def test_run_base_session_script():
+    """Round 3 (verifier P5 + D1): the base control session mirrors the
+    final session for app forge-glimmer and deploy/modal_glimmer.py,
+    with the same whole-cap budget fix."""
+    src = open(os.path.join(HERE, "run_base_session.sh"),
+               encoding="utf-8").read()
+    assert "deploy/modal_glimmer.py" in src
+    assert "modal_forge" not in src and "forge-trained" not in src
+    assert "runner_final.py" in src and "GLIMMER_URL" in src
+    assert "GLIMMER_KEY" in src and "FORGE_URL" not in src
+    assert "budget_left.py" in src
+    assert "app stop forge-glimmer" in src
+    assert "trap" in src and "GO" in src and "STOP" in src
+    assert '--budget "$CAP"' in src
+    assert '--budget "$B"' not in src
+    assert ":A:3" in src  # arm A specs, not FT
+
+
+def test_arm_a_messages_and_body_equal_ft_except_model():
+    """Round 3 (verifier P5): base control arm A sends the SAME short
+    prompt and body as FT, except the model name."""
+    job_text = "A widget. Block: X from 0 to 10."
+    assert runner_final.a_messages(job_text) == runner_final.ft_messages(
+        job_text)
+    body = runner_final.a_body(runner_final.a_messages(job_text))
+    ft_body = runner_final.ft_body(runner_final.ft_messages(job_text))
+    assert body["messages"] == ft_body["messages"]
+    assert body["max_tokens"] == ft_body["max_tokens"] == 16000
+    assert body["temperature"] == ft_body["temperature"] == 1.0
+    assert body["top_p"] == ft_body["top_p"] == 0.95
+    assert body["top_k"] == ft_body["top_k"] == 64
+    assert set(body) == set(ft_body)  # no extra keys
+    assert body["model"] == "muse-glimmer" and ft_body["model"] == "forge"
+    assert runner_final.A_MODEL == "muse-glimmer"
+
+
+def test_arm_a_suite_uses_base_model_and_arm_label(tmp_path):
+    """Arm A records carry arm A and model muse-glimmer, graded like FT."""
+    jobs = [{"id": "M1", "text": "make a box", "level": "medium"}]
+    post = _post_scripted([_resp("```python\nresult = 1\n```",
+                                 reasoning="think step")])
+    out = str(tmp_path / "a")
+    recs, summary = runner_final.run_ft_suite(
+        jobs, out, "http://x/v1/chat/completions", runner_final.A_MODEL,
+        "K", "first-test", post, lambda s: None, _box_ok(),
+        _grade_pass(), server_info_fn=lambda: {}, k=1, workers=1,
+        budget=5.0, arm=runner_final.A_ARM)
+    assert len(recs) == 1
+    assert recs[0]["arm"] == "A" and recs[0]["model"] == "muse-glimmer"
+    assert recs[0]["verdict"] == "PASS"
+    assert recs[0]["reasoning_chars"] == len("think step")
+    assert summary["arm"] == "A"
+    assert post.sent[0] == runner_final.a_messages("make a box")
+
+
+def test_ft_records_carry_reasoning_chars():
+    """Round 3 serving check: every FT record holds reasoning_chars =
+    len(message.reasoning_content); 0 when absent (INVALID included)."""
+    job = {"id": "M1", "text": "make a box", "level": "medium"}
+    post = _post_scripted([_resp("```python\nresult = 1\n```",
+                                 reasoning="abcd")])
+    rec = runner_final.do_ft_call(
+        job, "forge", "http://x/v1/chat/completions", [], "first-test",
+        post, lambda s: None, _box_ok(), _grade_pass())
+    assert rec["reasoning_chars"] == 4
+    assert rec["reasoning_len"] == 4 and rec["reasoning_length"] == 4
+    post = _post_scripted([_resp("```python\nresult = 1\n```")])
+    rec = runner_final.do_ft_call(
+        job, "forge", "http://x/v1/chat/completions", [], "first-test",
+        post, lambda s: None, _box_ok(), _grade_pass())
+    assert rec["reasoning_chars"] == 0
+    post = _post_scripted([RuntimeError("down")])
+    rec = runner_final.do_ft_call(
+        job, "forge", "http://x/v1/chat/completions", [], "first-test",
+        post, lambda s: None, _box_ok(), _grade_pass())
+    assert rec["verdict"] == "INVALID" and rec["reasoning_chars"] == 0
+    # The FT body is unchanged: no reasoning_strength, max_tokens 16000.
+    body = runner_final.ft_body(runner_final.ft_messages("t"))
+    assert "chat_template_kwargs" not in body
+    assert body["max_tokens"] == 16000
+
+
+def test_main_arm_a_needs_glimmer_keys_and_routes_there(
+        monkeypatch, tmp_path, capsys):
+    """--arms A refuses without GLIMMER_URL/GLIMMER_KEY (exit 2, names
+    the variable, no network) and runs the A suite on them otherwise."""
+    import urllib.request
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("network reached before the env check")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _boom)
+    for var in ("FORGE_URL", "FORGE_KEY", "GLIMMER_URL", "GLIMMER_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    with pytest.raises(SystemExit) as exc:
+        runner_final.main(["--jobs", "dry", "--out", str(tmp_path),
+                           "--arms", "A"])
+    assert exc.value.code == 2
+    assert "GLIMMER_URL" in capsys.readouterr().err
+
+    monkeypatch.setenv("GLIMMER_URL", "http://glimmer")
+    monkeypatch.setenv("GLIMMER_KEY", "K")
+    seen = {}
+
+    def _suite(jobs, out, endpoint, model, key, exam, **kwargs):
+        seen.update(endpoint=endpoint, model=model, key=key,
+                    arm=kwargs.get("arm"))
+        return [], {"n": 0, "pass_rate": None}
+
+    monkeypatch.setattr(runner_final, "run_ft_suite", _suite)
+    import types
+    fake_cq = types.SimpleNamespace(
+        modal=types.SimpleNamespace(enable_output=lambda: _Ctx()),
+        _app=types.SimpleNamespace(run=lambda: _Ctx()),
+        run_answer_in_box=lambda code: {}, grade=types.SimpleNamespace())
+    monkeypatch.setattr(runner_final, "cloud_cq", fake_cq)
+    assert runner_final.main(["--jobs", "dry", "--out", str(tmp_path),
+                              "--arms", "A"]) == 0
+    assert seen["endpoint"] == "http://glimmer/v1/chat/completions"
+    assert seen["model"] == "muse-glimmer" and seen["arm"] == "A"
+
+
+class _Ctx:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
 
 
 def test_server_info_never_raises_and_reads_digest():

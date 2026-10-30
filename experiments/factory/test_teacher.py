@@ -35,9 +35,11 @@ REAL_SHAPE = {  # the real Baseten usage shape (numbers illustrative)
 }
 
 
-def _reply(code="result = 1", usage=None, finish="stop"):
-    return {"choices": [{"message": {"content": "```python\n%s\n```"
-                        % code}, "finish_reason": finish}],
+def _reply(code="result = 1", usage=None, finish="stop", reasoning="think"):
+    msg = {"content": "```python\n%s\n```" % code}
+    if reasoning is not None:
+        msg["reasoning_content"] = reasoning
+    return {"choices": [{"message": msg, "finish_reason": finish}],
             "usage": usage or dict(REAL_SHAPE)}
 
 
@@ -138,13 +140,17 @@ def test_pass_ends_up_in_train_records_fail_does_not(tmp_path):
     kept = [json.loads(line) for line in open(
         os.path.join(out, "train_records.jsonl"), encoding="utf-8")]
     assert kept == [{"id": "F1-1", "text": "spool one",
-                     "code": "result = 1", "teacher": "spark"}]
+                     "code": "result = 1", "reasoning": "think",
+                     "teacher": "spark"}]
     by_id = {r["id"]: r for r in records}
     assert by_id["F1-1"]["verdict"] == "PASS"
     assert by_id["F1-2"]["verdict"] == "FAIL"
     assert all(r["factory_version"] == teacher.FACTORY_VERSION
                for r in records)
     assert all(r["cached_tokens"] == 7552 for r in records)
+    assert by_id["F1-1"]["reasoning"] == "think"
+    assert by_id["F1-1"]["reasoning_chars"] == 5
+    assert by_id["F1-1"]["reasoning_missing"] is False
     calls = [json.loads(line) for line in open(
         os.path.join(out, "calls.jsonl"), encoding="utf-8")]
     assert len(calls) == 2
@@ -278,7 +284,8 @@ def test_train_records_keep_the_short_prompt_no_notes(tmp_path):
     kept = [json.loads(line) for line in open(
         os.path.join(out, "train_records.jsonl"), encoding="utf-8")]
     assert kept == [{"id": "F1-1", "text": "spool one",
-                     "code": "result = 1", "teacher": "spark"}]
+                     "code": "result = 1", "reasoning": "think",
+                     "teacher": "spark"}]
     assert post.calls[0]["messages"][1]["content"].count("some note") == 1
 
 
@@ -466,3 +473,73 @@ def test_escalate_refused_by_decision_even_with_keys(
                       "--budget-dollars", "1", "--escalate"])
     assert exc.value.code == 2
     assert "no Wonder output in training data" in capsys.readouterr().err
+
+
+# ------------------------------------------------- round 3: reasoning
+
+
+def test_parse_response_returns_reasoning_content():
+    content, finish, usage, reasoning = teacher.parse_response(
+        _reply("result = 1", reasoning="worked it out"))
+    assert content == "```python\nresult = 1\n```"
+    assert reasoning == "worked it out"
+    assert finish == "stop" and usage["prompt_tokens"] == 8307
+    # Absent key -> None; present-but-empty -> "".
+    _c, _f, _u, missing = teacher.parse_response(_reply(reasoning=None))
+    assert missing is None
+    _c, _f, _u, empty = teacher.parse_response(_reply(reasoning=""))
+    assert empty == ""
+
+
+def test_empty_reasoning_pass_excluded_from_train_records_but_counted(
+        tmp_path):
+    def _post(body):
+        n = len(_post.calls)
+        _post.calls.append(body)
+        if n == 0:
+            return _reply("result = 1", reasoning="a" * 10)
+        if n == 1:
+            return _reply("result = 2", reasoning=None)  # empty PASS
+        return _reply("result = 3",
+                      reasoning="per the MANUAL, use boxes")  # manual word
+
+    _post.calls = []
+    out = str(tmp_path / "run")
+    records, summary = teacher.run_suite(
+        JOBS_BY_ID, ["F1-1", "F1-2", "F1-3"], out, _post, None,
+        "MANUAL", budget=1.0, exec_fn=_exec_ok, grade_fn=_grade_pass)
+    by_id = {r["id"]: r for r in records}
+    assert by_id["F1-1"]["reasoning_missing"] is False
+    assert by_id["F1-2"]["reasoning"] == ""
+    assert by_id["F1-2"]["reasoning_chars"] == 0
+    assert by_id["F1-2"]["reasoning_missing"] is True
+    kept = [json.loads(line) for line in open(
+        os.path.join(out, "train_records.jsonl"), encoding="utf-8")]
+    assert [r["id"] for r in kept] == ["F1-1", "F1-3"]  # empty out
+    assert all(set(r) == {"id", "text", "code", "reasoning", "teacher"}
+               for r in kept)
+    assert summary["n_with_reasoning"] == 2
+    assert summary["reasoning_chars_median"] == pytest.approx(
+        (10 + len("per the MANUAL, use boxes")) / 2)
+    assert summary["reasoning_chars_max"] == len("per the MANUAL, use boxes")
+    assert summary["n_reasoning_mentions_manual"] == 1
+    assert summary["n_reasoning_missing"] == 1
+
+
+def test_summary_reasoning_counts_empty_when_no_reasoning(tmp_path):
+    out = str(tmp_path / "run")
+
+    def _bare(body):
+        return _reply("result = 1", reasoning=None)
+
+    records, summary = teacher.run_suite(
+        JOBS_BY_ID, ["F1-1"], out, _bare, None, "MANUAL", budget=1.0,
+        exec_fn=_exec_ok, grade_fn=_grade_pass)
+    assert summary["n_with_reasoning"] == 0
+    assert summary["reasoning_chars_median"] == 0
+    assert summary["reasoning_chars_max"] == 0
+    assert summary["n_reasoning_mentions_manual"] == 0
+    assert summary["n_reasoning_missing"] == 1
+    kept = open(os.path.join(out, "train_records.jsonl"),
+                encoding="utf-8").read().strip()
+    assert kept == ""  # the only PASS had no worked solution

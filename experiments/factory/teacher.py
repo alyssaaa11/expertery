@@ -42,6 +42,8 @@ import contextlib
 import hashlib
 import json
 import os
+import re
+import statistics
 import sys
 import threading
 import time
@@ -193,7 +195,14 @@ def real_post_fn(url, key, affinity, timeout=CALL_TIMEOUT):
 
 
 def parse_response(data):
-    """Split a chat-completions body into (content, finish_reason, usage)."""
+    """Split a chat-completions body into (content, finish_reason, usage,
+    reasoning).
+
+    `reasoning` is the raw message.reasoning_content (None when the key
+    is absent, "" when it is present but empty): Spark's worked solution
+    (round 3), stored with the call and trained on. Non-string values
+    are coerced to str (never None down the line except absent).
+    """
     data = data or {}
     try:
         choice = (data.get("choices") or [{}])[0] or {}
@@ -205,10 +214,13 @@ def parse_response(data):
     if not isinstance(msg, dict):
         msg = {}
     content = msg.get("content") or ""
+    reasoning = msg.get("reasoning_content")
+    if reasoning is not None and not isinstance(reasoning, str):
+        reasoning = str(reasoning)
     usage = data.get("usage") or {}
     if not isinstance(usage, dict):
         usage = {}
-    return content, choice.get("finish_reason"), usage
+    return content, choice.get("finish_reason"), usage, reasoning
 
 
 def cached_tokens_of(usage):
@@ -367,11 +379,11 @@ def do_teacher_call(job, teacher, model, post_fn, exec_fn, grade_fn,
     body = build_body(
         model, build_messages(job["text"], manual_text, notes_text))
     t0 = time.monotonic()
-    content, finish_reason, usage = "", None, {}
+    content, finish_reason, usage, reasoning = "", None, {}, None
     code, verdict, fails, run_error = "", "INVALID", [], None
     try:
         data = post_fn(body)
-        content, finish_reason, usage = parse_response(data)
+        content, finish_reason, usage, reasoning = parse_response(data)
         code = extract_code(content)
         if finish_reason == "length" or not (code or "").strip():
             verdict, fails = "INVALID", []
@@ -408,12 +420,18 @@ def do_teacher_call(job, teacher, model, post_fn, exec_fn, grade_fn,
         run_error = "%s: %s" % (type(e).__name__, e)
         usage = {}
     latency = round(time.monotonic() - t0, 3)
+    reasoning_text = reasoning if isinstance(reasoning, str) else ""
     return {
         "id": job["id"],
         "family": job["family"],
         "teacher": teacher,
         "attempt": 1,
         "code": code,
+        "reasoning": reasoning_text,
+        "reasoning_chars": len(reasoning_text),
+        # A PASS with empty reasoning is still recorded, but it holds no
+        # worked solution, so it is excluded from train_records (round 3).
+        "reasoning_missing": not reasoning_text.strip(),
         "verdict": verdict,
         "fails": fails,
         "usage": usage,
@@ -580,12 +598,29 @@ def build_summary(records, ids, spent, spent_w, budget_stopped):
     kept = {r["id"] for r in records if r["verdict"] == "PASS"}
     wonder_kept = sum(1 for r in build_train_records_from(
         records) if r.get("teacher") == "wonder")
+    # Round 3: the worked solution survives only with the reasoning.
+    with_reasoning = [r for r in records
+                      if isinstance(r.get("reasoning"), str)
+                      and r["reasoning"].strip()]
+    reasoning_chars = [len(r["reasoning"]) for r in with_reasoning]
+    n_reasoning_missing = sum(
+        1 for r in records
+        if r["verdict"] == "PASS" and r.get("reasoning_missing"))
     return {
         "factory_version": FACTORY_VERSION,
         "n_ids": len(ids),
         "n_calls": len(records),
         "n_pass": n_pass,
         "n_kept_ids": len(kept),
+        "n_with_reasoning": len(with_reasoning),
+        "reasoning_chars_median": (
+            statistics.median(reasoning_chars)
+            if reasoning_chars else 0),
+        "reasoning_chars_max": max(reasoning_chars, default=0),
+        "n_reasoning_mentions_manual": sum(
+            1 for r in with_reasoning
+            if re.search(r"\bmanual\b", r["reasoning"], re.IGNORECASE)),
+        "n_reasoning_missing": n_reasoning_missing,
         "families": families,
         "prompt_tokens": prompt,
         "completion_tokens": completion,
@@ -609,15 +644,22 @@ def build_train_records_from(records):
 
 
 def build_train_records(records, jobs_by_id):
-    """train_records.jsonl = {"id", "text", "code", "teacher"} for the
-    first PASS at 1e-6 of each id (the teacher's extracted code, not
-    the reference). The teacher tag travels with the row (decision,
-    user 2026-10-30: no Wonder output in training data)."""
+    """train_records.jsonl = {"id", "text", "code", "reasoning",
+    "teacher"} for the first PASS at 1e-6 of each id (the teacher's
+    extracted code, not the reference). A PASS whose reasoning is empty
+    holds no worked solution and is excluded (round 3; it stays in
+    calls.jsonl with reasoning_missing true, counted in summary.json).
+    The teacher tag travels with the row (decision, user 2026-10-30:
+    no Wonder output in training data)."""
     out = []
     for rec in build_train_records_from(records):
+        reasoning = rec.get("reasoning") or ""
+        if not reasoning.strip():
+            continue
         job = jobs_by_id[rec["id"]]
         out.append({"id": rec["id"], "text": job["text"],
-                    "code": rec["code"], "teacher": rec["teacher"]})
+                    "code": rec["code"], "reasoning": reasoning,
+                    "teacher": rec["teacher"]})
     return out
 
 

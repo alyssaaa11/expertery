@@ -107,9 +107,10 @@ def test_smoke_entrypoint_refuses_tiny_cap_offline():
 def test_smoke_cap_2_refused_without_any_remote_call(monkeypatch, capsys):
     """Round 2 item 1: `smoke --cap-dollars 2.0` is CAP REFUSED before Modal.
 
-    With the 300 s startup allowance the minimum total cap is ~$2.89, so
-    $2.0 must refuse. Every remote path raises if touched, so a wrong cap
-    check would fail the test instead of starting a paid H100 job.
+    With the 300 s startup allowance the minimum total cap is ~$3.10
+    (round 3: train on H200), so $2.0 must refuse. Every remote path
+    raises if touched, so a wrong cap check would fail the test instead
+    of starting a paid GPU job.
     """
     import modal
 
@@ -126,11 +127,15 @@ def test_smoke_cap_2_refused_without_any_remote_call(monkeypatch, capsys):
 
 
 def test_startup_allowance_is_300s():
-    """Round 2 item 2: STARTUP_TIMEOUT_S = 300, so a $3 cap still trains."""
+    """Round 2 item 2: STARTUP_TIMEOUT_S = 300. Round 3: train runs on
+    H200 ($4.54/h), so the minimum cap moves to ~$3.10."""
     assert forge_train.STARTUP_TIMEOUT_S == 300
+    assert forge_train.H200_RATE == 4.54
     with pytest.raises(forge_train.CapExceeded):
-        forge_train.split_cap(2.0)  # under the ~$2.89 minimum: refuse
-    split = forge_train.split_cap(3.0)  # $3 still buys >= 15 min of train
+        forge_train.split_cap(2.0)  # under the ~$3.10 minimum: refuse
+    with pytest.raises(forge_train.CapExceeded):
+        forge_train.split_cap(3.0)  # H200: no longer 15 min of train
+    split = forge_train.split_cap(3.5)  # $3.5 still buys >= 15 min
     assert split["train"] >= 15 * 60
 
 
@@ -470,9 +475,9 @@ def test_cap_includes_startup_and_spent():
 def test_split_cap_reserves_merge_serve_first():
     split = forge_train.split_cap(6.0)
     assert split["merge"] == 12 * 60 and split["serve"] == 6 * 60
-    assert split["train"] >= 15 * 60  # the rest goes to train
+    assert split["train"] >= 15 * 60  # the rest goes to train (H200)
     cost = (forge_train.dollars_for_seconds(split["startup_s"] + split["train"],
-                                            forge_train.H100_RATE)
+                                            forge_train.H200_RATE)
             + forge_train.dollars_for_seconds(split["startup_s"] + split["merge"],
                                               forge_train.H100_RATE)
             + forge_train.dollars_for_seconds(split["startup_s"] + split["serve"],
@@ -616,6 +621,16 @@ def test_guard_uses_box_measure_for_code_side():
         forge_train.set_box_fns(*old)
 
 
+def test_gpu_stop_and_token_limit_for_h200():
+    """Round 3: train on H200 (merge stays H100), stop at 135 GB, and
+    keep examples up to 12288 tokens."""
+    assert forge_train.GPU_MEM_STOP_GB == 135
+    assert forge_train.MAX_TOKENS == 12288
+    src = open(os.path.join(HERE, "forge_train.py"), encoding="utf-8").read()
+    assert src.count('gpu="H200"') == 1  # train only
+    assert src.count('gpu="H100"') == 1  # merge stays as it is
+
+
 def test_guard_opens_cloud_cq_app_once_for_whole_pass(monkeypatch):
     """The guard holds cloud_cq._app.run() once for the whole pass,
     not once per record (slow). Three records, one app run."""
@@ -676,3 +691,140 @@ def test_guard_opens_cloud_cq_app_once_for_whole_pass(monkeypatch):
     finally:
         forge_train._box_exec_fn = old_exec
         forge_train._box_measure_fn = old_measure
+
+
+# ------------------------------------------------- round 3: thinking + answer
+
+THINK_TOK = forge_train.FakeThinkingTokenizer
+REASONING = "try a centred XY box, then cut the hole"
+CODE = "result = 1"
+TEXT = "make a box"
+
+
+def test_reasoning_renders_thinking_then_answer_with_loss_on_both():
+    tok = THINK_TOK()
+    prompt, full = forge_train.render_full(tok, TEXT, CODE, REASONING)
+    answer = forge_train.build_answer_text(CODE)
+    assert full.startswith(prompt)
+    loss_text = full[len(prompt):]
+    assert loss_text.index(REASONING) < loss_text.index(answer)
+    assert "to=self" in loss_text[:loss_text.index(REASONING)]
+    enc = forge_train.encode_example(tok, TEXT, CODE,
+                                     reasoning=REASONING)
+    assert not enc["dropped"]
+    n_prompt = len(tok(prompt)["input_ids"])
+    assert enc["labels"][:n_prompt] == [-100] * n_prompt  # prompt masked
+    assert enc["labels"][n_prompt:] == enc["input_ids"][n_prompt:]
+    assert any(v != -100 for v in enc["labels"])
+    # Both turns carry loss: reasoning words and code words are trained.
+    loss_words = [tok.decode([i]) for i, lab
+                  in zip(enc["input_ids"], enc["labels"]) if lab != -100]
+    assert "centred" in loss_words and "result" in loss_words
+
+
+def test_no_reasoning_renders_byte_equal_to_legacy():
+    """A record without reasoning keeps today's exact render."""
+    tok = THINK_TOK()
+    prompt, full = forge_train.render_full(tok, TEXT, CODE)
+    legacy = tok.apply_chat_template(
+        forge_train.build_messages(TEXT)
+        + [{"role": "assistant",
+            "content": forge_train.build_answer_text(CODE)}],
+        tokenize=False)
+    assert full == legacy
+    assert full.startswith(prompt)
+    enc = forge_train.encode_example(tok, TEXT, CODE)
+    assert not enc["dropped"]
+
+
+def test_fallback_raises_with_reasoning_never_drops_thinking():
+    """H1: a template that renders history differently raises for a
+    record with reasoning (the legacy fallback still applies without)."""
+    tok = SkewTok()
+    with pytest.raises(ValueError):
+        forge_train.render_full(tok, TEXT, CODE, "some thinking")
+    prompt, full = forge_train.render_full(tok, TEXT, CODE)
+    assert full.startswith(prompt)  # legacy fallback unchanged
+
+
+def test_filter_batch_carries_reasoning():
+    tok = THINK_TOK()
+    recs = [{"text": TEXT, "code": CODE, "reasoning": REASONING},
+            {"text": TEXT, "code": CODE}]
+    kept, dropped = forge_train.filter_batch(tok, recs)
+    assert dropped == 0 and len(kept) == 2
+    assert kept[0]["reasoning"] == REASONING
+    assert "reasoning" not in kept[1]
+
+
+class StripTok(THINK_TOK):
+    """A template that strips reasoning from history (the H2 worry):
+    the assistant turn renders without the thinking turn."""
+
+    def apply_chat_template(self, msgs, tokenize=False,
+                            add_generation_prompt=False):
+        plain = [{k: v for k, v in m.items() if k != "reasoning_content"}
+                 for m in msgs]
+        return super().apply_chat_template(
+            plain, tokenize=tokenize,
+            add_generation_prompt=add_generation_prompt)
+
+
+def test_format_check_passes_on_fake_reasoning_record():
+    result = forge_train.check_format(THINK_TOK(), {
+        "text": TEXT, "code": CODE, "reasoning": REASONING})
+    assert result["verdict"] == "PASS"
+    assert result["checks"] == {"thinking_first": True,
+                                "answer_after_thinking": True,
+                                "prompt_matches_ft": True}
+    assert result["has_reasoning"] is True
+    # (a) the first loss tokens open the thinking turn ...
+    assert result["loss_tokens"][0].startswith("to=self")
+    assert "to=self" in " ".join(result["loss_tokens"][:5])
+    # ... (b) the code turn follows it ...
+    joined = " ".join(result["loss_tokens"])
+    assert joined.index("centred") < joined.index("result")
+    # ... (c) the prompt is byte-equal to what FT sends at serve time,
+    # including the template's default reasoning-strength line.
+    assert "Reasoning strength: high." in result["prompt"]
+    assert result["prompt"] == THINK_TOK().apply_chat_template(
+        forge_train.ft_messages_for(TEXT), tokenize=False,
+        add_generation_prompt=True)
+
+
+def test_format_check_fails_when_template_strips_reasoning():
+    """H2's case: a template that drops the thinking turn FAILs (a) and
+    (b) instead of silently training answer-only."""
+    result = forge_train.check_format(StripTok(), {
+        "text": TEXT, "code": CODE, "reasoning": REASONING})
+    assert result["verdict"] == "FAIL"
+    assert result["checks"]["thinking_first"] is False
+    assert result["checks"]["prompt_matches_ft"] is True
+
+
+def test_format_check_fails_on_prompt_mismatch():
+    result = forge_train.check_format(
+        THINK_TOK(), {"text": TEXT, "code": CODE},
+        ft_messages=[{"role": "user", "content": "something else"}])
+    assert result["verdict"] == "FAIL"
+    assert result["checks"]["prompt_matches_ft"] is False
+
+
+def test_format_check_cli_fake_prints_text_tokens_and_pass(capsys):
+    rc = forge_train.main(["format-check", "--fake"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "FORMAT_FULL " in out and "to=self" in out
+    assert "FORMAT_LOSS_TOKENS " in out
+    assert "FORMAT_CHECK PASS" in out and "prompt_matches_ft=True" in out
+
+
+def test_format_check_cli_reads_first_record(tmp_path, capsys):
+    path = tmp_path / "recs.jsonl"
+    path.write_text(json.dumps({"text": TEXT, "code": CODE}) + "\n",
+                    encoding="utf-8")
+    rec = forge_train.load_format_record(str(path))
+    assert rec == {"text": TEXT, "code": CODE}
+    result = forge_train.check_format(THINK_TOK(), rec)
+    assert result["verdict"] == "PASS"  # legacy record still passes
+    assert result["has_reasoning"] is False

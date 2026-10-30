@@ -52,10 +52,14 @@ LORA_FALLBACK_PATTERN = (
 IMAGE_REF = "vllm/vllm-openai:muse-glimmer"
 HF_CACHE_MOUNT = "/root/.cache/huggingface"
 LORA_MOUNT = "/vol"
-GPU_MEM_STOP_GB = 76.0  # stop cleanly above this after the first optimizer step
+GPU_MEM_STOP_GB = 135.0  # H200: stop cleanly above this after the first optimizer step
 
-H100_RATE = 3.95  # $/h
+H100_RATE = 3.95  # $/h (merge still runs here)
+H200_RATE = 4.54  # $/h (train runs here, round 3)
 A100_RATE = 2.50  # $/h
+
+# Per-example token limit (round 3: longer thinking + answer examples).
+MAX_TOKENS = 12288
 
 # Money-cap timeout split (spec edit A6): merge + serve are reserved first,
 # the rest goes to train. Train is refused below 15 min.
@@ -116,31 +120,59 @@ def render_prompt(tokenizer, text):
     )
 
 
-def render_full(tokenizer, text, code):
+def build_full_messages(text, code, reasoning=None):
+    """Assistant side as message dicts: one user-facing turn holding the
+    code block, preceded (when `reasoning` is a non-empty string) by a
+    thinking turn holding Spark's worked solution.
+
+    The thinking turn travels as the `reasoning_content` field of the
+    assistant message: the Glimmer chat template renders it as its own
+    `assistant to=self` turn (no hand-written special tokens).
+    """
+    answer = build_answer_text(code)
+    message = {"role": "assistant", "content": answer}
+    if isinstance(reasoning, str) and reasoning.strip():
+        message["reasoning_content"] = reasoning
+    return build_messages(text) + [message]
+
+
+def render_full(tokenizer, text, code, reasoning=None):
     """Prompt + assistant answer via the chat template.
 
-    Falls back to prompt + answer + eos when the template renders history
-    differently (same fallback as the smoke test).
+    With `reasoning` the full text holds the thinking turn first, then
+    the code turn, both rendered by the template. Falls back to prompt
+    + answer + eos when the template renders history differently (same
+    fallback as the smoke test) -- but only for records WITHOUT
+    reasoning: for a record with reasoning the fallback would silently
+    drop the thinking turn, so it raises instead (H1).
     """
     prompt = render_prompt(tokenizer, text)
     answer = build_answer_text(code)
     full = tokenizer.apply_chat_template(
-        build_messages(text) + [{"role": "assistant", "content": answer}],
+        build_full_messages(text, code, reasoning),
         tokenize=False,
     )
     if not full.startswith(prompt):
+        if isinstance(reasoning, str) and reasoning.strip():
+            raise ValueError(
+                "chat template did not render the prompt prefix for a "
+                "record with reasoning; refusing to silently drop the "
+                "thinking turn")
         full = prompt + answer + (tokenizer.eos_token or "")
     return prompt, full
 
 
-def encode_example(tokenizer, text, code, max_tokens=4096):
+def encode_example(tokenizer, text, code, max_tokens=MAX_TOKENS,
+                   reasoning=None):
     """Tokenize one example; loss only on the assistant part.
 
-    Returns {"input_ids", "labels", "tokens", "dropped"} where labels are
-    -100 before the assistant part. Examples longer than max_tokens are
-    dropped (dropped=True, ids/labels empty).
+    With `reasoning` the loss covers both assistant turns (thinking +
+    answer), never the prompt. Returns {"input_ids", "labels", "tokens",
+    "dropped"} where labels are -100 before the assistant part.
+    Examples longer than max_tokens are dropped (dropped=True,
+    ids/labels empty).
     """
-    prompt, full = render_full(tokenizer, text, code)
+    prompt, full = render_full(tokenizer, text, code, reasoning)
     prompt_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
     ids = tokenizer(full, add_special_tokens=False)["input_ids"]
     if len(ids) > max_tokens:
@@ -149,7 +181,7 @@ def encode_example(tokenizer, text, code, max_tokens=4096):
     return {"input_ids": ids, "labels": labels, "tokens": len(ids), "dropped": False}
 
 
-def filter_batch(tokenizer, examples, max_tokens=4096):
+def filter_batch(tokenizer, examples, max_tokens=MAX_TOKENS):
     """Encode examples, dropping ones longer than max_tokens.
 
     Returns (kept, dropped_count).
@@ -157,12 +189,213 @@ def filter_batch(tokenizer, examples, max_tokens=4096):
     kept = []
     dropped = 0
     for ex in examples:
-        enc = encode_example(tokenizer, ex["text"], ex["code"], max_tokens)
+        enc = encode_example(tokenizer, ex["text"], ex["code"], max_tokens,
+                             ex.get("reasoning"))
         if enc["dropped"]:
             dropped += 1
         else:
             kept.append({**ex, **enc})
     return kept, dropped
+
+
+# ------------------------------------------------------- format check
+
+FAKE_FORMAT_TEXT = (
+    "A spacer block. Block: X from 0 to 30, Y from 0 to 20, Z from 0 "
+    "to 10. A 6 mm hole goes through it along the Z axis, centred at "
+    "(X, Y) = (15, 10).")
+FAKE_FORMAT_CODE = "result = cq.Workplane(\"XY\").box(30, 20, 10)"
+FAKE_FORMAT_REASONING = (
+    "The block is 30 by 20 by 10, so a centred XY box works; then cut "
+    "a 6 mm through-hole at (15, 10).")
+
+
+class FakeThinkingTokenizer:
+    """Offline stand-in that mirrors the Glimmer template's thinking-turn
+    rule (an assistant `reasoning_content` field renders as its own
+    `to=self` turn first), for `--format-check --fake` and unit tests.
+
+    It proves OUR masking/order logic, not the real template: the real
+    proof runs where the real tokenizer lives (Modal CPU, or a local
+    transformers install). Word tokens; decode inverts the split.
+    """
+
+    eos_token = "<|end_of_text|>"
+
+    def apply_chat_template(self, msgs, tokenize=False,
+                            add_generation_prompt=False):
+        out = ["<|begin_of_text|>"]
+        for m in msgs:
+            role = m.get("role")
+            if role == "system":
+                out.append("<|start|>system<|message|>" + m["content"]
+                           + "\n\nReasoning strength: high.\n\n"
+                           '# Valid recipients: "self", "user".<|eot|>')
+            elif role == "user":
+                out.append("<|start|>user<|message|>" + m["content"]
+                           + "<|eot|>")
+            elif role == "assistant":
+                if m.get("reasoning_content"):
+                    out.append("<|start|>assistant to=self<|message|>"
+                               + m["reasoning_content"] + "<|eom|>")
+                out.append("<|start|>assistant to=user<|message|>"
+                           + m["content"] + "<|eot|>")
+        text = "".join(out)
+        if add_generation_prompt:
+            text += "<|start|>assistant"
+        return text
+
+    def __call__(self, text, add_special_tokens=False):
+        return {"input_ids": text.split()}
+
+    def decode(self, ids):
+        return " ".join(ids)
+
+
+def ft_messages_for(text):
+    """The FT prompt messages, built with runner_final's own function
+    (lazy import, so this module still loads without Modal)."""
+    final_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "..", "final")
+    if final_dir not in sys.path:
+        sys.path.insert(0, final_dir)
+    import runner_final
+    return runner_final.ft_messages(text)
+
+
+THINK_OPENER_WORDS = ("to=self", "think", "reasoning", "analysis")
+
+
+def check_format(tokenizer, record, ft_messages=None):
+    """Render one record and check the thinking-then-answer format.
+
+    Returns {"prompt", "full", "loss_tokens" (first 40 decoded),
+    "n_loss_tokens", "has_reasoning", "checks", "verdict"}. PASS needs:
+    (a) the first loss tokens open the thinking turn, (b) the code turn
+    follows it, (c) the rendered prompt is byte-equal to the prompt
+    runner_final's FT arm sends (built with runner_final's own
+    function, including the template's default 'Reasoning strength:
+    high.' line). `ft_messages` is the prebuilt FT message list (the
+    Modal paths receive it from the repo side, which the container
+    cannot import); None builds it here with runner_final.
+    """
+    text, code = record["text"], record["code"]
+    reasoning = record.get("reasoning")
+    has = isinstance(reasoning, str) and bool(reasoning.strip())
+    prompt, full = render_full(tokenizer, text, code,
+                               reasoning if has else None)
+    if ft_messages is None:
+        ft_messages = ft_messages_for(text)
+    ft_prompt = tokenizer.apply_chat_template(
+        ft_messages, tokenize=False, add_generation_prompt=True)
+    prompt_ok = (prompt == ft_prompt)
+    starts = full.startswith(prompt)
+    loss_text = full[len(prompt):] if starts else ""
+    answer = build_answer_text(code)
+    if has:
+        ri, ai = loss_text.find(reasoning), loss_text.find(answer)
+        opener = loss_text[:ri] if ri != -1 else ""
+        thinking_first = (
+            ri != -1 and (ai == -1 or ri < ai)
+            and any(w in opener.lower() for w in THINK_OPENER_WORDS))
+        answer_after = ai != -1 and ri != -1 and ri < ai
+    else:
+        thinking_first = True  # legacy format: no thinking turn to open
+        answer_after = answer in loss_text
+    checks = {"thinking_first": bool(thinking_first),
+              "answer_after_thinking": bool(answer_after),
+              "prompt_matches_ft": bool(prompt_ok)}
+    verdict = "PASS" if (starts and all(checks.values())) else "FAIL"
+    prompt_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
+    ids = tokenizer(full, add_special_tokens=False)["input_ids"]
+    loss_ids = ids[len(prompt_ids):] if starts else []
+    decode = getattr(tokenizer, "decode", None)
+    loss_toks = [(decode([i]) if callable(decode) else str(i))
+                 for i in loss_ids[:40]]
+    return {"prompt": prompt, "full": full, "loss_tokens": loss_toks,
+            "n_loss_tokens": len(loss_ids), "has_reasoning": has,
+            "checks": checks, "verdict": verdict}
+
+
+def load_format_record(data_path):
+    """First record of a JSONL/JSON training file (render check only)."""
+    with open(data_path, encoding="utf-8") as f:
+        raw = f.read().strip()
+    if not raw:
+        raise ValueError("no records in %r" % (data_path,))
+    if raw.startswith("["):
+        records = json.loads(raw)
+    else:
+        records = [json.loads(line) for line in raw.splitlines()
+                   if line.strip()]
+    if not records:
+        raise ValueError("no records in %r" % (data_path,))
+    rec = records[0]
+    if (not isinstance(rec, dict) or not isinstance(rec.get("text"), str)
+            or not rec["text"].strip()
+            or not isinstance(rec.get("code"), str)
+            or not rec["code"].strip()):
+        raise ValueError(
+            "first record of %r needs non-empty text and code"
+            % (data_path,))
+    return rec
+
+
+def format_check_report(result):
+    """The printed PASS/FAIL line for a check_format result."""
+    return ("FORMAT_CHECK %s thinking_first=%s answer_after_thinking=%s "
+            "prompt_matches_ft=%s" % (
+                result["verdict"],
+                result["checks"]["thinking_first"],
+                result["checks"]["answer_after_thinking"],
+                result["checks"]["prompt_matches_ft"]))
+
+
+def run_format_check(fake=False, data=None, tokenizer_path=None):
+    """`format-check` entrypoint: render one record, print the full text
+    + the first 40 loss tokens + PASS/FAIL. Returns 0 on PASS, 1 on
+    FAIL. `--fake` renders a canned reasoning record with the offline
+    stand-in (runs before the factory re-run); otherwise the real
+    tokenizer loads locally via transformers, or -- on an ImportError
+    -- on Modal (tiny CPU function, tokenizer only)."""
+    if fake:
+        record = {"text": FAKE_FORMAT_TEXT, "code": FAKE_FORMAT_CODE,
+                  "reasoning": FAKE_FORMAT_REASONING}
+        result = check_format(FakeThinkingTokenizer(), record)
+    else:
+        if not data:
+            print("need --data <training file> (or --fake)")
+            return 2
+        record = load_format_record(data)
+        try:
+            from transformers import AutoTokenizer
+        except ImportError:
+            return run_format_check_remote(record)
+        tok = AutoTokenizer.from_pretrained(tokenizer_path or MODEL)
+        result = check_format(tok, record)
+    print("FORMAT_FULL " + result["full"])
+    print("FORMAT_LOSS_TOKENS " + json.dumps(result["loss_tokens"]))
+    print(format_check_report(result))
+    return 0 if result["verdict"] == "PASS" else 1
+
+
+def run_format_check_remote(record):
+    """Modal fallback: the real tokenizer lives only on Modal (no local
+    transformers), so a tiny CPU function loads only it (no GPU, no
+    weights) and runs the same check. The FT messages travel with the
+    record: the container cannot import runner_final."""
+    if modal is None or globals().get("app") is None:
+        print("no local transformers and modal is not installed; cannot "
+              "load the real tokenizer")
+        return 2
+    with modal.enable_output():
+        with app.run():
+            result = format_check_tokenizer.remote(
+                dict(record), ft_messages_for(record["text"]))
+    print("FORMAT_FULL " + result["full"])
+    print("FORMAT_LOSS_TOKENS " + json.dumps(result["loss_tokens"]))
+    print(format_check_report(result))
+    return 0 if result.get("verdict") == "PASS" else 1
 
 
 def seconds_for_dollars(dollars, rate_per_hour):
@@ -184,7 +417,7 @@ def default_plan(cap_dollars, train_s=14 * 60, merge_s=10 * 60, serve_s=10 * 60)
     return plan_timeouts(
         cap_dollars,
         [
-            ("train", H100_RATE, train_s),
+            ("train", H200_RATE, train_s),
             ("merge", H100_RATE, merge_s),
             ("serve", A100_RATE, serve_s),
         ],
@@ -221,9 +454,10 @@ def plan_timeouts(cap_dollars, steps, startup_s=0, spent_dollars=0.0):
 def split_cap(cap_dollars, spent_dollars=0.0, startup_s=STARTUP_TIMEOUT_S):
     """Reserve merge + serve first, hand the rest to train.
 
-    Merge gets 12 min H100, serve 6 min A100; train gets whatever the cap
-    still covers (startup included). Refuses (CapExceeded) when train
-    would get under 15 min. Returns {train, merge, serve, startup_s}.
+    Merge gets 12 min H100, serve 6 min A100; train (H200, round 3) gets
+    whatever the cap still covers (startup included). Refuses
+    (CapExceeded) when train would get under 15 min. Returns {train,
+    merge, serve, startup_s}.
     """
     merge_cost = dollars_for_seconds(startup_s + MERGE_RESERVE_S, H100_RATE)
     serve_cost = dollars_for_seconds(startup_s + SERVE_RESERVE_S, A100_RATE)
@@ -235,7 +469,7 @@ def split_cap(cap_dollars, spent_dollars=0.0, startup_s=STARTUP_TIMEOUT_S):
                                  merge_cost, serve_cost)
         )
     train_budget = left - merge_cost - serve_cost
-    train_s = train_budget * 3600.0 / H100_RATE - startup_s
+    train_s = train_budget * 3600.0 / H200_RATE - startup_s
     if train_s < MIN_TRAIN_S:
         raise CapExceeded(
             "cap $%.2f leaves only %ds for train (under %ds); refusing"
@@ -824,7 +1058,7 @@ if modal is not None:
 
     VOLUMES = {HF_CACHE_MOUNT: hf_cache, LORA_MOUNT: lora_vol}
 
-    @app.function(image=image, gpu="H100", timeout=45 * 60,
+    @app.function(image=image, gpu="H200", timeout=45 * 60,
                  startup_timeout=STARTUP_TIMEOUT_S, volumes=VOLUMES)
     def train(
         data,
@@ -833,32 +1067,43 @@ if modal is not None:
         lr=1e-4,
         r=16,
         alpha=32,
-        max_tokens=4096,
+        max_tokens=MAX_TOKENS,
         grad_accum=8,
         gpu_minutes=45,
         max_steps=None,
         timeout_s=None,
         deadline_margin_s=DEADLINE_MARGIN_S,
+        ft_messages_0=None,
     ):
-        """LoRA-tune Glimmer on [{"text", "code"}] records; short prompt only.
+        """LoRA-tune Glimmer on [{"text", "code", "reasoning"?}] records;
+        short prompt only, on H200.
 
         `data` is the records themselves (a list of dicts, JSON-serialised
         by the entrypoint), or a volume-relative path holding JSONL when
-        the payload was over 5 MB. Loss only on the assistant part
-        (labels -100 before it); examples longer than max_tokens are
-        dropped and counted. bf16, gradient checkpointing, AdamW, cosine
-        schedule with 5% warmup (LR set per OPTIMIZER step). MICRO-steps
-        (one example each) accumulate gradients; an optimizer step fires
-        every grad_accum micro-steps plus once more for a leftover partial
-        group (scaled by its real size); `max_steps` caps OPTIMIZER steps.
-        After the first optimizer step the peak GPU memory is recorded and
-        the run STOPs cleanly (saving nothing) above 76 GB. The adapter is
-        saved every 25 optimizer steps; when less than deadline_margin_s
-        of the timeout is left, training stops after the current optimizer
-        step and saves (marked stopped_at_deadline). Saves the adapter to
-        /vol/<out_name>/adapter plus a train_log.json holding the fully
-        rendered first training example and the first 40 decoded tokens
-        that carry loss. Returns plain JSON, printed as TRAIN_JSON {...}.
+        the payload was over 5 MB. A record with `reasoning` trains
+        Glimmer's own two-turn assistant format (thinking turn holding
+        the reasoning, then the code turn, both rendered by the
+        tokenizer's chat template); loss covers both turns, never the
+        prompt. Records without `reasoning` keep the legacy format.
+        Examples longer than max_tokens are dropped and counted. bf16,
+        gradient checkpointing, AdamW, cosine schedule with 5% warmup
+        (LR set per OPTIMIZER step). MICRO-steps (one example each)
+        accumulate gradients; an optimizer step fires every grad_accum
+        micro-steps plus once more for a leftover partial group (scaled
+        by its real size); `max_steps` caps OPTIMIZER steps. After the
+        first optimizer step the peak GPU memory is recorded and the run
+        STOPs cleanly (saving nothing) above 135 GB (H200). The adapter
+        is saved every 25 optimizer steps; when less than
+        deadline_margin_s of the timeout is left, training stops after
+        the current optimizer step and saves (marked
+        stopped_at_deadline). Saves the adapter to /vol/<out_name>/adapter
+        plus a train_log.json holding the fully rendered first training
+        example and the first 40 decoded tokens that carry loss. The
+        first lines run the format check on the first example and print
+        it (FORMAT_CHECK ...) before training. `ft_messages_0` is the
+        prebuilt FT message list for that example (the container cannot
+        import runner_final). Returns plain JSON, printed as TRAIN_JSON
+        {...}.
         """
         import time
 
@@ -888,6 +1133,15 @@ if modal is not None:
                 raise ValueError(
                     "record %d needs non-empty text and code" % i)
         tok = transformers.AutoTokenizer.from_pretrained(MODEL)
+        # Format check first: render the first example (thinking turn +
+        # code turn when it has reasoning) and print PASS/FAIL before
+        # training. The FT messages travel with the entrypoint call: the
+        # container cannot import runner_final.
+        if examples:
+            _fmt = check_format(tok, examples[0], ft_messages_0)
+            print(format_check_report(_fmt)
+                  + " has_reasoning=%s n_loss_tokens=%d"
+                  % (_fmt["has_reasoning"], _fmt["n_loss_tokens"]))
         model = transformers.AutoModelForMultimodalLM.from_pretrained(
             MODEL, torch_dtype=torch.bfloat16, device_map="cuda"
         )
@@ -909,7 +1163,8 @@ if modal is not None:
         model.config.use_cache = False
 
         def encode(ex):
-            prompt, full = _remote_render(tok, ex["text"], ex["code"])
+            prompt, full = _remote_render(tok, ex["text"], ex["code"],
+                                          _record_reasoning(ex))
             p_ids = tok(prompt, add_special_tokens=False)["input_ids"]
             ids = tok(full, add_special_tokens=False)["input_ids"]
             labels = [-100] * len(p_ids) + ids[len(p_ids):]
@@ -917,14 +1172,17 @@ if modal is not None:
 
         kept, dropped = [], 0
         for ex in examples:
-            prompt, full = _remote_render(tok, ex["text"], ex["code"])
+            prompt, full = _remote_render(tok, ex["text"], ex["code"],
+                                          _record_reasoning(ex))
             if len(tok(full, add_special_tokens=False)["input_ids"]) > max_tokens:
                 dropped += 1
                 continue
             kept.append(ex)
         out["examples"], out["dropped"] = len(kept), dropped
         if kept:
-            prompt0, full0 = _remote_render(tok, kept[0]["text"], kept[0]["code"])
+            prompt0, full0 = _remote_render(tok, kept[0]["text"],
+                                            kept[0]["code"],
+                                            _record_reasoning(kept[0]))
             ids0, labels0, _, _ = encode(kept[0])
             loss_toks = [tok.decode([i]) for i, lab in zip(ids0, labels0)
                          if lab != -100][:40]
@@ -1038,6 +1296,26 @@ if modal is not None:
         out = ensure_plain_json(out)
         print("TRAIN_JSON " + json.dumps(out))
         return out
+
+    @app.function(image=image, cpu=1, timeout=15 * 60,
+                 volumes={HF_CACHE_MOUNT: hf_cache})
+    def format_check_tokenizer(record, ft_messages):
+        """Tiny CPU format check: loads ONLY the tokenizer (no GPU, no
+        weights) and runs the same check_format as the offline path.
+
+        `record` is one {"text", "code", "reasoning"?} dict; `ft_messages`
+        is the prebuilt FT message list from the repo side (this
+        container cannot import runner_final). Prints the PASS/FAIL
+        line and returns the plain-JSON result (the caller prints the
+        full text + loss tokens). Run BEFORE the factory re-run via
+        `format-check --data` on a machine without local transformers.
+        """
+        import transformers
+
+        tok = transformers.AutoTokenizer.from_pretrained(MODEL)
+        result = check_format(tok, dict(record), list(ft_messages))
+        print(format_check_report(result))
+        return ensure_plain_json(result)
 
     @app.function(image=image, gpu="H100", timeout=MERGE_RESERVE_S,
                  startup_timeout=STARTUP_TIMEOUT_S, volumes=VOLUMES)
@@ -1182,9 +1460,16 @@ if modal is not None:
         print("SERVE_JSON " + json.dumps(out))
         return out
 
-def _remote_render(tok, text, code):
+def _remote_render(tok, text, code, reasoning=None):
     """Render (prompt, full) with the tokenizer's chat template."""
-    return render_full(tok, text, code)
+    return render_full(tok, text, code, reasoning)
+
+
+def _record_reasoning(ex):
+    """The thinking turn of a training record (None when it has none)."""
+    reasoning = (ex or {}).get("reasoning")
+    return reasoning if isinstance(reasoning, str) and reasoning.strip() \
+        else None
 
 
 # ------------------------------------------------------- local entrypoints
@@ -1281,7 +1566,7 @@ def _pipeline(data_arg, out_name, split, res_dir, train_kwargs,
                 return split
             spent = spent_dollars + dollars_for_seconds(
                 startup + float(t.get("train_total_s") or split["train"]),
-                H100_RATE)
+                H200_RATE)
             # Re-derive merge/serve from the money left (train -> merge ->
             # serve share one cap); refuses when the remainder no longer
             # fits them.
@@ -1303,12 +1588,21 @@ def _pipeline(data_arg, out_name, split, res_dir, train_kwargs,
     return split
 
 
+def first_ft_messages(kept):
+    """Prebuilt FT messages for the first kept record (or None when no
+    records): the train container's pre-training format check needs
+    them, and it cannot import runner_final."""
+    if not kept:
+        return None
+    return ft_messages_for(kept[0]["text"])
+
+
 def run_smoke(cap_dollars, spent_dollars=0.0):
     """Smoke pipeline: guard + train (max_steps 10, epochs 2) + merge + check.
 
     Timeout split: merge 12 min H100 + serve 6 min A100 reserved first,
-    the rest to train (refused under 15 min). Raises CapExceeded when a
-    step does not fit; planning works offline.
+    the rest to train on H200 (refused under 15 min). Raises CapExceeded
+    when a step does not fit; planning works offline.
     """
     records = load_training_records(SMOKE_EXAMPLES)  # same loader (JSON ok)
     split = split_cap(cap_dollars, spent_dollars)
@@ -1319,7 +1613,8 @@ def run_smoke(cap_dollars, spent_dollars=0.0):
     kept = guard_or_abort(records, res_dir)
     data_arg = stage_data(kept, "smoke")
     return _pipeline(data_arg, "smoke", split, res_dir,
-                     {"epochs": 2, "max_steps": 10}, [SMOKE_JOB],
+                     {"epochs": 2, "max_steps": 10,
+                      "ft_messages_0": first_ft_messages(kept)}, [SMOKE_JOB],
                      spent_dollars)
 
 
@@ -1334,7 +1629,7 @@ def run_full(data, out_name, cap_dollars, spent_dollars=0.0, max_steps=None,
     res_dir = results_dir(out_name)
     kept = guard_or_abort(records, res_dir)
     data_arg = stage_data(kept, out_name)
-    kwargs = {"epochs": 2}
+    kwargs = {"epochs": 2, "ft_messages_0": first_ft_messages(kept)}
     if max_steps is not None:
         kwargs["max_steps"] = max_steps
     return _pipeline(data_arg, out_name, split, res_dir, kwargs,
@@ -1342,10 +1637,13 @@ def run_full(data, out_name, cap_dollars, spent_dollars=0.0, max_steps=None,
 
 
 def main(argv=None):
-    """Local entrypoints: `smoke` and `full --data <jsonl> --out <name>`.
+    """Local entrypoints: `smoke`, `full --data <jsonl> --out <name>`,
+    and `format-check`.
 
     Every entrypoint takes --cap-dollars and derives each function's
     timeout from the money left, refusing to start a step that does not fit.
+    `format-check` renders one record (thinking turn + code turn) and
+    prints the full text, the first 40 loss tokens, and PASS/FAIL.
     """
     parser = argparse.ArgumentParser(description="Forge training pipeline")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -1363,10 +1661,23 @@ def main(argv=None):
                       help="cap OPTIMIZER steps")
     full.add_argument("--prompt", action="append", default=[],
                       help="job text for the one-prompt format check")
+    fc = sub.add_parser("format-check",
+                        help="render one record; print the full text, "
+                             "the first 40 loss tokens, and PASS/FAIL")
+    fc.add_argument("--fake", action="store_true",
+                    help="use a canned reasoning record with the offline "
+                         "stand-in (runs before the factory re-run)")
+    fc.add_argument("--data", default=None,
+                    help="training file whose first record to render")
+    fc.add_argument("--tokenizer", default=None,
+                    help="local tokenizer dir (default: the model id)")
     args = parser.parse_args(argv)
     try:
         if args.cmd == "smoke":
             run_smoke(args.cap_dollars, spent_dollars=args.spent_dollars)
+        elif args.cmd == "format-check":
+            return run_format_check(fake=args.fake, data=args.data,
+                                    tokenizer_path=args.tokenizer)
         else:
             run_full(args.data, args.out, args.cap_dollars,
                      spent_dollars=args.spent_dollars,
