@@ -47,8 +47,8 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | **Total** | **≈ 37.3 of 50** | |
 
 Rest of the plan (verifier, forge-factory-pilot-2026-10-30): expected ≈ $48-49 total; worst case at every cap ≈ $54
-(main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. Open user question: do
-Baseten/Modal/Meta spends paid from the hackathon credits ($100 Baseten, $100 Modal, $150 Meta) count towards the $50?
+(main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. decision (user, 2026-10-30): **the $50 covers
+everything together, credits included** (Baseten, Modal, Meta).
 
 ## Open questions
 1. hypothesis: training on answer-only text (no reasoning) may teach Glimmer to skip reasoning: cheaper, maybe weaker
