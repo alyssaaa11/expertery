@@ -91,5 +91,10 @@ CLI: `patterns.py --runs <teacher run dir> [<dir> ...] --out <dir> [--min-count 
   exam files, the overlap check. Why: changing the referee would raise the pass rate without better data.
 - When: after the pilot and before any retry or main run, never during a run. After a family text change: re-run the
   make_jobs self-check + overlap check and Claude's blind rebuild for that family, then re-freeze (sha256).
+- After a wording fix: re-run make_jobs and re-freeze jobs.jsonl, split.json and jobs_dev.jsonl by sha256 before the dev
+  check (verifier F5). The training report discloses that our_wording fixes push data towards phrasings the teacher can
+  solve (verifier N1).
+- patterns.py also refuses records whose id is not `F<n>-<m>` or is a dev id (verifier F4: pointed at results/ it would
+  read exam and baseline runs).
 - Tests: 3 identical run errors over 2 families -> teacher_habit; 3 harness -> our_bug; 3 wrong_shape in one family ->
   our_wording; 2 hits -> no pattern; dev ids ignored; forbidden path -> exit 2; factory_version changes with teacher_notes.md.
