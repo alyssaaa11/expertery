@@ -1,0 +1,483 @@
+"""Offline tests for experiments/final/runner_final.py (no Modal, no network).
+
+Fake post/exec/grade/server-info functions stand in for the real ones.
+Any test that could reach a real Modal call or the network monkeypatches
+it to raise. Never opens blind/ folders or expected*.json contents.
+"""
+import json
+import os
+import sys
+
+import pytest
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+FIRST_TEST = os.path.join(os.path.dirname(HERE), "first-test")
+if FIRST_TEST not in sys.path:
+    sys.path.insert(0, FIRST_TEST)
+
+import runner
+import runner_final
+
+
+# ------------------------------------------------------- fakes
+
+
+def _resp(content, finish="stop", prompt=100, completion=50):
+    return {"choices": [{"message": {"content": content},
+                         "finish_reason": finish}],
+            "usage": {"prompt_tokens": prompt,
+                      "completion_tokens": completion}}
+
+
+def _post_scripted(replies):
+    """post_fn serving scripted replies; records the message lists sent."""
+    sent = []
+    state = {"i": 0}
+
+    def _post(endpoint, body, timeout):
+        sent.append([dict(m) for m in body["messages"]])
+        reply = replies[min(state["i"], len(replies) - 1)]
+        state["i"] += 1
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+    _post.sent = sent
+    return _post
+
+
+def _box_ok(brep=b"BREP", measure=None):
+    m = {"bbox": [0, 0, 0, 10, 10, 5], "volume": 500.0, "area": 1.0,
+         "com": [5, 5, 2.5], "solids": 1, "valid": True}
+    if measure is not None:
+        m = measure
+    return lambda code: {"brep_bytes": brep, "measure": dict(m), "log": "",
+                         "run_error": None}
+
+
+def _grade_pass(verdict="PASS", tight="PASS"):
+    return lambda exam, job_id, brep: {
+        "verdict": verdict, "tight": tight, "fails": [],
+        "fails_tight": [], "measurements": {"volume": 1.0}}
+
+
+def _no_net(monkeypatch):
+    import urllib.request
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("network reached in a test")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _boom)
+    monkeypatch.setattr(runner_final.cloud_cq, "modal", None,
+                        raising=False)
+
+
+# ------------------------------------------------------- FT messages / body
+
+
+def test_ft_messages_and_body_equal_arm_a_except_model():
+    job_text = "A widget. Block: X from 0 to 10."
+    assert runner_final.ft_messages(job_text) == runner.build_messages(
+        "A", job_text, "")
+    assert runner_final.ft_messages(job_text) == runner.build_messages(
+        "A", job_text, "whatever manual")
+    body = runner_final.ft_body(runner_final.ft_messages(job_text))
+    expected = runner.build_body("muse-glimmer",
+                                 runner.build_messages("A", job_text, ""))
+    assert body["max_tokens"] == expected["max_tokens"] == 16000
+    assert body["temperature"] == expected["temperature"] == 1.0
+    assert body["top_p"] == expected["top_p"] == 0.95
+    assert body["top_k"] == expected["top_k"] == 64
+    assert body["messages"] == expected["messages"]
+    assert body["model"] == "forge"
+    assert set(body) == set(expected)  # no extra keys
+
+
+# ------------------------------------------------------- FT call
+
+
+def test_ft_pass_fail_invalid_paths():
+    job = {"id": "M1", "text": "make a box", "level": "medium"}
+    post = _post_scripted([_resp("```python\nresult = 1\n```")])
+    rec = runner_final.do_ft_call(
+        job, "forge", "http://x/v1/chat/completions", [], "first-test",
+        post, lambda s: None, _box_ok(), _grade_pass(), rep=2)
+    assert rec["verdict"] == "PASS" and rec["outcome"] == "PASS"
+    assert rec["tight"] == "PASS"
+    assert rec["grader"] == "first-test"
+    assert rec["rep"] == 2 and rec["sample"] == 2
+    assert rec["t_call_s"] >= 0 and rec["usage"]["prompt_tokens"] == 100
+
+    post = _post_scripted([_resp("```python\nresult = 1\n```")])
+    rec = runner_final.do_ft_call(
+        job, "forge", "http://x/v1/chat/completions", [], "first-test",
+        post, lambda s: None, _box_ok(), _grade_pass("FAIL", "FAIL"))
+    assert rec["verdict"] == "FAIL" and rec["tight"] == "FAIL"
+
+    post = _post_scripted([_resp("```python\nresult = 1\n```")])
+    rec = runner_final.do_ft_call(
+        job, "forge", "http://x/v1/chat/completions", [], "factory",
+        post, lambda s: None,
+        lambda code: {"brep_bytes": None, "measure": None, "log": "",
+                      "run_error": "the answer wrote no BREP: boom"},
+        _grade_pass())
+    assert rec["verdict"] == "FAIL" and rec["grader"] == "factory"
+    assert "no BREP" in rec["run_error"]
+
+    post = _post_scripted([_resp("", finish="length")])
+    rec = runner_final.do_ft_call(
+        job, "forge", "http://x/v1/chat/completions", [], "first-test",
+        post, lambda s: None, _box_ok(), _grade_pass())
+    assert rec["verdict"] == "INVALID"
+
+    post = _post_scripted([RuntimeError("down")])
+    rec = runner_final.do_ft_call(
+        job, "forge", "http://x/v1/chat/completions", [], "first-test",
+        post, lambda s: None, _box_ok(), _grade_pass())
+    assert rec["verdict"] == "INVALID" and "down" in rec["run_error"]
+
+
+def test_ft_suite_writes_grader_records_and_summary(tmp_path):
+    jobs = [{"id": "M%d" % i, "text": "make box %d" % i,
+             "level": "medium"} for i in range(2)]
+    n = {"i": 0}
+
+    def _post(endpoint, body, timeout):
+        n["i"] += 1
+        return _resp("```python\nresult = %d\n```" % n["i"])
+
+    out = str(tmp_path / "ft")
+    recs, summary = runner_final.run_ft_suite(
+        jobs, out, "http://x/v1/chat/completions", "forge", "K",
+        "first-test", _post, lambda s: None, _box_ok(), _grade_pass(),
+        server_info_fn=lambda: {"models": ["forge"],
+                                "image_digest": "sha256:abc"},
+        k=2, workers=2, budget=5.0, gpu_start=None)
+    assert len(recs) == 4
+    assert all(r["grader"] == "first-test" for r in recs)
+    assert summary["PASS"] == 4 and summary["pass_rate"] == 1.0
+    assert summary["pass_rate_tight"] == 1.0
+    assert summary["pass_at_k"] == 1.0
+    assert summary["tokens_per_correct"] == pytest.approx(150.0)
+    assert summary["prompt_tokens"] == 400
+    assert summary["server"]["image_digest"] == "sha256:abc"
+    assert summary["status"] == "COMPLETE"
+    assert "dev_gate" not in summary  # exam runs have no dev gate
+    calls = [json.loads(line) for line in
+             open(os.path.join(out, "calls.jsonl")) if line.strip()]
+    assert len(calls) == 4
+    assert json.load(open(os.path.join(out, "summary.json")))["PASS"] == 4
+    report = open(os.path.join(out, "report.md")).read()
+    assert "1e-6" in report and "sha256:abc" in report
+
+
+def test_dev_gate_go_and_stop(tmp_path, capsys):
+    jobs = [{"id": "F1-1", "text": "make spool", "family": 1}]
+    out = str(tmp_path / "dev")
+    post = _post_scripted([_resp("```python\nresult = 1\n```")] * 3)
+    _recs, summary = runner_final.run_ft_suite(
+        jobs, out, "http://x/v1/chat/completions", "forge", "K",
+        "factory", post, lambda s: None, _box_ok(), _grade_pass(),
+        server_info_fn=lambda: {}, k=3, workers=1, budget=5.0)
+    assert summary["dev_gate"] == "GO"  # 100% >= 80%
+    assert "GO" in runner_final.dev_gate_line(summary)
+    report = open(os.path.join(out, "report.md")).read()
+    assert "DEV GATE (PLAN step 5)" in report and "GO" in report
+
+    post = _post_scripted([_resp("```python\nresult = 1\n```")] * 3)
+    out2 = str(tmp_path / "dev2")
+    _recs, summary = runner_final.run_ft_suite(
+        jobs, out2, "http://x/v1/chat/completions", "forge", "K",
+        "factory", post, lambda s: None, _box_ok(),
+        _grade_pass("FAIL", "FAIL"),
+        server_info_fn=lambda: {}, k=3, workers=1, budget=5.0)
+    assert summary["dev_gate"] == "STOP"  # 0% < 80%
+    assert runner_final.dev_gate_line(summary).endswith("STOP")
+
+
+def test_no_keys_exits_2_with_variable_name(monkeypatch, tmp_path, capsys):
+    import urllib.request
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("network reached before the env check")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _boom)
+    for var in ("FORGE_URL", "FORGE_KEY", "GLIMMER_URL", "GLIMMER_KEY",
+                "BASETEN_KEY", "META_HERDSHOT_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    with pytest.raises(SystemExit) as exc:
+        runner_final.main(["--jobs", "main", "--out", str(tmp_path)])
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    assert "FORGE_URL" in err
+    assert "FORGE_KEY" in err
+
+
+# ------------------------------------------------------- BX cloud loop
+
+
+CODE_A = "```python\nCODE-A\n```"
+CODE_B = "```python\nCODE-B\n```"
+
+
+def _local_shape_exec(outcomes):
+    """Fake run_code_sandboxed: scripted (built?, measure) per call."""
+    state = {"i": 0}
+
+    def _exec(code, run_tmp, profile, timeout=60.0):
+        built, measure = outcomes[min(state["i"], len(outcomes) - 1)]
+        state["i"] += 1
+        if built:
+            return (object(), None, dict(measure))
+        return (None, "boom: no result", None)
+
+    return _exec
+
+
+def _box_exec_from(outcomes):
+    """The same script as cloud box dicts (bbox-list measure format)."""
+    state = {"i": 0}
+
+    def _exec(code):
+        built, measure = outcomes[min(state["i"], len(outcomes) - 1)]
+        state["i"] += 1
+        if built:
+            box = {"bbox": [measure["xmin"], measure["ymin"],
+                            measure["zmin"], measure["xmax"],
+                            measure["ymax"], measure["zmax"]],
+                   "volume": measure["volume"], "area": 1.0,
+                   "com": [0, 0, 0], "solids": measure["solids"],
+                   "valid": True}
+            return {"brep_bytes": b"BREP:" + code.encode(), "measure": box,
+                    "log": "", "run_error": None}
+        # Same observable failure as the local fake executor (the box's
+        # run_error prefix is production-only detail, not loop behavior).
+        return {"brep_bytes": None, "measure": None, "log": "",
+                "run_error": "boom: no result"}
+
+    return _exec
+
+
+MEAS = {"xmin": 0, "ymin": 0, "zmin": 0, "xmax": 10, "ymax": 10,
+        "zmax": 5, "volume": 500.0, "solids": 1}
+
+
+def test_bx_cloud_sends_same_messages_as_frozen_loop(monkeypatch):
+    """With fake replies and equivalent fake executors, the cloud BX loop
+    sends exactly the same message list, round by round, as the frozen
+    runner.do_bx_call (build, run error, self-check, no-code-block end).
+    """
+    cq = pytest.importorskip("cadquery")
+    sys.path.insert(0, FIRST_TEST)
+    import checks
+    ref_shape = cq.Solid.makeBox(10, 10, 5)
+    expected = checks.measure(ref_shape)
+    job = {"id": "H1", "text": "make a hard part", "level": "hard",
+           "build": lambda: cq.Solid.makeBox(10, 10, 5)}
+    manual, hint = "MANUAL", "HINT"
+    examples = [{"text": "ex job", "code": "result = 1"}]
+    # Round 1 builds (self-check follows), round 2 crashes (error
+    # follow-up), round 3 builds then the model ends with no code block.
+    replies = [_resp(CODE_A), _resp(CODE_B), _resp("DONE, looks right")]
+    script = [(True, dict(MEAS)), (False, None), (True, dict(MEAS))]
+    frozen_post = _post_scripted(list(replies))
+
+    def _real_shape_exec(code, run_tmp, profile, timeout=60.0):
+        built, measure = script[min(_real_shape_exec.i, len(script) - 1)]
+        _real_shape_exec.i += 1
+        if built:
+            return (cq.Solid.makeBox(10, 10, 5), None, dict(measure))
+        return (None, "boom: no result", None)
+
+    _real_shape_exec.i = 0
+    monkeypatch.setattr(runner, "run_code_sandboxed", _real_shape_exec)
+    frozen = runner.do_bx_call(
+        job, "muse-glimmer", "http://x/v1/chat/completions", [], manual,
+        expected, frozen_post, lambda s: None,
+        sandbox_profile="PROFILE", sandbox_dir=None, examples=examples,
+        hint_text=hint)
+    cloud_post = _post_scripted(list(replies))
+    cloud = runner_final.do_bx_cloud_call(
+        job, "muse-glimmer", "http://x/v1/chat/completions", [], manual,
+        cloud_post, lambda s: None, _box_exec_from(list(script)),
+        _grade_pass(), hint_text=hint, examples=examples)
+    assert cloud_post.sent == frozen_post.sent
+    assert len(cloud_post.sent) == 3  # build, error, self-check ends
+    assert [r["event"] for r in cloud["bx_rounds"]] == \
+        [r["event"] for r in frozen["bx_rounds"]] == \
+        ["built", "crash", "DONE"]
+    assert cloud["outcome"] == frozen["outcome"] == "PASS"
+    assert cloud["verdict"] == "PASS" and cloud["grader"] == "first-test"
+
+
+def test_bx_cloud_crash_and_invalid_paths():
+    job = {"id": "H2", "text": "make a part", "level": "hard"}
+    # Three crashes: FAIL, keeps the last error.
+    post = _post_scripted([_resp(CODE_A)] * 3)
+    rec = runner_final.do_bx_cloud_call(
+        job, "m", "http://x", [], "MAN", post, lambda s: None,
+        _box_exec_from([(False, None)] * 3), _grade_pass())
+    assert rec["outcome"] == "FAIL" and rec["model_calls"] == 3
+    assert [r["event"] for r in rec["bx_rounds"]] == ["crash"] * 3
+    # Round-1 cut-off: INVALID.
+    post = _post_scripted([_resp("", finish="length")])
+    rec = runner_final.do_bx_cloud_call(
+        job, "m", "http://x", [], "MAN", post, lambda s: None,
+        _box_exec_from([(True, dict(MEAS))]), _grade_pass())
+    assert rec["outcome"] == "INVALID" and rec["tight"] == "INVALID"
+
+
+def test_box_measure_conversion():
+    box = {"bbox": [1, 2, 3, 11, 12, 13], "volume": 7.5, "solids": 2,
+           "area": 1.0, "com": [0, 0, 0], "valid": True}
+    sc = runner_final.box_measure_to_selfcheck(box)
+    assert sc == {"xmin": 1, "ymin": 2, "zmin": 3, "xmax": 11,
+                  "ymax": 12, "zmax": 13, "volume": 7.5, "solids": 2}
+    msg = runner.bx_self_check_message(sc)  # the frozen message accepts it
+    assert "volume 7.5" in msg
+    assert runner_final.box_measure_to_selfcheck(None) is None
+    assert runner_final.box_measure_to_selfcheck({"bbox": [1]}) is None
+
+
+# ------------------------------------------------------- fill-missing
+
+
+def _baseline_with_bx_finals(tmp_path, finals):
+    base = tmp_path / "base"
+    base.mkdir()
+    with open(str(base / "calls.jsonl"), "w", encoding="utf-8") as f:
+        for rec in finals:
+            f.write(json.dumps(rec) + "\n")
+    return str(base)
+
+
+def _bx_final(job, rep, verdict="PASS"):
+    return {"job": job, "arm": "BX", "bx_final": True, "round": 1,
+            "sample": rep, "outcome": verdict, "verdict": verdict,
+            "prompt_tokens_total": 10, "completion_tokens_total": 5,
+            "model_calls": 1, "bx_rounds": []}
+
+
+def test_missing_pairs_and_incomplete_exit_3(tmp_path, capsys):
+    jobs = [{"id": "H13", "text": "hard 13", "level": "hard"},
+            {"id": "H14", "text": "hard 14", "level": "hard"}]
+    base = _baseline_with_bx_finals(
+        tmp_path, [_bx_final("H13", 0), {"job": "H13", "arm": "B2",
+                                         "outcome": "PASS"}])
+    missing, present = runner_final.missing_bx_pairs(base, jobs, k=2)
+    assert [(j["id"], r) for j, r in missing] == [
+        ("H13", 1), ("H14", 0), ("H14", 1)]
+    assert ("H13", 0) in present and len(present) == 1
+
+    post = _post_scripted([_resp("DONE")])  # no code: best None -> FAIL
+    out = str(tmp_path / "fill")
+    sent, summary, missing_pairs = runner_final.run_bx_fill(
+        base, jobs, out, "http://x", "m", "K", "MAN", post,
+        lambda s: None,
+        lambda code: {"brep_bytes": None, "measure": None, "log": "",
+                      "run_error": "boom"},
+        _grade_pass(), server_info_fn=lambda: {}, workers=3, k=2,
+        budget=5.0)
+    assert len(sent) == 3  # one final per missing pair
+    # Simulate the stop: drop one final -> fewer finals than missing.
+    assert summary["status"] == "COMPLETE"
+    assert summary["n_missing"] == 3
+
+
+def test_fill_incomplete_writes_refused_summary(tmp_path):
+    jobs = [{"id": "H13", "text": "hard 13", "level": "hard"}]
+    base = _baseline_with_bx_finals(tmp_path, [])
+    out = str(tmp_path / "fill")
+
+    def _post(endpoint, body, timeout):
+        raise AssertionError("no call may start without money")
+
+    # Zero budget: nothing is sent, so fewer finals than missing pairs.
+    sent, summary, missing_pairs = runner_final.run_bx_fill(
+        base, jobs, out, "http://x", "m", "K", "MAN", _post,
+        lambda s: None, _box_ok(), _grade_pass(),
+        server_info_fn=lambda: {}, workers=1, k=2, budget=0.0)
+    assert len(missing_pairs) == 2
+    assert len([r for r in sent if r.get("bx_final") is True]) == 0
+    assert summary["status"] == "INCOMPLETE"
+    assert summary["still_missing"] == ["H13 rep 0", "H13 rep 1"]
+    saved = json.load(open(os.path.join(out, "summary.json")))
+    assert saved["status"] == "INCOMPLETE"  # compare.py refuses this
+    assert "INCOMPLETE: ask the user" in open(
+        os.path.join(out, "report.md")).read()
+
+
+def test_fill_workers_default_12_and_budget_guard(tmp_path):
+    assert runner_final.money_left(5.0, None) == pytest.approx(5.0)
+    assert runner_final.out_of_money(0.1, None) is True
+    assert runner_final.out_of_money(5.0, None) is False
+    # A zero budget sends nothing new: everything is skipped.
+    jobs = [{"id": "M1", "text": "box", "level": "medium"}]
+    out = str(tmp_path / "skipped")
+
+    def _post(endpoint, body, timeout):
+        raise AssertionError("no call may start without money")
+
+    recs, summary = runner_final.run_ft_suite(
+        jobs, out, "http://x", "forge", "K", "first-test", _post,
+        lambda s: None, _box_ok(), _grade_pass(),
+        server_info_fn=lambda: {}, k=1, workers=1, budget=0.0)
+    assert recs == [] and summary["skipped"] == 1
+    assert summary["budget_stopped"] is True
+
+
+def test_modal_forge_matches_glimmer_settings():
+    """Section 6: same GPU/image/flags/limits/secret as modal_glimmer,
+    except app forge-trained, /vol/<name>/merged, served name forge."""
+    src = open(os.path.join(HERE, "..", "..", "deploy", "modal_forge.py"),
+               encoding="utf-8").read()
+    assert 'modal.App("forge-trained")' in src
+    assert '"A100-80GB"' in src and '"32768"' in src
+    assert "max_containers=1" in src and "300" in src
+    assert 'Secret.from_name("forge-glimmer")' in src
+    assert '"forge-lora"' in src and "/vol/" in src
+    assert 'FORGE_MODEL_NAME' in src and '"final"' in src
+    assert '"forge"' in src
+    assert "muse_glimmer" in src  # same vLLM parsers
+
+
+def test_run_final_session_script():
+    """Section 6: deploy, wait ready, cap with reserve, trap stops app."""
+    src = open(os.path.join(HERE, "run_final_session.sh"),
+               encoding="utf-8").read()
+    assert "deploy/modal_forge.py" in src
+    assert "runner_final.py" in src and "FORGE_URL" in src
+    assert "budget_left.py" in src  # whole-session cap with reserve
+    assert "app stop forge-trained" in src
+    assert "trap" in src and "GO" in src and "STOP" in src
+
+
+def test_server_info_never_raises_and_reads_digest():
+    assert runner_final.fetch_server_info("", "") == {
+        "models": [], "image_digest": None}
+
+    class _Resp:
+        headers = {"x-image-digest": "sha256:img"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    import io
+    payload = json.dumps({"data": [{"id": "forge"}],
+                          "image_digest": "sha256:body"}).encode()
+    info = runner_final.fetch_server_info(
+        "http://gpu/v1/chat/completions", "K",
+        urlopen=lambda req, timeout: io.BytesIO(payload))
+    assert info == {"models": ["forge"], "image_digest": "sha256:body"}
+
+    def _boom(req, timeout):
+        raise RuntimeError("net down")
+
+    assert runner_final.fetch_server_info("http://gpu/v1/chat/completions",
+                                          "K", urlopen=_boom) == {
+        "models": [], "image_digest": None}

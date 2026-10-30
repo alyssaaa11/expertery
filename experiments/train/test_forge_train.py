@@ -179,8 +179,12 @@ def test_schedule_leftover_partial_group():
 
 
 def test_loader_accepts_jsonl_and_json_array(tmp_path):
-    recs = [{"text": "make a box", "code": "result = 1"},
-            {"text": "make a tube", "code": "result = 2"}]
+    # E3 (2026-10-30): records need "teacher": "spark" unless the file
+    # is the factory's train_records.jsonl.
+    recs = [{"text": "make a box", "code": "result = 1",
+             "teacher": "spark"},
+            {"text": "make a tube", "code": "result = 2",
+             "teacher": "spark"}]
     jl = tmp_path / "data.jsonl"
     jl.write_text("\n".join(json.dumps(r) for r in recs) + "\n",
                   encoding="utf-8")
@@ -188,9 +192,11 @@ def test_loader_accepts_jsonl_and_json_array(tmp_path):
     ja = tmp_path / "data.json"
     ja.write_text(json.dumps(recs), encoding="utf-8")
     assert forge_train.load_training_records(str(ja)) == recs
-    # The smoke examples file is a JSON array and loads with the same loader.
+    # The smoke examples file is a JSON array and loads with the same
+    # loader, but its records carry no teacher tag, so under E3 they
+    # are all refused (it is not the factory's train_records.jsonl).
     smoke = forge_train.load_training_records(forge_train.SMOKE_EXAMPLES)
-    assert len(smoke) > 0 and all(r["text"] and r["code"] for r in smoke)
+    assert smoke == []
 
 
 def test_loader_rejects_records_without_text_and_code(tmp_path):
@@ -199,6 +205,66 @@ def test_loader_rejects_records_without_text_and_code(tmp_path):
                    encoding="utf-8")
     with pytest.raises(ValueError):
         forge_train.load_training_records(str(bad))
+
+
+def test_loader_drops_non_spark_teacher_and_counts(tmp_path, capsys):
+    """E3 (user, 2026-10-30): any record whose teacher is not spark is
+    dropped and counted in the log."""
+    recs = [
+        {"text": "spark box", "code": "result = 1", "teacher": "spark"},
+        {"text": "wonder box", "code": "result = 2", "teacher": "wonder"},
+        {"text": "human box", "code": "result = 3", "teacher": "human"},
+    ]
+    path = tmp_path / "mixed.jsonl"
+    path.write_text("\n".join(json.dumps(r) for r in recs) + "\n",
+                    encoding="utf-8")
+    kept = forge_train.load_training_records(str(path))
+    assert [r["text"] for r in kept] == ["spark box"]
+    out = capsys.readouterr().out
+    assert "TEACHER_FILTER" in out and "kept=1" in out
+    assert "dropped_non_spark=2" in out
+
+
+def test_loader_refuses_missing_teacher_unless_factory_file(tmp_path):
+    """E3: records without the field are refused, unless the file is
+    the factory's train_records.jsonl (Spark PASS answers only)."""
+    recs = [{"text": "a box", "code": "result = 1"},
+            {"text": "a tube", "code": "result = 2"}]
+    other = tmp_path / "data.jsonl"
+    other.write_text("\n".join(json.dumps(r) for r in recs) + "\n",
+                     encoding="utf-8")
+    assert forge_train.load_training_records(str(other)) == []
+    factory = tmp_path / "train_records.jsonl"
+    factory.write_text("\n".join(json.dumps(r) for r in recs) + "\n",
+                       encoding="utf-8")
+    assert forge_train.load_training_records(str(factory)) == recs
+
+
+def test_loader_refuses_escalate_run(tmp_path):
+    """E3: a file from a run with --escalate (sibling summary.json with
+    Wonder share/cost) is refused entirely, never trained on."""
+    run_dir = tmp_path / "factory-escalated"
+    run_dir.mkdir()
+    train = run_dir / "train_records.jsonl"
+    train.write_text(json.dumps({"text": "a box", "code": "result = 1"})
+                     + "\n", encoding="utf-8")
+    (run_dir / "summary.json").write_text(json.dumps(
+        {"factory_version": "abc", "n_ids": 1, "wonder_share": 0.5,
+         "cost_w_dollars": 0.01}), encoding="utf-8")
+    with pytest.raises(ValueError, match="--escalate"):
+        forge_train.load_training_records(str(train))
+    # A Spark-only run's summary is no evidence: it loads.
+    clean_dir = tmp_path / "factory-clean"
+    clean_dir.mkdir()
+    clean_train = clean_dir / "train_records.jsonl"
+    clean_train.write_text(json.dumps({"text": "a box",
+                                       "code": "result = 1"}) + "\n",
+                           encoding="utf-8")
+    (clean_dir / "summary.json").write_text(json.dumps(
+        {"factory_version": "abc", "n_ids": 1, "wonder_share": 0.0,
+         "cost_w_dollars": 0.0}), encoding="utf-8")
+    kept = forge_train.load_training_records(str(clean_train))
+    assert len(kept) == 1
 
 
 FAKE_EXAM = [

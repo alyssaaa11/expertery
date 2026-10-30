@@ -279,12 +279,54 @@ def plan_optimizer_steps(n_examples, epochs, grad_accum, max_steps=None):
             "groups": groups}
 
 
+def refuses_escalate_run(path):
+    """True when a sibling summary.json shows the data came from a run
+    with --escalate (Wonder cost or Wonder share above zero).
+
+    Decision guard (user, 2026-10-30: no Wonder output in training
+    data, Meta API terms section 10.1): such files are refused, never
+    trained on. Unreadable or absent summaries are not evidence.
+    """
+    summary_path = os.path.join(os.path.dirname(os.path.abspath(path)),
+                                "summary.json")
+    if not os.path.isfile(summary_path):
+        return False
+    try:
+        with open(summary_path, encoding="utf-8") as f:
+            summary = json.load(f)
+    except (OSError, ValueError):
+        return False
+    if not isinstance(summary, dict):
+        return False
+    try:
+        wonder_share = float(summary.get("wonder_share", 0) or 0)
+    except (TypeError, ValueError):
+        wonder_share = 0.0
+    try:
+        cost_w = float(summary.get("cost_w_dollars", 0) or 0)
+    except (TypeError, ValueError):
+        cost_w = 0.0
+    return wonder_share > 0 or cost_w > 0
+
+
 def load_training_records(path):
     """Read training records from JSONL or a JSON array (both accepted).
 
     Validates each record has non-empty "text" and "code" strings.
-    Returns the list of dicts. Raises ValueError on bad records.
+    Decision guard (user, 2026-10-30: no Wonder output in training
+    data, Meta API terms section 10.1): a file from a run with
+    --escalate (sibling summary.json with Wonder share/cost) is refused
+    with ValueError; any record whose "teacher" is not "spark" is
+    dropped and counted in the log (records without the field are
+    refused too, unless the file is the factory's train_records.jsonl,
+    which only holds Spark PASS answers). Returns the kept dicts.
+    Raises ValueError on bad records.
     """
+    if refuses_escalate_run(path):
+        raise ValueError(
+            "training data %r came from a run with --escalate "
+            "(sibling summary.json shows Wonder output); refusing to "
+            "start (no Wonder output in training data)" % (path,))
     with open(path, encoding="utf-8") as f:
         raw = f.read()
     stripped = raw.strip()
@@ -305,7 +347,24 @@ def load_training_records(path):
                 or not rec["code"].strip()):
             raise ValueError(
                 "record %d needs non-empty \"text\" and \"code\" strings" % i)
-    return records
+    factory_train = (os.path.basename(path) == "train_records.jsonl")
+    kept, n_non_spark, n_no_teacher = [], 0, 0
+    for rec in records:
+        teacher = rec.get("teacher", None)
+        if teacher is None:
+            if factory_train:
+                kept.append(rec)
+                continue
+            n_no_teacher += 1
+            continue
+        if teacher != "spark":
+            n_non_spark += 1
+            continue
+        kept.append(rec)
+    print("TEACHER_FILTER %s: kept=%d dropped_non_spark=%d "
+          "dropped_no_teacher=%d" % (path, len(kept), n_non_spark,
+                                     n_no_teacher))
+    return kept
 
 
 # ------------------------------------------------------------ exam guard
