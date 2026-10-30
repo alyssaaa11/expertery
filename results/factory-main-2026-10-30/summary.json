@@ -1,0 +1,66 @@
+{
+ "factory_version": "f89b04bab5e1",
+ "n_ids": 160,
+ "n_calls": 157,
+ "n_pass": 148,
+ "n_kept_ids": 148,
+ "families": {
+  "1": {
+   "n_calls": 16,
+   "n_pass": 16,
+   "pass_rate": 1.0
+  },
+  "2": {
+   "n_calls": 16,
+   "n_pass": 16,
+   "pass_rate": 1.0
+  },
+  "3": {
+   "n_calls": 16,
+   "n_pass": 15,
+   "pass_rate": 0.9375
+  },
+  "4": {
+   "n_calls": 16,
+   "n_pass": 15,
+   "pass_rate": 0.9375
+  },
+  "5": {
+   "n_calls": 16,
+   "n_pass": 13,
+   "pass_rate": 0.8125
+  },
+  "6": {
+   "n_calls": 16,
+   "n_pass": 16,
+   "pass_rate": 1.0
+  },
+  "7": {
+   "n_calls": 16,
+   "n_pass": 16,
+   "pass_rate": 1.0
+  },
+  "8": {
+   "n_calls": 16,
+   "n_pass": 12,
+   "pass_rate": 0.75
+  },
+  "9": {
+   "n_calls": 16,
+   "n_pass": 16,
+   "pass_rate": 1.0
+  },
+  "10": {
+   "n_calls": 13,
+   "n_pass": 13,
+   "pass_rate": 1.0
+  }
+ },
+ "prompt_tokens": 909593,
+ "completion_tokens": 987956,
+ "cached_tokens": 867840,
+ "cost_dollars": 4.3812,
+ "cost_w_dollars": 0.0,
+ "wonder_share": 0.0,
+ "budget_stopped": true
+}
