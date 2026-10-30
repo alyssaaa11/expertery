@@ -18,7 +18,9 @@ calls, edits no file; writes patterns.json + patterns.md.
 Every FAIL or error gets a signature (category, key). Categories:
   harness: box error, timeout, no BREP, grader exception
     (run_error starting with "harness:", mentioning no BREP, or a
-    timeout).
+    timeout), or a teacher-model API/HTTP call failure (INVALID with
+    empty code and a transport error: no answer was produced because
+    the call failed).
   no_code: the answer had no code.
   run_error: exception type + message with numbers replaced by N.
   wrong_shape: the sorted failed checks.
@@ -49,6 +51,17 @@ PATTERNS_JSON = "patterns.json"
 
 ID_RE = re.compile(r"F\d+-\d+$")
 NUM_RE = re.compile(r"\d+(?:\.\d+)?")
+# An API/HTTP error from the teacher model means no answer was produced
+# because the call itself failed (our side), not a teacher habit. These
+# match the run_error of a do_teacher_call record whose post_fn raised
+# ("<ExcType>: <message>", INVALID, empty code).
+CALL_FAIL_RE = re.compile(
+    r"ConnectionError|TimeoutError|HTTPError|URLError|SSLError|"
+    r"socket\.|RemoteDisconnected|MaxRetryError|ReadTimeout|"
+    r"ConnectTimeout|urlopen|connection (refused|reset|aborted)|"
+    r"HTTP[/ ]|status ?\d{3}|Service Unavailable|Bad Gateway|"
+    r"Gateway Timeout|rate.?limit",
+    re.IGNORECASE)
 
 FORBIDDEN = ("blind", "experiments/option-a", "experiments/first-test")
 
@@ -100,6 +113,11 @@ def signature_of(rec):
                                                      for f in fails)))[:200])
     err = str(rec.get("run_error") or "")
     code = rec.get("code")
+    if rec.get("verdict") == "INVALID" and not (code or "").strip() \
+            and CALL_FAIL_RE.search(err):
+        # The teacher call itself failed (no answer produced): our bug.
+        return ("harness", normalize_numbers(err.strip())[:200]
+                or "harness")
     if rec.get("verdict") == "INVALID" and (
             not (code or "").strip() or err in (
                 "empty reply", "cut off by the token limit")

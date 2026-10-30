@@ -91,11 +91,79 @@ def build_shape(source):
 
 
 def export_svg(shape, path):
-    """Isometric SVG of a shape, hidden lines off. Needs cadquery."""
+    """Isometric SVG of a shape, hidden lines off. Needs cadquery.
+
+    The exporter writes a fixed-size viewport with no viewBox, which
+    clips wide drawings; fit_viewbox_to_drawing adds a viewBox around
+    the drawing (with a margin) so nothing is clipped."""
     import cadquery as _cq
 
     _cq.exporters.export(shape, path, exportType="SVG", opt=dict(SVG_OPT))
+    fit_viewbox_to_drawing(path)
     return path
+
+
+def _transformed_bbox(svg_text):
+    """Bounding box of an exported SVG's path coordinates in output units.
+
+    Applies the exporter's <g> scale/translate to every path point.
+    Returns (xmin, ymin, xmax, ymax) or None when there is nothing to
+    fit (no paths)."""
+    paths = re.findall(r'<path\s+d="([^"]*)"', svg_text)
+    if not paths:
+        return None
+    pts = []
+    for d in paths:
+        nums = [float(m) for m in re.findall(r"-?\d+(?:\.\d+)?", d)]
+        pts.extend(zip(nums[::2], nums[1::2]))
+    if not pts:
+        return None
+    m = re.search(
+        r"<g\s+transform=\"scale\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)"
+        r"\s*translate\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)",
+        svg_text)
+    if m:
+        sx, sy, tx, ty = (float(m.group(i)) for i in range(1, 5))
+        pts = [(sx * (x + tx), sy * (y + ty)) for x, y in pts]
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    return (min(xs), min(ys), max(xs), max(ys))
+
+
+def fit_viewbox_to_drawing(path_or_svg, margin=0.05):
+    """Fit an SVG viewBox to its drawing, with a margin (not clipped).
+
+    Accepts a file path (rewritten in place) or an SVG string (returns
+    the rewritten string). The viewBox is the path bounding box grown
+    by `margin` (fraction of each size, at least 1 unit). SVGs without
+    paths are returned unchanged."""
+    is_path = "\n" not in str(path_or_svg) and \
+        os.path.isfile(str(path_or_svg))
+    if is_path:
+        with open(str(path_or_svg), encoding="utf-8") as f:
+            svg_text = f.read()
+    else:
+        svg_text = str(path_or_svg)
+    bbox = _transformed_bbox(svg_text)
+    if bbox is None:
+        result = svg_text
+    else:
+        xmin, ymin, xmax, ymax = bbox
+        w, h = xmax - xmin, ymax - ymin
+        mx = max(w * margin, 1.0)
+        my = max(h * margin, 1.0)
+        view = "viewBox=\"%s %s %s %s\"" % (
+            xmin - mx, ymin - my, w + 2 * mx, h + 2 * my)
+        if re.search(r"viewBox=\"[^\"]*\"", svg_text):
+            result = re.sub(r"viewBox=\"[^\"]*\"", view, svg_text,
+                            count=1)
+        else:
+            result = re.sub(r"<svg\b", "<svg " + view, svg_text, count=1)
+    if is_path:
+        with open(str(path_or_svg), "w", encoding="utf-8") as f:
+            f.write(result)
+        return path_or_svg
+    return result
 
 
 def inline_svg(path):

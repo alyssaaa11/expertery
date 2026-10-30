@@ -9,13 +9,17 @@ runner's --jobs-file).
 Self-check (SPEC section 1): every reference builds one valid solid
 in-process (trusted generator code); two "wrong" variants per family
 (a moved feature, a wrong size) FAIL at 1e-6; no job text has difflib
-ratio >= 0.9 (exact numbers) to any first-test job text. Prints a
+ratio >= 0.9 (exact numbers) to any first-test job text; TEXT=REF: for
+every job, the numbers in the text are re-parsed and each number the
+reference program uses (its literal numbers, after rounding) must
+appear in the text (a family passes only at 20/20). Prints a
 10-family table.
 """
 
 import difflib
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +32,38 @@ JOBS_NAME = "jobs.jsonl"
 SPLIT_NAME = "split.json"
 DEV_JOBS_NAME = "jobs_dev.jsonl"
 OVERLAP_LIMIT = 0.9
+
+NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
+# Whole-number construction constants (overshoot +-1, the origin, small
+# counts) carry no design value and are exempt from the TEXT=REF check.
+SMALL_INT = 8
+
+
+def body_of(reference):
+    """The reference program without the shared preamble helpers."""
+    if reference.startswith(generator.PREAMBLE):
+        return reference[len(generator.PREAMBLE):]
+    return reference
+
+
+def text_ref_ok(text, reference):
+    """True when every design number the reference program uses appears
+    in the job text (TEXT=REF).
+
+    Each numeric literal in the reference body (after rounding) must
+    match a number parsed from the text within 1e-9, except whole-number
+    construction constants with abs(v) <= 8. A text that prints 21.2
+    while its reference uses 21.3 fails. (--check-refs grades a
+    reference against itself and cannot see this.)
+    Returns (ok, missing_literal_or_None)."""
+    texts = [float(m) for m in NUM_RE.findall(text or "")]
+    for m in NUM_RE.findall(body_of(reference or "")):
+        v = float(m)
+        if v == int(v) and abs(int(v)) <= SMALL_INT:
+            continue
+        if not any(abs(v - t) <= 1e-9 for t in texts):
+            return False, m
+    return True, None
 
 
 def exam_texts():
@@ -49,7 +85,9 @@ def max_overlap(text, texts):
 
 def self_check(jobs, texts):
     """Full self-check. Returns per-family rows:
-    (family, name, n_valid, n_jobs, wrong_results, max_ratio)."""
+    (family, name, n_valid, n_jobs, wrong_results, max_ratio, n_text_ref).
+    n_text_ref is the TEXT=REF count: jobs whose every reference number
+    (after rounding) appears in the text."""
     rows = []
     for family in range(1, generator.N_FAMILIES + 1):
         fam = generator.FAMILIES[family]
@@ -70,29 +108,38 @@ def self_check(jobs, texts):
             passed, fails = generator.score_at_tight(wsrc, ref)
             wrongs.append((passed, fails))
         ratio = max(max_overlap(j["text"], texts) for j in sub)
+        n_text_ref = 0
+        for job in sub:
+            ok, missing = text_ref_ok(job["text"], job["reference"])
+            if ok:
+                n_text_ref += 1
+            else:
+                print("TEXT!=REF %s: reference uses %s, not in the text"
+                      % (job["id"], missing))
         rows.append((family, fam["name"], n_valid, len(sub), wrongs,
-                     ratio))
+                     ratio, n_text_ref))
     return rows
 
 
 def print_table(rows):
     """Print the 10-family self-check table."""
-    print("%-28s %8s %8s %8s %8s" % (
-        "FAMILY", "VALID", "WRONG-1", "WRONG-2", "OVERLAP"))
+    print("%-28s %8s %8s %8s %8s %8s" % (
+        "FAMILY", "VALID", "WRONG-1", "WRONG-2", "OVERLAP", "TEXT=REF"))
     ok = True
-    for family, name, n_valid, n_jobs, wrongs, ratio in rows:
+    for family, name, n_valid, n_jobs, wrongs, ratio, n_text_ref in rows:
         cells = []
         v_ok = n_valid == n_jobs
         cells.append("%d/%d" % (n_valid, n_jobs))
         for passed, _fails in wrongs:
             cells.append("FAIL" if not passed else "PASS-BAD")
         cells.append("%.3f" % ratio)
+        cells.append("%d/%d" % (n_text_ref, n_jobs))
         if not v_ok or any(p for p, _f in wrongs) \
-                or ratio >= OVERLAP_LIMIT:
+                or ratio >= OVERLAP_LIMIT or n_text_ref != n_jobs:
             ok = False
-        print("%-28s %8s %8s %8s %8s" % (
+        print("%-28s %8s %8s %8s %8s %8s" % (
             "%d %s" % (family, name), cells[0], cells[1], cells[2],
-            cells[3]))
+            cells[3], cells[4]))
     print("SELF-CHECK %s" % ("OK" if ok else "FAIL"))
     return ok
 

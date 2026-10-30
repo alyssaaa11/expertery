@@ -7,6 +7,7 @@ answer code ever runs.
 import builtins
 import json
 import os
+import re
 import sys
 
 import pytest
@@ -53,6 +54,34 @@ def test_gallery_writes_10_svg_cards_skips_dev(tmp_path, no_expected_json):
     for name in gallery.family_names().values():
         assert name in text
     assert "teacher verdict" not in text  # no --runs: no verdict column
+
+
+def test_fit_viewbox_adds_margin_and_holds_drawing():
+    svg = ('<svg width="800" height="240">'
+           '<g transform="scale(2, -2)   translate(10,5)">'
+           '<path d="M0,0 L4,6 " />'
+           "</g></svg>")
+    out = gallery.fit_viewbox_to_drawing(svg)
+    found = re.search(r'viewBox="([^"]*)"', out)
+    assert found
+    x, y, w, h = (float(v) for v in found.group(1).split())
+    # Transformed points are (20, -10) and (28, -22): the viewBox must
+    # hold them with a strict margin on every side.
+    assert x < 20 and x + w > 28
+    assert y < -22 and y + h > -10
+    assert w > 8 and h > 12
+
+
+def test_fit_viewbox_leaves_empty_svg_alone():
+    svg = '<svg width="10" height="10"></svg>'
+    assert gallery.fit_viewbox_to_drawing(svg) == svg
+
+
+def test_gallery_cards_carry_fitted_viewboxes(tmp_path, no_expected_json):
+    out = str(tmp_path / "gallery")
+    assert gallery.main(["--out", out]) == 0
+    text = open(os.path.join(out, "index.html"), encoding="utf-8").read()
+    assert text.count("viewBox=") == 10  # every card fitted, not clipped
 
 
 def test_gallery_with_runs_shows_verdicts_runs_no_code(tmp_path,

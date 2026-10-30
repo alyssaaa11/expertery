@@ -451,3 +451,65 @@ def test_guard_uses_box_measure_for_code_side():
         assert report["n_refused_code"] == 1
     finally:
         forge_train.set_box_fns(*old)
+
+
+def test_guard_opens_cloud_cq_app_once_for_whole_pass(monkeypatch):
+    """The guard holds cloud_cq._app.run() once for the whole pass,
+    not once per record (slow). Three records, one app run."""
+    import types
+
+    state = {"entered": False, "outputs": 0, "runs": 0}
+
+    class _Ctx:
+        def __init__(self, flag):
+            self._flag = flag
+
+        def __enter__(self):
+            self._flag[0] = True
+
+        def __exit__(self, *args):
+            self._flag[0] = False
+            return False
+
+    entered = [False]
+
+    class _Modal:
+        @staticmethod
+        def enable_output():
+            state["outputs"] += 1
+            return _Ctx([False])
+
+    class _CloudApp:
+        def run(self):
+            state["runs"] += 1
+            return _Ctx(entered)
+
+    class _Measure:
+        def remote(self, brep_bytes):
+            if not entered[0]:
+                raise RuntimeError("Function has not been hydrated")
+            return {"bbox": [0, 0, 0, 1, 1, 1], "volume": 1.0}
+
+    fake_cq = types.SimpleNamespace(
+        modal=_Modal(), _app=_CloudApp(), measure_brep=_Measure(),
+        run_answer_in_box=lambda code: {"brep_bytes": b"B",
+                                        "measure": None, "log": "",
+                                        "run_error": None})
+    monkeypatch.setattr(forge_train, "_final_cq", lambda: fake_cq)
+    old_exec, old_measure = (forge_train._box_exec_fn,
+                             forge_train._box_measure_fn)
+    forge_train._box_exec_fn = None
+    forge_train._box_measure_fn = None
+    try:
+        recs = [{"text": "an unrelated widget %d" % i, "code": "CODE"}
+                for i in range(3)]
+        kept, refused, _report = forge_train.guard_records(
+            recs, exam_texts=["something entirely different"],
+            ref_meases=[{"bbox": [0, 0, 0, 10, 10, 10],
+                         "volume": 1000.0}])
+        assert len(kept) == 3 and refused == []  # no code match
+        assert state["runs"] == 1 and state["outputs"] == 1
+        assert forge_train._GUARD_CTX_DEPTH == 0  # released
+    finally:
+        forge_train._box_exec_fn = old_exec
+        forge_train._box_measure_fn = old_measure

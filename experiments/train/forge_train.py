@@ -458,11 +458,20 @@ def default_box_exec(code, timeout=60.0):
     return _final_cq().run_answer_in_box(code)
 
 
+_GUARD_CTX_DEPTH = 0
+
+
 def cloud_cq_context():
     """The cloud_cq grader app's run context (F1): the exam guard's
     measure call must run inside it, because outside it `.remote`
     raises "Function has not been hydrated". forge_train's own app.run
-    is a different App and does not hydrate the grader functions."""
+    is a different App and does not hydrate the grader functions.
+
+    Re-entrant: the guard holds this once for the whole pass, so a
+    measure call made while it is already held reuses it instead of
+    opening cloud_cq._app.run() again (slow)."""
+    if _GUARD_CTX_DEPTH > 0:
+        return contextlib.nullcontext()
     cq = _final_cq()
     modal_mod = getattr(cq, "modal", None)
     app = getattr(cq, "_app", None)
@@ -473,9 +482,14 @@ def cloud_cq_context():
 
 @contextlib.contextmanager
 def _cloud_cq_stack(modal_mod, app):
+    global _GUARD_CTX_DEPTH
     with modal_mod.enable_output():
         with app.run():
-            yield
+            _GUARD_CTX_DEPTH += 1
+            try:
+                yield
+            finally:
+                _GUARD_CTX_DEPTH -= 1
 
 
 def default_box_measure(brep_bytes):
@@ -550,30 +564,40 @@ def guard_records(records, exam_texts=None, ref_meases=None,
                 "refusing to train" % (e,))
     if train_meas_fn is None and ref_meases:
         train_meas_fn = default_train_meas
+    # The real grader-side measure needs cloud_cq._app.run(): hold it
+    # once for the whole guard pass, not once per record (slow). The
+    # inner per-record measures reuse it (cloud_cq_context is
+    # re-entrant). Injected fake measures need no context.
+    if train_meas_fn is default_train_meas and _box_measure_fn is None \
+            and ref_meases:
+        guard_ctx = cloud_cq_context()
+    else:
+        guard_ctx = contextlib.nullcontext()
     kept, refused = [], []
     n_warn = n_ref_text = n_ref_code = 0
-    for idx, rec in enumerate(records):
-        verdict, _ = check_text_record(rec.get("text", ""), exam_texts)
-        if verdict == "refuse":
-            refused.append(idx)
-            n_ref_text += 1
-            continue
-        if verdict == "warn":
-            n_warn += 1
-        matched = False
-        if ref_meases and train_meas_fn is not None:
-            try:
-                meas = train_meas_fn(rec.get("code", ""))
-            except Exception:
-                meas = None
-            if meas is not None:
-                matched, _ = code_matches_exam(meas, ref_meases,
-                                              full_score_fn)
-        if matched:
-            refused.append(idx)
-            n_ref_code += 1
-            continue
-        kept.append(rec)
+    with guard_ctx:
+        for idx, rec in enumerate(records):
+            verdict, _ = check_text_record(rec.get("text", ""), exam_texts)
+            if verdict == "refuse":
+                refused.append(idx)
+                n_ref_text += 1
+                continue
+            if verdict == "warn":
+                n_warn += 1
+            matched = False
+            if ref_meases and train_meas_fn is not None:
+                try:
+                    meas = train_meas_fn(rec.get("code", ""))
+                except Exception:
+                    meas = None
+                if meas is not None:
+                    matched, _ = code_matches_exam(meas, ref_meases,
+                                                  full_score_fn)
+            if matched:
+                refused.append(idx)
+                n_ref_code += 1
+                continue
+            kept.append(rec)
     n = len(records)
     report = {"n_records": n, "n_refused_text": n_ref_text,
               "n_warned_text": n_warn, "n_refused_code": n_ref_code,

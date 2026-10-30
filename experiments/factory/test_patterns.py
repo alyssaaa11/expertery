@@ -83,6 +83,35 @@ def test_harness_is_our_bug(tmp_path):
     assert "our_bug" in text
 
 
+def test_teacher_api_error_is_our_bug_not_teacher_habit(tmp_path):
+    """An API/HTTP error from the teacher model (no answer produced
+    because the call failed) is kind our_bug (category harness), not
+    teacher_habit. Records come from real do_teacher_call failures."""
+    job = {"id": "F1-1", "family": 1, "text": "t", "reference": "r"}
+    recs = []
+    for boom in (ConnectionError("connection refused"),
+                 Exception("HTTP Error 503: Service Unavailable")):
+        def _post(body, _boom=boom):
+            raise _boom
+        rec = teacher.do_teacher_call(
+            dict(job), "spark", teacher.SPARK_MODEL, _post,
+            None, None, "MANUAL")
+        assert rec["verdict"] == "INVALID"
+        assert not (rec["code"] or "").strip()  # no answer produced
+        assert patterns.signature_of(rec)[0] == "harness"
+        assert patterns.kind_of("harness", {}) == "our_bug"
+        recs.append(rec)
+    _fake_run(str(tmp_path / "run-a"), [
+        {**recs[0], "id": "F1-1"},
+        {**recs[0], "id": "F1-2"},
+        {**recs[0], "id": "F2-1"},
+    ])
+    data, _text = _run_patterns(tmp_path, [str(tmp_path)])
+    assert len(data["patterns"]) == 1
+    pat = data["patterns"][0]
+    assert (pat["kind"], pat["category"]) == ("our_bug", "harness")
+
+
 def test_wrong_shape_in_one_family_is_our_wording(tmp_path):
     fails = ["bbox xmax mismatch", "mismatch 5.0%"]
     _fake_run(str(tmp_path / "run-a"), [

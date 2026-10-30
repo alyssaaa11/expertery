@@ -89,9 +89,49 @@ def test_self_check_table_ok_on_real_jobs():
     jobs = generator.generate_all()
     rows = make_jobs.self_check(jobs, make_jobs.exam_texts())
     assert len(rows) == 10
-    for _fam, _name, n_valid, n_jobs, wrongs, ratio in rows:
+    for _fam, _name, n_valid, n_jobs, wrongs, ratio, n_text_ref in rows:
         assert n_valid == n_jobs == 20
         assert len(wrongs) == 2
         assert all(not passed for passed, _f in wrongs)
         assert ratio < 0.9
+        assert n_text_ref == n_jobs == 20
     assert make_jobs.print_table(rows) is True
+
+
+@pytest.mark.parametrize("family", list(range(1, 11)))
+def test_text_ref_passes_on_every_generated_job(family):
+    jobs = [j for j in generator.generate_all()
+            if j["family"] == family]
+    assert len(jobs) == 20
+    for job in jobs:
+        ok, missing = make_jobs.text_ref_ok(job["text"],
+                                            job["reference"])
+        assert ok, "%s: reference uses %s, not in the text" % (
+            job["id"], missing)
+
+
+def test_text_ref_fails_on_rounded_mismatch():
+    # A family whose text prints 21.2 while its reference uses 21.3
+    # fails TEXT=REF.
+    jobs = generator.generate_all()
+    job = next(j for j in jobs if j["family"] == 3)
+    ok, _missing = make_jobs.text_ref_ok(job["text"], job["reference"])
+    assert ok
+    body = make_jobs.body_of(job["reference"])
+    nums = make_jobs.NUM_RE.findall(body)
+    assert nums, "F3 reference body has no numeric literals"
+    texts = [float(m) for m in make_jobs.NUM_RE.findall(job["text"])]
+    victim, shifted = None, None
+    for m in nums:
+        if float(m) == int(float(m)) \
+                and abs(int(float(m))) <= make_jobs.SMALL_INT:
+            continue
+        cand = round(float(m) + 0.1, 1)
+        if all(abs(cand - t) > 1e-9 for t in texts):
+            victim, shifted = m, str(cand)
+            break
+    assert victim is not None, "no shiftable literal in F3 reference"
+    bad_ref = body.replace(victim, shifted, 1)
+    ok, missing = make_jobs.text_ref_ok(job["text"], bad_ref)
+    assert not ok
+    assert missing == shifted
