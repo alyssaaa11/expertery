@@ -9,3 +9,5 @@ Readings where the text left a choice (each is a wording risk if it fails):
 - F10: the recess bottom diameter is not given; read as the same wall slope as the outer cone. Rim ring = outer edge
   diameter 54.4, 4.9 wide inward. HIGH RISK: likely ambiguous wording.
 - After writing these answers, Claude saw the gallery picture of F4-1 (reference slot has square ends; answer kept with rounded ends, unchanged). Disclosed so the F4 result is read correctly.
+- Verifier G3 (2026-10-30): F4-1 removed from the run (not blind after the gallery). F4 is rebuilt after the generator fix, whose text states the slot ends, so knowing the reference's ends no longer helps.
+- Expected now (verifier G1): F3, F7, F10 fail at 1e-6 because the text and the reference disagree; this run confirms G1, it is not the final blind-rebuild gate.
