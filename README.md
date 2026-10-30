@@ -42,6 +42,10 @@ HerdShot, which was written on Oct 26 (kickoff day).
 
 The full day-by-day log is in [`forge-wiki/log.md`](forge-wiki/log.md).
 
+Note on the git history: early market notes (Oct 28) listed defence and medical companies as example customers. We
+removed them on Oct 30 to follow the hackathon rules; Forge was never built for those uses. The history is kept as
+proof of when each part was built.
+
 ## Models and licences
 | Model | Role | Licence / terms |
 |---|---|---|

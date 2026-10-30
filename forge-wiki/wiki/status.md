@@ -66,6 +66,8 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
   (F5/F9; fixed by user option A: precise volumes in the factory grader only).
 - decision (user, Oct 30): learning loop = suggest-and-approve; precise volumes (option A); **no Wonder output in training
   data** (Meta API terms §10.1); talk to the user via hivey/Slack (`hivey msg send human --from hivey/hivey`).
+- decision (user, Oct 30, "keep"): keep the full git history (timeline proof); README states the removed defence/medical
+  market examples openly.
 - Repo readiness list 1-7 done (f692227): README for judges, LICENSE Apache-2.0, defence/medical removed, licence check,
   history secret scan clean. Verifier review pending (m…219). Repo stays PRIVATE until the user decides.
 - Next: verifier on the factory → the user's yes for the **pilot** (20 jobs, Spark Open on Baseten, cap $1.20) → learning
