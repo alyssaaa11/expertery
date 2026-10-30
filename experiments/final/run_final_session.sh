@@ -22,6 +22,7 @@
 # Offline-test seams (env, all optional; production defaults unchanged):
 #   RUN_SESSION_SKIP_DEPLOY=1  skip secret/deploy/ready, pretend URL=skip
 #   MODAL_BIN               modal binary (default "modal"; stub it in tests)
+#   CURL_BIN                curl binary (default "curl"; stub it in tests)
 set -u
 FORGE=~/projects/forge
 OUT=$1; shift
@@ -43,6 +44,7 @@ mkdir -p "$OUT"
 cd ~/projects/forge
 COMMON=~/projects/forge/experiments/common
 MODAL_BIN=${MODAL_BIN:-modal}
+CURL_BIN=${CURL_BIN:-curl}
 K=$(python3 -I -c "import secrets;print(secrets.token_urlsafe(32))")
 echo "key generated (never printed)"
 RPID=""
@@ -74,11 +76,22 @@ else
   URL=$(echo "$DEP" | grep -oE 'https://[a-zA-Z0-9.-]+\.modal\.run' | head -1)
   [ -z "$URL" ] && { echo "no URL, abort"; exit 1; }
   for i in {1..90}; do
-    code=$(curl -s -o /dev/null -w "%{http_code}" -m 60 -H "Authorization: Bearer $K" "$URL/v1/models")
+    code=$("$CURL_BIN" -s -o /dev/null -w "%{http_code}" -m 60 -H "Authorization: Bearer $K" "$URL/v1/models")
     [ "$code" = "200" ] && { date +"ready %T (try $i)"; break; }
     sleep 20
   done
   [ "$code" != "200" ] && { echo "Forge not ready after 30 min, abort"; exit 1; }
+  # Verifier D1: refuse the pilot unless the server serves the model this
+  # session deployed (FORGE_MODEL_NAME, default final). The trap stops
+  # the app on this exit 1.
+  MODELS_JSON=$("$CURL_BIN" -s -m 60 -H "Authorization: Bearer $K" "$URL/v1/models")
+  SERVED_ROOT=$(printf '%s' "$MODELS_JSON" | python3 -I -c "import sys,json; d=json.load(sys.stdin); items=d.get('data',[]); print(items[0].get('root','') if items else '')" 2>/dev/null || true)
+  echo "served model root: $SERVED_ROOT"
+  EXPECTED_ROOT="/vol/${FORGE_MODEL_NAME:-final}/merged"
+  if [ "$SERVED_ROOT" != "$EXPECTED_ROOT" ]; then
+    echo "MODEL MISMATCH: served $SERVED_ROOT, expected $EXPECTED_ROOT"
+    exit 1
+  fi
 fi
 PY=~/projects/forge/.venv/bin/python
 DEV_JOBS=~/projects/forge/experiments/factory/jobs_dev.jsonl

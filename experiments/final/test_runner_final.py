@@ -447,6 +447,79 @@ def test_modal_forge_matches_glimmer_settings():
     assert "muse_glimmer" in src  # same vLLM parsers
 
 
+def test_modal_forge_bakes_name_into_container_env():
+    """Round 3c (verifier D1): the deploy-time FORGE_MODEL_NAME reaches
+    the container env (Modal re-imports the module inside the container
+    where the variable is not set), and serve() logs the served path."""
+    src = open(os.path.join(HERE, "..", "..", "deploy", "modal_forge.py"),
+               encoding="utf-8").read()
+    assert 'image.env({"FORGE_MODEL_NAME"' in src or \
+        "image.env({'FORGE_MODEL_NAME'" in src
+    assert "MODEL_NAME" in src  # the deploy-time value is what is baked in
+    assert "SERVING" in src and "/vol/" in src and "/merged" in src
+    # serve() re-reads the name inside the container instead of trusting
+    # the deploy-time MODEL_PATH global.
+    serve_body = src.split("def serve", 1)[1]
+    assert "FORGE_MODEL_NAME" in serve_body
+    assert "MODEL_PATH" not in serve_body or "model_path" in serve_body
+
+
+def test_run_final_session_verifies_served_model():
+    """Round 3c (verifier D1): after ready, the session fetches
+    $URL/v1/models, prints the served root, and refuses (exit 1, app
+    stopped by the trap) unless it equals /vol/$FORGE_MODEL_NAME/merged
+    (default final)."""
+    src = open(os.path.join(HERE, "run_final_session.sh"),
+               encoding="utf-8").read()
+    assert "$URL/v1/models" in src
+    assert "root" in src
+    assert "served model root" in src
+    assert "/vol/${FORGE_MODEL_NAME:-final}/merged" in src
+    assert "MODEL MISMATCH" in src
+    assert "exit 1" in src
+
+
+def test_run_final_session_refuses_on_root_mismatch(tmp_path):
+    """Round 3c (verifier D1): fake curl/models responses — a served root
+    that is not /vol/$FORGE_MODEL_NAME/merged exits 1 and the trap stops
+    the app. No network, no Modal."""
+    import shutil
+    import subprocess
+    if not shutil.which("zsh"):
+        pytest.skip("zsh is not installed")
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    modal_stub = bindir / "modal"
+    modal_stub.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"deploy\" ]; then\n"
+        "  echo \"https://stub.modal.run\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "exit 0\n",
+        encoding="utf-8")
+    modal_stub.chmod(0o755)
+    curl_stub = bindir / "curl"
+    curl_stub.write_text(
+        "#!/bin/sh\n"
+        'case "$*" in\n'
+        '  *"-w"*) printf "200"; exit 0;;\n'
+        "esac\n"
+        'printf \'{"data": [{"id": "forge", "root": "/vol/final/merged"}]}\'\n',
+        encoding="utf-8")
+    curl_stub.chmod(0o755)
+    out = tmp_path / "out"
+    env = dict(os.environ, MODAL_BIN=str(modal_stub),
+               CURL_BIN=str(curl_stub), FORGE_MODEL_NAME="other-model")
+    p = subprocess.run(
+        ["zsh", os.path.join(HERE, "run_final_session.sh"), str(out)],
+        capture_output=True, text=True, env=env, timeout=120)
+    assert p.returncode == 1, p.stdout + p.stderr
+    assert "MODEL MISMATCH" in p.stdout
+    assert "served model root: /vol/final/merged" in p.stdout
+    assert "app stopped" in p.stdout  # the EXIT trap stopped the app
+
+
 def test_run_final_session_script():
     """Section 6: deploy, wait ready, cap with reserve, trap stops app.
     Round 3 (verifier D1): run() passes the whole cap (--budget "$CAP");

@@ -35,6 +35,10 @@ image = modal.Image.from_registry(
         ' && (python -m pip --version || python -m ensurepip)',
     ],
 ).entrypoint([])
+# Bake the deploy-time name INTO the container: Modal re-imports this
+# module inside the container where FORGE_MODEL_NAME is not set, so
+# without this the server would fall back to /vol/final/merged.
+image = image.env({"FORGE_MODEL_NAME": MODEL_NAME})
 hf_cache = modal.Volume.from_name("forge-hf-cache", create_if_missing=True)
 vllm_cache = modal.Volume.from_name("forge-vllm-cache", create_if_missing=True)
 lora_vol = modal.Volume.from_name("forge-lora", create_if_missing=True)
@@ -56,9 +60,14 @@ app = modal.App("forge-trained")
 @modal.concurrent(max_inputs=16)
 @modal.web_server(port=PORT, startup_timeout=25 * MINUTES)
 def serve():
+    # Re-read the name inside the container (from the baked image env)
+    # rather than trusting the deploy-time MODEL_PATH global.
+    model_path = "/vol/%s/merged" % os.environ.get("FORGE_MODEL_NAME",
+                                                   "final")
+    print("SERVING %s" % model_path, flush=True)
     # VLLM_API_KEY from the secret makes vLLM require "Authorization: Bearer <key>"
     subprocess.Popen([
-        "vllm", "serve", MODEL_PATH,
+        "vllm", "serve", model_path,
         "--served-model-name", SERVED_NAME,
         "--host", "0.0.0.0", "--port", str(PORT),
         "--tensor-parallel-size", "1",
