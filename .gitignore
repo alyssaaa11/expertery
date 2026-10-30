@@ -3,3 +3,16 @@ __pycache__/
 *.step
 *.stl
 .env
+# model weights, adapters and CAD outputs (large; never committed)
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.brep
+adapters/
+merged/
+# run scratch and local app state
+results/**/sandbox_*/
+.obsidian/workspace.json
+.archify/
+.DS_Store
