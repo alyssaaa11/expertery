@@ -1,4 +1,4 @@
-# Muse Code round 1b: learning loop to spec (verifier: GO for this fix round, forge-factory-build-2026-10-30; waits for the user's yes)
+# Muse Code round 1b: learning loop to spec (verifier: GO for this fix round, forge-factory-build-2026-10-30; user yes 2026-10-30)
 
 Round 1 built experiments/factory/patterns.py from the round brief only, because experiments/factory/SPEC.md had no §4
 yet (Claude's mistake). §4 is now written. Read experiments/factory/SPEC.md §4 fully, plus patterns.py, teacher.py and
@@ -21,11 +21,20 @@ no commit, never print keys, never open blind/ or experiments/option-a/, never p
   measure call outside the context fails the test.
 - **F2**: Wonder is charged at Meta's rates $4.00 / $0.20 cached / $20.00 per M (not Spark's), and the Wonder in-flight
   reserve is >= $0.35 per call. Tests for both.
+- **Gallery (user yes, 2026-10-30)**: `experiments/factory/gallery.py [--out results/factory-gallery] [--runs <teacher run dir>]`.
+  For each family, the first non-dev job: build its reference in-process (trusted generator code, like make_jobs),
+  export an SVG with `cq.exporters.export(..., exportType="SVG")` (isometric view, hidden lines off), and write
+  index.html: a grid of 10 cards (family name, job id, job text, the SVG). With `--runs`, each card also shows that
+  job's teacher verdict (PASS/FAIL/INVALID) and, when the answer failed, its fails text (from calls.jsonl; no answer
+  code is run). Plain HTML + inline SVG, no network, no JS libraries. Why: the user wants to see the factory's parts;
+  it is also the start of the demo viewer. Test: the gallery writes 10 SVG cards, skips dev ids, and opens no
+  expected*.json.
 - **F4**: besides the path refusal, patterns.py refuses records whose id is not `F<n>-<m>` and skips dev ids.
 
 ## Done when
 - `~/projects/forge/.venv/bin/python -m pytest -q experiments/final experiments/factory experiments/freecad
   experiments/train experiments/common` passes (216 plus the new tests).
+- `gallery.py` writes results/factory-gallery/index.html with 10 cards.
 - `make_jobs.py` output is unchanged (jobs.jsonl byte-identical).
 
 Report at the end: files changed, the pytest line, and anything you did not follow.
