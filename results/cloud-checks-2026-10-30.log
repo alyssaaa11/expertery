@@ -1,0 +1,85 @@
+=== cloud_cq.py --check-refs --exam factory
+Saving image...
+Image saved, took 2.81s
+Built image im-pMlhVnfs4xcqHBfNuhobPB in 35.62s
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+REFS 200/200 PASS
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-v7BnWUAbXGG7Rm2Wv43MGl
+exit 0
+=== cloud_cq.py --check-refs --exam first-test
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-zEc7Fe5wtrjWkyDTNPXOhS
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+REFS 30/30 PASS
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-zEc7Fe5wtrjWkyDTNPXOhS
+exit 0
+=== cloud_cq.py --regrade results/regrade-2026-10-30/BR --exam first-test
+https://modal.com/apps/my-workspace/main/ap-aMlEtTUTIN4zJaeHNyjwdB
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+MEASURE same=30 changed=0
+REGRADE same=30 changed=0
+Stopping app - local entrypoint completed.
+Runner terminated.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-aMlEtTUTIN4zJaeHNyjwdB
+exit 0
+=== cloud_cq.py --regrade results/regrade-2026-10-30/B2BX --exam first-test
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-iV1gVC2XJhegll1FqvpWAh
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+MEASURE same=169 changed=0
+REGRADE same=169 changed=0
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-iV1gVC2XJhegll1FqvpWAh
+exit 0
+=== cloud_cq.py --regrade results/blind-rebuild-2026-10-30 --exam factory
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-iDvaeXLnXZcod1vXOrP9Vi
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+MEASURE same=0 changed=10
+REGRADE same=0 changed=10
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-iDvaeXLnXZcod1vXOrP9Vi
+exit 0
+ALLDONE

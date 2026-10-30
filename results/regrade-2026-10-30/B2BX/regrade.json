@@ -1,0 +1,4978 @@
+[
+ {
+  "job": "M1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -10.0,
+    0.0,
+    20.0,
+    10.0,
+    20.0
+   ],
+   "volume": 4322.19,
+   "area": 3437.708,
+   "com": [
+    0.0,
+    4.053,
+    6.22
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -10.0,
+    0.0,
+    20.0,
+    10.0,
+    20.0
+   ],
+   "volume": 4322.19,
+   "area": 3437.708,
+   "com": [
+    0.0,
+    4.053,
+    6.22
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -10.0,
+    0.0,
+    20.0,
+    10.0,
+    20.0
+   ],
+   "volume": 4322.19,
+   "area": 3437.708,
+   "com": [
+    -0.0,
+    4.053,
+    6.22
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    60.0,
+    15.0,
+    30.0
+   ],
+   "volume": 13440.0,
+   "area": 7648.0,
+   "com": [
+    30.0,
+    -0.0,
+    21.036
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    60.0,
+    15.0,
+    30.0
+   ],
+   "volume": 13440.0,
+   "area": 7648.0,
+   "com": [
+    30.0,
+    -0.0,
+    21.036
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    60.0,
+    15.0,
+    30.0
+   ],
+   "volume": 13440.0,
+   "area": 7648.0,
+   "com": [
+    30.0,
+    -0.0,
+    21.036
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    30.0
+   ],
+   "volume": 15552.0,
+   "area": 15952.0,
+   "com": [
+    -0.0,
+    0.0,
+    11.37
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    30.0
+   ],
+   "volume": 15552.0,
+   "area": 15952.0,
+   "com": [
+    -0.0,
+    0.0,
+    11.37
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    30.0
+   ],
+   "volume": 15552.0,
+   "area": 15952.0,
+   "com": [
+    -0.0,
+    0.0,
+    11.37
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    7.0
+   ],
+   "volume": 6123.0,
+   "area": 6964.0,
+   "com": [
+    0.0,
+    0.0,
+    1.756
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    7.0
+   ],
+   "volume": 6123.0,
+   "area": 6964.0,
+   "com": [
+    0.0,
+    0.0,
+    1.756
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    7.0
+   ],
+   "volume": 6123.0,
+   "area": 6964.0,
+   "com": [
+    0.0,
+    0.0,
+    1.756
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    65.0
+   ],
+   "volume": 14137.167,
+   "area": 3926.991,
+   "com": [
+    0.0,
+    0.0,
+    24.792
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    65.0
+   ],
+   "volume": 14137.167,
+   "area": 3926.991,
+   "com": [
+    0.0,
+    0.0,
+    24.792
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    65.0
+   ],
+   "volume": 14137.167,
+   "area": 3926.991,
+   "com": [
+    0.0,
+    0.0,
+    24.792
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -30.0,
+    0.0,
+    30.0,
+    30.0,
+    28.0
+   ],
+   "volume": 27055.396,
+   "area": 10555.751,
+   "com": [
+    0.0,
+    -0.0,
+    8.064
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -30.0,
+    0.0,
+    30.0,
+    30.0,
+    28.0
+   ],
+   "volume": 27055.396,
+   "area": 10555.751,
+   "com": [
+    0.0,
+    -0.0,
+    8.064
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -30.0,
+    0.0,
+    30.0,
+    30.0,
+    28.0
+   ],
+   "volume": 27055.396,
+   "area": 10555.751,
+   "com": [
+    0.0,
+    -0.0,
+    8.064
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M7",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    20.0
+   ],
+   "volume": 9600.0,
+   "area": 7084.0,
+   "com": [
+    25.0,
+    0.0,
+    6.813
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M7",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    20.0
+   ],
+   "volume": 9600.0,
+   "area": 7084.0,
+   "com": [
+    25.0,
+    0.0,
+    6.813
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M7",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    20.0
+   ],
+   "volume": 9600.0,
+   "area": 7084.0,
+   "com": [
+    25.0,
+    0.0,
+    6.813
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -25.0,
+    0.0,
+    25.0,
+    25.0,
+    13.0
+   ],
+   "volume": 9143.053,
+   "area": 7038.849,
+   "com": [
+    0.0,
+    -0.0,
+    2.728
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -25.0,
+    0.0,
+    25.0,
+    25.0,
+    13.0
+   ],
+   "volume": 9143.053,
+   "area": 7038.849,
+   "com": [
+    0.0,
+    -0.0,
+    2.728
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -25.0,
+    0.0,
+    25.0,
+    25.0,
+    13.0
+   ],
+   "volume": 9143.053,
+   "area": 7038.849,
+   "com": [
+    0.0,
+    -0.0,
+    2.728
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    0.0,
+    0.0,
+    40.0,
+    68.117,
+    72.615
+   ],
+   "volume": 53045.923,
+   "area": 23726.148,
+   "com": [
+    -0.0,
+    42.504,
+    21.2
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    0.0,
+    0.0,
+    40.0,
+    68.117,
+    72.615
+   ],
+   "volume": 53045.923,
+   "area": 23726.148,
+   "com": [
+    0.0,
+    42.504,
+    21.2
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    0.0,
+    0.0,
+    40.0,
+    68.117,
+    72.615
+   ],
+   "volume": 53045.923,
+   "area": 23726.148,
+   "com": [
+    0.0,
+    42.504,
+    21.2
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    -0.0,
+    20.0,
+    20.0,
+    10.0
+   ],
+   "volume": 15262.543,
+   "area": 5028.771,
+   "com": [
+    0.0,
+    0.0,
+    4.955
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    10.0
+   ],
+   "volume": 15262.543,
+   "area": 5028.771,
+   "com": [
+    -0.0,
+    -0.0,
+    4.955
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    10.0
+   ],
+   "volume": 15262.543,
+   "area": 5028.771,
+   "com": [
+    -0.0,
+    -0.0,
+    4.955
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M11",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    50.0
+   ],
+   "volume": 12770.0,
+   "area": 7334.421,
+   "com": [
+    13.818,
+    0.0,
+    13.818
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M11",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    50.0
+   ],
+   "volume": 12770.0,
+   "area": 7334.421,
+   "com": [
+    13.818,
+    0.0,
+    13.818
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M11",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    50.0
+   ],
+   "volume": 12770.0,
+   "area": 7334.421,
+   "com": [
+    13.818,
+    0.0,
+    13.818
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M12",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    12.0
+   ],
+   "volume": 12666.902,
+   "area": 5026.548,
+   "com": [
+    0.0,
+    0.0,
+    6.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M12",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    12.0
+   ],
+   "volume": 12666.902,
+   "area": 5026.548,
+   "com": [
+    0.0,
+    0.0,
+    6.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M12",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    12.0
+   ],
+   "volume": 12666.902,
+   "area": 5026.548,
+   "com": [
+    0.0,
+    0.0,
+    6.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M13",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -8.0,
+    -8.0,
+    0.0,
+    25.0,
+    8.0,
+    8.0
+   ],
+   "volume": 1438.088,
+   "area": 1351.682,
+   "com": [
+    4.516,
+    2.09,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M13",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -8.0,
+    -8.0,
+    0.0,
+    25.0,
+    8.0,
+    8.0
+   ],
+   "volume": 1438.088,
+   "area": 1351.682,
+   "com": [
+    4.516,
+    2.09,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M13",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -8.0,
+    -8.0,
+    0.0,
+    25.0,
+    8.0,
+    8.0
+   ],
+   "volume": 1438.088,
+   "area": 1351.682,
+   "com": [
+    4.516,
+    2.09,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M14",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -3.0,
+    0.0,
+    40.0,
+    30.0,
+    6.0
+   ],
+   "volume": 3083.226,
+   "area": 3504.282,
+   "com": [
+    20.0,
+    11.616,
+    1.541
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M14",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -3.0,
+    0.0,
+    40.0,
+    30.0,
+    6.0
+   ],
+   "volume": 3083.226,
+   "area": 3504.282,
+   "com": [
+    20.0,
+    11.616,
+    1.541
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M14",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -3.0,
+    0.0,
+    40.0,
+    30.0,
+    6.0
+   ],
+   "volume": 3083.226,
+   "area": 3504.282,
+   "com": [
+    20.0,
+    11.616,
+    1.541
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M15",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -50.0,
+    -5.0,
+    0.0,
+    50.0,
+    5.0,
+    30.0
+   ],
+   "volume": 13863.152,
+   "area": 5965.876,
+   "com": [
+    -0.0,
+    0.0,
+    20.879
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M15",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -50.0,
+    -5.0,
+    0.0,
+    50.0,
+    5.0,
+    30.0
+   ],
+   "volume": 13863.152,
+   "area": 5965.876,
+   "com": [
+    -0.0,
+    0.0,
+    20.879
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M15",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -50.0,
+    -5.0,
+    0.0,
+    50.0,
+    5.0,
+    30.0
+   ],
+   "volume": 13863.152,
+   "area": 5965.876,
+   "com": [
+    -0.0,
+    0.0,
+    20.879
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    -25.0,
+    0.0,
+    40.0,
+    25.0,
+    30.0
+   ],
+   "volume": 24448.56,
+   "area": 25302.354,
+   "com": [
+    0.0,
+    0.0,
+    10.948
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    -25.0,
+    0.0,
+    40.0,
+    25.0,
+    30.0
+   ],
+   "volume": 24448.56,
+   "area": 25302.354,
+   "com": [
+    0.0,
+    0.0,
+    10.948
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    -25.0,
+    0.0,
+    40.0,
+    25.0,
+    30.0
+   ],
+   "volume": 24448.56,
+   "area": 25302.354,
+   "com": [
+    0.0,
+    0.0,
+    10.948
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    100.0,
+    70.0,
+    8.0
+   ],
+   "volume": 20708.623,
+   "area": 15454.62,
+   "com": [
+    50.0,
+    34.991,
+    1.587
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    100.0,
+    70.0,
+    8.0
+   ],
+   "volume": 20708.623,
+   "area": 15454.62,
+   "com": [
+    50.0,
+    34.991,
+    1.587
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    100.0,
+    70.0,
+    8.0
+   ],
+   "volume": 20708.623,
+   "area": 15454.62,
+   "com": [
+    50.0,
+    34.991,
+    1.587
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H3",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "volume",
+   "area",
+   "mismatch 30.1%"
+  ],
+  "fails_tight": [
+   "volume",
+   "area",
+   "mismatch 30.1%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    8.0
+   ],
+   "volume": 11015.576,
+   "area": 5543.025,
+   "com": [
+    -0.016,
+    -0.0,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -19.944,
+    -19.944,
+    0.0,
+    19.944,
+    19.944,
+    8.0
+   ],
+   "volume": 8466.077,
+   "area": 4107.874,
+   "com": [
+    -0.021,
+    -0.0,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -19.944,
+    -19.944,
+    0.0,
+    19.944,
+    19.944,
+    8.0
+   ],
+   "volume": 8466.077,
+   "area": 4107.874,
+   "com": [
+    -0.021,
+    -0.0,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    19.0
+   ],
+   "volume": 4123.285,
+   "area": 3213.562,
+   "com": [
+    -0.0,
+    -0.0,
+    7.706
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    19.0
+   ],
+   "volume": 4123.285,
+   "area": 3213.562,
+   "com": [
+    -0.0,
+    -0.0,
+    7.706
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    19.0
+   ],
+   "volume": 4123.285,
+   "area": 3213.562,
+   "com": [
+    -0.0,
+    -0.0,
+    7.706
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    30.0,
+    30.0,
+    30.0
+   ],
+   "volume": 7203.903,
+   "area": 5437.699,
+   "com": [
+    10.957,
+    10.957,
+    10.957
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H5",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "mismatch 0.8%"
+  ],
+  "fails_tight": [
+   "mismatch 0.8%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    30.0,
+    30.0,
+    30.0
+   ],
+   "volume": 7260.451,
+   "area": 5456.549,
+   "com": [
+    10.959,
+    10.959,
+    10.959
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    30.0,
+    30.0,
+    30.0
+   ],
+   "volume": 7203.903,
+   "area": 5437.699,
+   "com": [
+    10.957,
+    10.957,
+    10.957
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -20.0,
+    0.0,
+    25.0,
+    20.0,
+    25.0
+   ],
+   "volume": 44943.607,
+   "area": 10099.071,
+   "com": [
+    0.0,
+    -0.0,
+    12.077
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H6",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "volume",
+   "area",
+   "mismatch 3.3%"
+  ],
+  "fails_tight": [
+   "volume",
+   "area",
+   "mismatch 3.3%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -20.0,
+    0.0,
+    25.0,
+    20.0,
+    25.0
+   ],
+   "volume": 46416.228,
+   "area": 9549.292,
+   "com": [
+    0.0,
+    0.0,
+    11.892
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -20.0,
+    -0.0,
+    25.0,
+    20.0,
+    25.0
+   ],
+   "volume": 44943.607,
+   "area": 10099.071,
+   "com": [
+    0.0,
+    0.0,
+    12.077
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H7",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    12.0
+   ],
+   "volume": 3170.59,
+   "area": 1628.941,
+   "com": [
+    0.0,
+    -0.0,
+    5.653
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H7",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    12.0
+   ],
+   "volume": 3170.59,
+   "area": 1628.941,
+   "com": [
+    0.0,
+    -0.0,
+    5.653
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H7",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    12.0
+   ],
+   "volume": 3170.59,
+   "area": 1628.941,
+   "com": [
+    0.0,
+    -0.0,
+    5.653
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    50.0,
+    10.0,
+    7.0
+   ],
+   "volume": 1620.0,
+   "area": 1452.284,
+   "com": [
+    19.745,
+    5.0,
+    3.095
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    50.0,
+    10.0,
+    7.0
+   ],
+   "volume": 1620.0,
+   "area": 1452.284,
+   "com": [
+    19.745,
+    5.0,
+    3.095
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    50.0,
+    10.0,
+    7.0
+   ],
+   "volume": 1620.0,
+   "area": 1452.284,
+   "com": [
+    19.745,
+    5.0,
+    3.095
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H9",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [],
+  "run_error": "the answer wrote no BREP: Traceback (most recent call last):\n  File \"/work/run_cq_box.py\", line 77, in <module>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"/work/run_cq_box.py\", line 57, in main\n    exec(compile(src, answer_path, \"exec\"), ns)\n  File \"/work/answer.py\", line 9, in <module>\n    result = result.union(fin)\n             ^^^^^^^^^^^^\nAttributeError: 'Solid' object has no attribute 'union'",
+  "measure_same": true,
+  "measurements": null
+ },
+ {
+  "job": "H9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    24.0
+   ],
+   "volume": 20400.0,
+   "area": 20540.0,
+   "com": [
+    0.0,
+    0.0,
+    8.353
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    24.0
+   ],
+   "volume": 20400.0,
+   "area": 20540.0,
+   "com": [
+    0.0,
+    0.0,
+    8.353
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.5,
+    -10.0,
+    0.0,
+    30.5,
+    10.0,
+    15.5
+   ],
+   "volume": 4332.807,
+   "area": 3551.023,
+   "com": [
+    -0.0,
+    -0.0,
+    6.038
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.5,
+    -10.0,
+    -0.0,
+    30.5,
+    10.0,
+    15.5
+   ],
+   "volume": 4332.807,
+   "area": 3551.023,
+   "com": [
+    0.0,
+    0.0,
+    6.038
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H10",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "bbox",
+   "volume",
+   "area",
+   "com",
+   "mismatch 60.9%"
+  ],
+  "fails_tight": [
+   "bbox",
+   "volume",
+   "area",
+   "com",
+   "mismatch 60.9%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.5,
+    -20.0,
+    -0.0,
+    30.5,
+    20.0,
+    15.5
+   ],
+   "volume": 6971.745,
+   "area": 5430.315,
+   "com": [
+    -0.0,
+    0.0,
+    7.139
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H11",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "volume",
+   "area",
+   "com",
+   "mismatch 4.2%"
+  ],
+  "fails_tight": [
+   "volume",
+   "area",
+   "com",
+   "mismatch 4.2%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -0.0,
+    0.0,
+    -0.0,
+    40.0,
+    30.0,
+    32.0
+   ],
+   "volume": 23493.971,
+   "area": 5980.686,
+   "com": [
+    25.448,
+    15.034,
+    12.151
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H11",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    40.0,
+    30.0,
+    32.0
+   ],
+   "volume": 22751.77,
+   "area": 6508.938,
+   "com": [
+    24.979,
+    15.0,
+    11.509
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H11",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "volume",
+   "area",
+   "com",
+   "mismatch 1.9%"
+  ],
+  "fails_tight": [
+   "volume",
+   "area",
+   "com",
+   "mismatch 1.9%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    40.0,
+    30.0,
+    32.0
+   ],
+   "volume": 23175.885,
+   "area": 6282.743,
+   "com": [
+    25.162,
+    14.863,
+    11.811
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H12",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "mismatch 0.4%"
+  ],
+  "fails_tight": [
+   "mismatch 0.4%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -14.925,
+    -15.0,
+    0.0,
+    14.925,
+    15.0,
+    15.0
+   ],
+   "volume": 9286.214,
+   "area": 3353.487,
+   "com": [
+    0.009,
+    -0.0,
+    7.483
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H12",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -14.925,
+    -15.0,
+    0.0,
+    14.925,
+    15.0,
+    15.0
+   ],
+   "volume": 9327.671,
+   "area": 3345.334,
+   "com": [
+    0.019,
+    -0.0,
+    7.5
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H12",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -14.925,
+    -15.0,
+    0.0,
+    14.925,
+    15.0,
+    15.0
+   ],
+   "volume": 9327.671,
+   "area": 3345.334,
+   "com": [
+    0.019,
+    -0.0,
+    7.5
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H13",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "mismatch 0.9%"
+  ],
+  "fails_tight": [
+   "mismatch 0.9%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -15.0,
+    0.0,
+    0.0,
+    15.0,
+    34.0,
+    60.0
+   ],
+   "volume": 9366.224,
+   "area": 5685.615,
+   "com": [
+    -0.0,
+    7.08,
+    30.334
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H13",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "mismatch 0.9%"
+  ],
+  "fails_tight": [
+   "mismatch 0.9%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -15.0,
+    0.0,
+    0.0,
+    15.0,
+    34.0,
+    60.0
+   ],
+   "volume": 9366.224,
+   "area": 5685.615,
+   "com": [
+    -0.0,
+    7.08,
+    30.334
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H13",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "mismatch 0.9%"
+  ],
+  "fails_tight": [
+   "mismatch 0.9%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -15.0,
+    0.0,
+    0.0,
+    15.0,
+    34.0,
+    60.0
+   ],
+   "volume": 9366.224,
+   "area": 5685.615,
+   "com": [
+    -0.0,
+    7.08,
+    30.066
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H14",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    57.0,
+    20.0,
+    23.0
+   ],
+   "volume": 4202.19,
+   "area": 3597.708,
+   "com": [
+    28.5,
+    10.0,
+    11.5
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H14",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    57.0,
+    20.0,
+    23.0
+   ],
+   "volume": 4202.19,
+   "area": 3597.708,
+   "com": [
+    28.5,
+    10.0,
+    11.5
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H14",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    57.0,
+    20.0,
+    23.0
+   ],
+   "volume": 4202.19,
+   "area": 3597.708,
+   "com": [
+    28.5,
+    10.0,
+    11.5
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H15",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    -25.0,
+    0.0,
+    40.0,
+    25.0,
+    2.0
+   ],
+   "volume": 6663.451,
+   "area": 8538.85,
+   "com": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H15",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    -25.0,
+    0.0,
+    40.0,
+    25.0,
+    2.0
+   ],
+   "volume": 6663.451,
+   "area": 8538.85,
+   "com": [
+    -0.0,
+    0.0,
+    1.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H15",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    -25.0,
+    0.0,
+    40.0,
+    25.0,
+    2.0
+   ],
+   "volume": 6663.451,
+   "area": 8538.85,
+   "com": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -10.0,
+    0.0,
+    20.0,
+    10.0,
+    20.0
+   ],
+   "volume": 4322.19,
+   "area": 3437.708,
+   "com": [
+    0.0,
+    4.053,
+    6.22
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -10.0,
+    0.0,
+    20.0,
+    10.0,
+    20.0
+   ],
+   "volume": 4322.19,
+   "area": 3437.708,
+   "com": [
+    0.0,
+    4.053,
+    6.22
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -10.0,
+    0.0,
+    20.0,
+    10.0,
+    20.0
+   ],
+   "volume": 4322.19,
+   "area": 3437.708,
+   "com": [
+    0.0,
+    4.053,
+    6.22
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    60.0,
+    15.0,
+    30.0
+   ],
+   "volume": 13440.0,
+   "area": 7648.0,
+   "com": [
+    30.0,
+    -0.0,
+    21.036
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    60.0,
+    15.0,
+    30.0
+   ],
+   "volume": 13440.0,
+   "area": 7648.0,
+   "com": [
+    30.0,
+    -0.0,
+    21.036
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    60.0,
+    15.0,
+    30.0
+   ],
+   "volume": 13440.0,
+   "area": 7648.0,
+   "com": [
+    30.0,
+    -0.0,
+    21.036
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    30.0
+   ],
+   "volume": 15552.0,
+   "area": 15952.0,
+   "com": [
+    -0.0,
+    0.0,
+    11.37
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    30.0
+   ],
+   "volume": 15552.0,
+   "area": 15952.0,
+   "com": [
+    -0.0,
+    0.0,
+    11.37
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    30.0
+   ],
+   "volume": 15552.0,
+   "area": 15952.0,
+   "com": [
+    -0.0,
+    0.0,
+    11.37
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    7.0
+   ],
+   "volume": 6123.0,
+   "area": 6964.0,
+   "com": [
+    0.0,
+    0.0,
+    1.756
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    7.0
+   ],
+   "volume": 6123.0,
+   "area": 6964.0,
+   "com": [
+    0.0,
+    0.0,
+    1.756
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    7.0
+   ],
+   "volume": 6123.0,
+   "area": 6964.0,
+   "com": [
+    0.0,
+    0.0,
+    1.756
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    65.0
+   ],
+   "volume": 14137.167,
+   "area": 3926.991,
+   "com": [
+    0.0,
+    0.0,
+    24.792
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    65.0
+   ],
+   "volume": 14137.167,
+   "area": 3926.991,
+   "com": [
+    0.0,
+    0.0,
+    24.792
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    65.0
+   ],
+   "volume": 14137.167,
+   "area": 3926.991,
+   "com": [
+    0.0,
+    0.0,
+    24.792
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -30.0,
+    0.0,
+    30.0,
+    30.0,
+    28.0
+   ],
+   "volume": 27055.396,
+   "area": 10555.751,
+   "com": [
+    0.0,
+    -0.0,
+    8.064
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -30.0,
+    0.0,
+    30.0,
+    30.0,
+    28.0
+   ],
+   "volume": 27055.396,
+   "area": 10555.751,
+   "com": [
+    0.0,
+    -0.0,
+    8.064
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -30.0,
+    0.0,
+    30.0,
+    30.0,
+    28.0
+   ],
+   "volume": 27055.396,
+   "area": 10555.751,
+   "com": [
+    0.0,
+    -0.0,
+    8.064
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M7",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    20.0
+   ],
+   "volume": 9600.0,
+   "area": 7084.0,
+   "com": [
+    25.0,
+    0.0,
+    6.813
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M7",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    20.0
+   ],
+   "volume": 9600.0,
+   "area": 7084.0,
+   "com": [
+    25.0,
+    0.0,
+    6.813
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M7",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    20.0
+   ],
+   "volume": 9600.0,
+   "area": 7084.0,
+   "com": [
+    25.0,
+    0.0,
+    6.813
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -25.0,
+    0.0,
+    25.0,
+    25.0,
+    13.0
+   ],
+   "volume": 9143.053,
+   "area": 7038.849,
+   "com": [
+    0.0,
+    -0.0,
+    2.728
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -25.0,
+    0.0,
+    25.0,
+    25.0,
+    13.0
+   ],
+   "volume": 9143.053,
+   "area": 7038.849,
+   "com": [
+    0.0,
+    -0.0,
+    2.728
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -25.0,
+    0.0,
+    25.0,
+    25.0,
+    13.0
+   ],
+   "volume": 9143.053,
+   "area": 7038.849,
+   "com": [
+    0.0,
+    -0.0,
+    2.728
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    0.0,
+    0.0,
+    40.0,
+    68.117,
+    72.615
+   ],
+   "volume": 53045.923,
+   "area": 23726.148,
+   "com": [
+    0.0,
+    42.504,
+    21.2
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    0.0,
+    0.0,
+    40.0,
+    68.117,
+    72.615
+   ],
+   "volume": 53045.923,
+   "area": 23726.148,
+   "com": [
+    0.0,
+    42.504,
+    21.2
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    0.0,
+    0.0,
+    40.0,
+    68.117,
+    72.615
+   ],
+   "volume": 53045.923,
+   "area": 23726.148,
+   "com": [
+    -0.0,
+    42.504,
+    21.2
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    10.0
+   ],
+   "volume": 15262.543,
+   "area": 5028.771,
+   "com": [
+    0.0,
+    0.0,
+    4.955
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    10.0
+   ],
+   "volume": 15262.543,
+   "area": 5028.771,
+   "com": [
+    0.0,
+    0.0,
+    4.955
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    10.0
+   ],
+   "volume": 15262.543,
+   "area": 5028.771,
+   "com": [
+    0.0,
+    0.0,
+    4.955
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M11",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    50.0
+   ],
+   "volume": 12770.0,
+   "area": 7334.421,
+   "com": [
+    13.818,
+    0.0,
+    13.818
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M11",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    50.0
+   ],
+   "volume": 12770.0,
+   "area": 7334.421,
+   "com": [
+    13.818,
+    0.0,
+    13.818
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M11",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -15.0,
+    0.0,
+    50.0,
+    15.0,
+    50.0
+   ],
+   "volume": 12770.0,
+   "area": 7334.421,
+   "com": [
+    13.818,
+    0.0,
+    13.818
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M12",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    12.0
+   ],
+   "volume": 12666.902,
+   "area": 5026.548,
+   "com": [
+    0.0,
+    -0.0,
+    6.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M12",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    12.0
+   ],
+   "volume": 12666.902,
+   "area": 5026.548,
+   "com": [
+    0.0,
+    0.0,
+    6.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M12",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    12.0
+   ],
+   "volume": 12666.902,
+   "area": 5026.548,
+   "com": [
+    0.0,
+    0.0,
+    6.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M13",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -8.0,
+    -8.0,
+    0.0,
+    25.0,
+    8.0,
+    8.0
+   ],
+   "volume": 1438.088,
+   "area": 1351.682,
+   "com": [
+    4.516,
+    2.09,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M13",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -8.0,
+    -8.0,
+    0.0,
+    25.0,
+    8.0,
+    8.0
+   ],
+   "volume": 1438.088,
+   "area": 1351.682,
+   "com": [
+    4.516,
+    2.09,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M13",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "volume",
+   "com",
+   "mismatch 2.6%"
+  ],
+  "fails_tight": [
+   "volume",
+   "com",
+   "mismatch 2.6%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -8.0,
+    -8.0,
+    0.0,
+    25.0,
+    8.0,
+    8.0
+   ],
+   "volume": 1475.787,
+   "area": 1339.115,
+   "com": [
+    4.911,
+    2.203,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M14",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -3.0,
+    0.0,
+    40.0,
+    30.0,
+    6.0
+   ],
+   "volume": 3083.226,
+   "area": 3504.282,
+   "com": [
+    20.0,
+    11.616,
+    1.541
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M14",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -3.0,
+    0.0,
+    40.0,
+    30.0,
+    6.0
+   ],
+   "volume": 3083.226,
+   "area": 3504.282,
+   "com": [
+    20.0,
+    11.616,
+    1.541
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M14",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    -3.0,
+    0.0,
+    40.0,
+    30.0,
+    6.0
+   ],
+   "volume": 3083.226,
+   "area": 3504.282,
+   "com": [
+    20.0,
+    11.616,
+    1.541
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M15",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -50.0,
+    -5.0,
+    0.0,
+    50.0,
+    5.0,
+    30.0
+   ],
+   "volume": 13863.152,
+   "area": 5965.876,
+   "com": [
+    -0.0,
+    0.0,
+    20.879
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M15",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -50.0,
+    -5.0,
+    0.0,
+    50.0,
+    5.0,
+    30.0
+   ],
+   "volume": 13863.152,
+   "area": 5965.876,
+   "com": [
+    -0.0,
+    0.0,
+    20.879
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "M15",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -50.0,
+    -5.0,
+    0.0,
+    50.0,
+    5.0,
+    30.0
+   ],
+   "volume": 13863.152,
+   "area": 5965.876,
+   "com": [
+    -0.0,
+    0.0,
+    20.879
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    -25.0,
+    0.0,
+    40.0,
+    25.0,
+    30.0
+   ],
+   "volume": 24448.56,
+   "area": 25302.354,
+   "com": [
+    0.0,
+    0.0,
+    10.948
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    -25.0,
+    0.0,
+    40.0,
+    25.0,
+    30.0
+   ],
+   "volume": 24448.56,
+   "area": 25302.354,
+   "com": [
+    0.0,
+    0.0,
+    10.948
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H1",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -40.0,
+    -25.0,
+    0.0,
+    40.0,
+    25.0,
+    30.0
+   ],
+   "volume": 24448.56,
+   "area": 25302.354,
+   "com": [
+    0.0,
+    0.0,
+    10.948
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    100.0,
+    70.0,
+    8.0
+   ],
+   "volume": 20708.623,
+   "area": 15454.62,
+   "com": [
+    50.0,
+    34.991,
+    1.587
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    100.0,
+    70.0,
+    8.0
+   ],
+   "volume": 20708.623,
+   "area": 15454.62,
+   "com": [
+    50.0,
+    34.991,
+    1.587
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H2",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    100.0,
+    70.0,
+    8.0
+   ],
+   "volume": 20708.623,
+   "area": 15454.62,
+   "com": [
+    50.0,
+    34.991,
+    1.587
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -19.944,
+    -19.944,
+    0.0,
+    19.944,
+    19.944,
+    8.0
+   ],
+   "volume": 8466.077,
+   "area": 4107.874,
+   "com": [
+    -0.021,
+    -0.0,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -19.944,
+    -19.944,
+    0.0,
+    19.944,
+    19.944,
+    8.0
+   ],
+   "volume": 8466.077,
+   "area": 4107.874,
+   "com": [
+    -0.021,
+    -0.0,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H3",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -19.944,
+    -19.944,
+    0.0,
+    19.944,
+    19.944,
+    8.0
+   ],
+   "volume": 8466.077,
+   "area": 4107.874,
+   "com": [
+    -0.021,
+    -0.0,
+    4.0
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H4",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "solids=2",
+   "volume",
+   "area",
+   "mismatch 8.3%"
+  ],
+  "fails_tight": [
+   "solids=2",
+   "volume",
+   "area",
+   "mismatch 8.3%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    19.0
+   ],
+   "volume": 4019.125,
+   "area": 3130.613,
+   "com": [
+    0.0,
+    0.0,
+    7.543
+   ],
+   "solids": 2,
+   "valid": true
+  }
+ },
+ {
+  "job": "H4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    19.0
+   ],
+   "volume": 4123.285,
+   "area": 3213.562,
+   "com": [
+    -0.0,
+    -0.0,
+    7.706
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H4",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    19.0
+   ],
+   "volume": 4123.285,
+   "area": 3213.562,
+   "com": [
+    -0.0,
+    -0.0,
+    7.706
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    30.0,
+    30.0,
+    30.0
+   ],
+   "volume": 7203.903,
+   "area": 5437.699,
+   "com": [
+    10.957,
+    10.957,
+    10.957
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    30.0,
+    30.0,
+    30.0
+   ],
+   "volume": 7203.903,
+   "area": 5437.699,
+   "com": [
+    10.957,
+    10.957,
+    10.957
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H5",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    30.0,
+    30.0,
+    30.0
+   ],
+   "volume": 7203.903,
+   "area": 5437.699,
+   "com": [
+    10.957,
+    10.957,
+    10.957
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -20.0,
+    0.0,
+    25.0,
+    20.0,
+    25.0
+   ],
+   "volume": 44943.607,
+   "area": 10099.071,
+   "com": [
+    0.0,
+    -0.0,
+    12.077
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -20.0,
+    0.0,
+    25.0,
+    20.0,
+    25.0
+   ],
+   "volume": 44943.607,
+   "area": 10099.071,
+   "com": [
+    0.0,
+    -0.0,
+    12.077
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H6",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -25.0,
+    -20.0,
+    0.0,
+    25.0,
+    20.0,
+    25.0
+   ],
+   "volume": 44943.607,
+   "area": 10099.071,
+   "com": [
+    0.0,
+    -0.0,
+    12.077
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H7",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "mismatch 2.0%"
+  ],
+  "fails_tight": [
+   "mismatch 2.0%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    12.0
+   ],
+   "volume": 3170.59,
+   "area": 1628.941,
+   "com": [
+    0.0,
+    -0.0,
+    5.653
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H7",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    12.0
+   ],
+   "volume": 3170.59,
+   "area": 1628.941,
+   "com": [
+    0.0,
+    -0.0,
+    5.653
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H7",
+  "old_verdict": "FAIL",
+  "new_verdict": "FAIL",
+  "new_tight": "FAIL",
+  "fails": [
+   "mismatch 2.0%"
+  ],
+  "fails_tight": [
+   "mismatch 2.0%"
+  ],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -10.0,
+    -10.0,
+    0.0,
+    10.0,
+    10.0,
+    12.0
+   ],
+   "volume": 3170.59,
+   "area": 1628.941,
+   "com": [
+    0.0,
+    -0.0,
+    5.653
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    50.0,
+    10.0,
+    7.0
+   ],
+   "volume": 1620.0,
+   "area": 1452.284,
+   "com": [
+    19.745,
+    5.0,
+    3.095
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    50.0,
+    10.0,
+    7.0
+   ],
+   "volume": 1620.0,
+   "area": 1452.284,
+   "com": [
+    19.745,
+    5.0,
+    3.095
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H8",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    50.0,
+    10.0,
+    7.0
+   ],
+   "volume": 1620.0,
+   "area": 1452.284,
+   "com": [
+    19.745,
+    5.0,
+    3.095
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    24.0
+   ],
+   "volume": 20400.0,
+   "area": 20540.0,
+   "com": [
+    0.0,
+    0.0,
+    8.353
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    24.0
+   ],
+   "volume": 20400.0,
+   "area": 20540.0,
+   "com": [
+    0.0,
+    0.0,
+    8.353
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H9",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.0,
+    -20.0,
+    0.0,
+    30.0,
+    20.0,
+    24.0
+   ],
+   "volume": 20400.0,
+   "area": 20540.0,
+   "com": [
+    0.0,
+    0.0,
+    8.353
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.5,
+    -10.0,
+    0.0,
+    30.5,
+    10.0,
+    15.5
+   ],
+   "volume": 4332.807,
+   "area": 3551.023,
+   "com": [
+    0.0,
+    0.0,
+    6.038
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.5,
+    -10.0,
+    -0.0,
+    30.5,
+    10.0,
+    15.5
+   ],
+   "volume": 4332.807,
+   "area": 3551.023,
+   "com": [
+    0.0,
+    0.0,
+    6.038
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H10",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -30.5,
+    -10.0,
+    0.0,
+    30.5,
+    10.0,
+    15.5
+   ],
+   "volume": 4332.807,
+   "area": 3551.023,
+   "com": [
+    0.0,
+    0.0,
+    6.038
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H11",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    40.0,
+    30.0,
+    32.0
+   ],
+   "volume": 22751.77,
+   "area": 6508.938,
+   "com": [
+    24.979,
+    15.0,
+    11.509
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H11",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    40.0,
+    30.0,
+    32.0
+   ],
+   "volume": 22751.77,
+   "area": 6508.938,
+   "com": [
+    24.979,
+    15.0,
+    11.509
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H11",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    0.0,
+    0.0,
+    0.0,
+    40.0,
+    30.0,
+    32.0
+   ],
+   "volume": 22751.77,
+   "area": 6508.938,
+   "com": [
+    24.979,
+    15.0,
+    11.509
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ },
+ {
+  "job": "H12",
+  "old_verdict": "PASS",
+  "new_verdict": "PASS",
+  "new_tight": "PASS",
+  "fails": [],
+  "fails_tight": [],
+  "run_error": null,
+  "measure_same": true,
+  "measurements": {
+   "bbox": [
+    -14.925,
+    -15.0,
+    0.0,
+    14.925,
+    15.0,
+    15.0
+   ],
+   "volume": 9327.671,
+   "area": 3345.334,
+   "com": [
+    0.019,
+    -0.0,
+    7.5
+   ],
+   "solids": 1,
+   "valid": true
+  }
+ }
+]
