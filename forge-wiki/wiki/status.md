@@ -102,6 +102,12 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
   first-test D1-D3: 0/3 (base Glimmer passes them), errors like the centred-box trap. Pre-registered rule: STOP, report,
   one retry only with a new user yes, exam untouched. Session note: first start aborted (budget double count, verifier
   D1), restart with cap $2.50; Modal ≈ $0.32.
+- verified correction (second opinion 2026-10-30, checked in findings/first-test-2026-10-28.md:31): base Glimmer with the
+  short prompt and NO manual = **16/30 = 53%** on the exam; 87% (BR) is Glimmer + manual. So training had to replace the
+  manual and keep the reasoning from a 53% start. Claude had told the user "Glimmer alone 87%": wrong, corrected.
+- Second opinion (forge-wiki/raw/second-opinion-answer-2026-10-30.md, independent Claude, read-only): diagnosis confirmed
+  (first loss tokens ` to` `=user` taught "skip the thinking turn"); recommends one base-Glimmer check (A and B2 on the 20
+  dev jobs, ≈ $0.5-0.8) then self-distillation: generate WITH manual (+hint), train WITHOUT it, on reasoning + code.
 - hypothesis: training on answer-only code (no reasoning turn, no manual) taught the short format but not the care;
   open question 1 answered in the bad direction. Missing baseline: base Glimmer on the same 20 dev jobs.
 - Next: Muse round 2b (E2 test, E3 calls.jsonl cross-check) + verifier review of round 2 + 2b → **dev check** (step 5,
