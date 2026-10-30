@@ -53,7 +53,8 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | **Total** | **≈ 46.6 of 65** (verifier T2 recount: 44.06; + Modal cents) | |
 
 Rest of the plan (verifier, forge-factory-pilot-2026-10-30): expected ≈ $48-49 total; worst case at every cap ≈ $54
-(main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. decision (user, 2026-10-30): **budget raised to $65**, covering
+(main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. decision (user, 2026-10-30 evening, "total" to the $80 proposal): **budget $80 total**; extra room is for Modal + Baseten,
+Muse (Meta) kept tight. Earlier: budget raised to $65, covering
 everything together, credits included (Baseten, Modal, Meta). Every paid step still needs the user's yes + verifier.
 
 ## Open questions
