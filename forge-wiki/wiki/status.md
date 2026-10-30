@@ -48,7 +48,9 @@ Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**;
 | Factory main run (Baseten) | 4.38 | summary.json |
 | Training (Modal) | 0.89 | billing before/after |
 | Dashboard (Muse) | 0.43 | run.usage |
-| **Total** | **≈ 45.4 of 65** (verifier T2 recount: 44.06; + Modal cents) | |
+| Muse round 2b | 0.87 | run.usage |
+| Dev check (Modal) | 0.32 | billing 10.78 → 11.10 |
+| **Total** | **≈ 46.6 of 65** (verifier T2 recount: 44.06; + Modal cents) | |
 
 Rest of the plan (verifier, forge-factory-pilot-2026-10-30): expected ≈ $48-49 total; worst case at every cap ≈ $54
 (main 4.70 + training 4 + Muse round 2 ≈ 4 + dev 1 + BX finish 1 + exam 2 + demo 0.3) > $50. decision (user, 2026-10-30): **budget raised to $65**, covering
@@ -94,6 +96,14 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 - verified (verifier forge-round2b-prebuild): training OK for the dev check; 'Reasoning strength: high.' is the template
   default at train AND serve (match), answers trained without a reasoning turn. **B3: dev session starts with a pilot on
   first-test D1-D3** (served format end to end). N1: before the exam, served generation_config.json = base's.
+- verified: **dev check (step 5) = STOP** (results/dev-2026-10-30, COMPLETE 60/60, not budget-stopped): trained Glimmer
+  23/60 = **38.3%** at 0.2% (31.7% at 1e-6), pass@3 75%; per family F1 5/6 … F8 0/6, F5 1/6, F10 1/6; failures mostly
+  wrong volume (18) and separate solids (6), 8 no-BREP tracebacks; ~390 completion tokens, 21.5 s per answer. Pilot on
+  first-test D1-D3: 0/3 (base Glimmer passes them), errors like the centred-box trap. Pre-registered rule: STOP, report,
+  one retry only with a new user yes, exam untouched. Session note: first start aborted (budget double count, verifier
+  D1), restart with cap $2.50; Modal ≈ $0.32.
+- hypothesis: training on answer-only code (no reasoning turn, no manual) taught the short format but not the care;
+  open question 1 answered in the bad direction. Missing baseline: base Glimmer on the same 20 dev jobs.
 - Next: Muse round 2b (E2 test, E3 calls.jsonl cross-check) + verifier review of round 2 + 2b → **dev check** (step 5,
   cap $1, gate ≥ 80% at 0.2%).
 - (done) Next: verifier on the factory → the user's yes for the **pilot** (20 jobs, Spark Open on Baseten, cap $1.20) → learning

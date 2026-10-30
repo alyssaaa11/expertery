@@ -83,3 +83,4 @@
 - Repo readiness 1-7 (f692227, 3f392d6), verifier reviewing.
 - 2026-10-30 verified: factory pilot 19/20 (95%), $0.52, 0 patterns (6274420); main run proposed (160 jobs).
 - 2026-10-30 verified: factory main 148/157 (94%) $4.38; training set 167 records; Muse round 2 built $2.40 (fd1d32c). Money ≈ $43.6.
+- 2026-10-30 17:00 verified: dev check STOP: trained Glimmer 38.3% (23/60) at 0.2%; pilot D1-D3 0/3. Exam untouched.
