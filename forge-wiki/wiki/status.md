@@ -91,6 +91,9 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
   /vol/final/merged (174 s); Modal ≈ $0.89 (billing 9.89 → 10.78). No serve test (no prompt given).
   Note: the training prompt rendered "Reasoning strength: high." from the chat template while answers have no reasoning
   (open question 1).
+- verified (verifier forge-round2b-prebuild): training OK for the dev check; 'Reasoning strength: high.' is the template
+  default at train AND serve (match), answers trained without a reasoning turn. **B3: dev session starts with a pilot on
+  first-test D1-D3** (served format end to end). N1: before the exam, served generation_config.json = base's.
 - Next: Muse round 2b (E2 test, E3 calls.jsonl cross-check) + verifier review of round 2 + 2b → **dev check** (step 5,
   cap $1, gate ≥ 80% at 0.2%).
 - (done) Next: verifier on the factory → the user's yes for the **pilot** (20 jobs, Spark Open on Baseten, cap $1.20) → learning
