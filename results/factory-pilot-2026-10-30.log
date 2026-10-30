@@ -1,0 +1,14 @@
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-W4BdHeBzJxwBDzRVSLHAdO
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-W4BdHeBzJxwBDzRVSLHAdO
+TEACHER ids=20 calls=20 kept=19 cost=$0.5211 wonder=0.00
