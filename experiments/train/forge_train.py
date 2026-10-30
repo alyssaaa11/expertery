@@ -351,6 +351,25 @@ def format_check_report(result):
                 result["checks"]["prompt_matches_ft"]))
 
 
+class FormatRefused(RuntimeError):
+    """Raised when the in-train FORMAT_CHECK aborts the run.
+
+    A record with a reasoning turn that fails any of thinking_first /
+    answer_after_thinking / prompt_matches_ft refuses to train: the
+    thinking turn would silently mistrain. Records without reasoning
+    never raise (unchanged behaviour).
+    """
+
+
+def format_gate_aborts(fmt):
+    """True when a check_format result must abort the run before training.
+
+    Only records with reasoning can abort (any check False); records
+    without reasoning keep the old print-and-continue behaviour.
+    """
+    return bool(fmt["has_reasoning"]) and not all(fmt["checks"].values())
+
+
 def run_format_check(fake=False, data=None, tokenizer_path=None):
     """`format-check` entrypoint: render one record, print the full text
     + the first 40 loss tokens + PASS/FAIL. Returns 0 on PASS, 1 on
@@ -1099,10 +1118,15 @@ if modal is not None:
         stopped_at_deadline). Saves the adapter to /vol/<out_name>/adapter
         plus a train_log.json holding the fully rendered first training
         example and the first 40 decoded tokens that carry loss. The
-        first lines run the format check on the first example and print
-        it (FORMAT_CHECK ...) before training. `ft_messages_0` is the
-        prebuilt FT message list for that example (the container cannot
-        import runner_final). Returns plain JSON, printed as TRAIN_JSON
+        first lines run the format check on the first example with
+        reasoning (else the first example) and print it (FORMAT_CHECK
+        ...) before training; when that record has reasoning and any of
+        thinking_first / answer_after_thinking / prompt_matches_ft is
+        False, the run aborts (FormatRefused) before the first optimizer
+        step, saving no adapter but still reporting elapsed time and
+        cost as TRAIN_JSON. `ft_messages_0` is the prebuilt FT message
+        list for that checked record (the container cannot import
+        runner_final). Returns plain JSON, printed as TRAIN_JSON
         {...}.
         """
         import time
@@ -1138,10 +1162,22 @@ if modal is not None:
         # training. The FT messages travel with the entrypoint call: the
         # container cannot import runner_final.
         if examples:
-            _fmt = check_format(tok, examples[0], ft_messages_0)
+            _fmt = check_format(tok, first_format_record(examples),
+                                ft_messages_0)
             print(format_check_report(_fmt)
                   + " has_reasoning=%s n_loss_tokens=%d"
                   % (_fmt["has_reasoning"], _fmt["n_loss_tokens"]))
+            if format_gate_aborts(_fmt):
+                out["train_total_s"] = round(time.time() - t0, 1)
+                out["cost_dollars"] = round(
+                    out["train_total_s"] * H200_RATE / 3600.0, 4)
+                out["format_abort"] = {"verdict": _fmt["verdict"],
+                                       "checks": dict(_fmt["checks"])}
+                print("TRAIN_JSON " + json.dumps(ensure_plain_json(out)))
+                raise FormatRefused(
+                    "FORMAT_CHECK FAIL %s; aborting before the first "
+                    "optimizer step (no adapter saved)"
+                    % json.dumps(_fmt["checks"], sort_keys=True))
         model = transformers.AutoModelForMultimodalLM.from_pretrained(
             MODEL, torch_dtype=torch.bfloat16, device_map="cuda"
         )
@@ -1472,6 +1508,19 @@ def _record_reasoning(ex):
         else None
 
 
+def first_format_record(examples):
+    """The record the pre-training FORMAT_CHECK renders.
+
+    The first record with a reasoning turn (same non-empty-string rule
+    as check_format's has_reasoning); when no record has reasoning, the
+    first record (legacy print-and-continue behaviour, never aborts).
+    """
+    for ex in examples:
+        if _record_reasoning(ex) is not None:
+            return ex
+    return examples[0]
+
+
 # ------------------------------------------------------- local entrypoints
 
 
@@ -1589,12 +1638,14 @@ def _pipeline(data_arg, out_name, split, res_dir, train_kwargs,
 
 
 def first_ft_messages(kept):
-    """Prebuilt FT messages for the first kept record (or None when no
-    records): the train container's pre-training format check needs
-    them, and it cannot import runner_final."""
+    """Prebuilt FT messages for the record the in-train FORMAT_CHECK
+    renders (or None when no records): the first kept record with
+    reasoning, else the first kept record. The train container's
+    pre-training format check needs them, and it cannot import
+    runner_final."""
     if not kept:
         return None
-    return ft_messages_for(kept[0]["text"])
+    return ft_messages_for(first_format_record(kept)["text"])
 
 
 def run_smoke(cap_dollars, spent_dollars=0.0):
@@ -1687,6 +1738,9 @@ def main(argv=None):
         return 2
     except ExamRefused as e:
         print("EXAM REFUSED: %s" % e)
+        return 3
+    except FormatRefused as e:
+        print("FORMAT REFUSED: %s" % e)
         return 3
     return 0
 

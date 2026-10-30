@@ -828,3 +828,66 @@ def test_format_check_cli_reads_first_record(tmp_path, capsys):
     result = forge_train.check_format(THINK_TOK(), rec)
     assert result["verdict"] == "PASS"  # legacy record still passes
     assert result["has_reasoning"] is False
+
+
+# --------------------------------------- round 3b: the in-train gate aborts
+
+def test_first_format_record_prefers_first_reasoning_record():
+    legacy = {"text": TEXT, "code": CODE}
+    reasoned = {"text": TEXT, "code": CODE, "reasoning": REASONING}
+    assert forge_train.first_format_record([legacy, reasoned]) is reasoned
+    assert forge_train.first_format_record([reasoned, legacy]) is reasoned
+    assert forge_train.first_format_record([legacy]) is legacy
+
+
+def test_first_ft_messages_targets_first_reasoning_record():
+    legacy = {"text": TEXT, "code": CODE}
+    reasoned = {"text": "another job", "code": CODE, "reasoning": REASONING}
+    assert (forge_train.first_ft_messages([legacy, reasoned])
+            == forge_train.ft_messages_for("another job"))
+    assert forge_train.first_ft_messages([]) is None
+
+
+def _pretraining_gate(tok, examples, ft_messages):
+    """Mirror of train()'s pre-training block: check, print, maybe abort."""
+    fmt = forge_train.check_format(
+        tok, forge_train.first_format_record(examples), ft_messages)
+    if forge_train.format_gate_aborts(fmt):
+        raise forge_train.FormatRefused(
+            "FORMAT_CHECK FAIL %s" % (fmt["checks"],))
+    return fmt
+
+
+def test_failing_render_aborts_before_first_optimizer_step():
+    """A fake failing render raises (no optimizer step, no adapter save)."""
+    rec = {"text": TEXT, "code": CODE, "reasoning": REASONING}
+    with pytest.raises(forge_train.FormatRefused):
+        _pretraining_gate(StripTok(), [rec], None)
+    fmt = forge_train.check_format(
+        StripTok(), forge_train.first_format_record([rec]), None)
+    assert fmt["has_reasoning"] is True
+    assert forge_train.format_gate_aborts(fmt) is True
+    src = open(os.path.join(HERE, "forge_train.py"), encoding="utf-8").read()
+    gate_at = src.index("if format_gate_aborts(_fmt):")
+    assert gate_at < src.index("opt.step()")  # aborts before any step
+    assert gate_at < src.index("save_adapter()")  # no adapter saved
+    assert "TRAIN_JSON" in src[gate_at:src.index("raise FormatRefused")] \
+        or src.index("TRAIN_JSON", gate_at) < src.index("raise FormatRefused")
+
+
+def test_passing_render_continues():
+    rec = {"text": TEXT, "code": CODE, "reasoning": REASONING}
+    fmt = _pretraining_gate(
+        THINK_TOK(), [rec], forge_train.ft_messages_for(TEXT))
+    assert fmt["verdict"] == "PASS"
+    assert forge_train.format_gate_aborts(fmt) is False
+
+
+def test_legacy_record_without_reasoning_never_aborts():
+    """Records without reasoning keep print-and-continue, even on FAIL."""
+    fmt = forge_train.check_format(
+        THINK_TOK(), {"text": TEXT, "code": CODE},
+        ft_messages=[{"role": "user", "content": "something else"}])
+    assert fmt["verdict"] == "FAIL"  # prompt mismatch ...
+    assert fmt["has_reasoning"] is False
+    assert forge_train.format_gate_aborts(fmt) is False  # ... but no abort
