@@ -204,8 +204,8 @@ def test_escalate_keeps_wonder_pass_only(tmp_path):
     out = str(tmp_path / "run")
     records, summary = teacher.run_suite(
         {"F1-1": JOBS_BY_ID["F1-1"], "F1-2": JOBS_BY_ID["F1-2"]},
-        ["F1-1", "F1-2"], out, _spark, _wonder, "MANUAL", budget=1.0,
-        budget_w=1.0, escalate=True, exec_fn=_exec, grade_fn=_grade)
+        ["F1-1", "F1-2"], out, _spark, _wonder, "MANUAL", budget=10.0,
+        budget_w=10.0, escalate=True, exec_fn=_exec, grade_fn=_grade)
     spark_recs = [r for r in records if r["teacher"] == "spark"]
     wonder_recs = [r for r in records if r["teacher"] == "wonder"]
     assert all(r["verdict"] == "FAIL" for r in spark_recs)
@@ -251,6 +251,171 @@ def test_no_brep_is_fail_box_error_is_invalid():
         _post_for(["result = 1"]), _boom, _grade_pass, "MANUAL")
     assert rec["verdict"] == "INVALID"
     assert rec["run_error"].startswith("harness:")
+
+
+# ------------------------------------------------- notes + version
+
+
+def test_notes_go_after_the_manual_empty_notes_is_short_prompt():
+    assert teacher.load_notes() == ""  # the repo file starts empty
+    user = teacher.prompt_user_text("JOB", "MANUAL", "")
+    assert user == ("Here is the CadQuery manual. Use it.\n\nMANUAL"
+                    "\n\nJOB")
+    user = teacher.prompt_user_text("JOB", "MANUAL", "watch the slot")
+    assert user.index("MANUAL") < user.index("watch the slot")
+    assert user.index("watch the slot") < user.index("JOB")
+    msgs = teacher.build_messages("JOB", "MANUAL", "watch the slot")
+    assert msgs[0]["content"] == teacher.SYSTEM_PROMPT
+    assert "watch the slot" in msgs[1]["content"]
+
+
+def test_train_records_keep_the_short_prompt_no_notes(tmp_path):
+    post = _post_for(["result = 1"])
+    out = str(tmp_path / "run")
+    records, _summary = teacher.run_suite(
+        JOBS_BY_ID, ["F1-1"], out, post, None, "MANUAL", budget=1.0,
+        exec_fn=_exec_ok, grade_fn=_grade_pass, notes_text="some note")
+    kept = [json.loads(line) for line in open(
+        os.path.join(out, "train_records.jsonl"), encoding="utf-8")]
+    assert kept == [{"id": "F1-1", "text": "spool one",
+                     "code": "result = 1"}]
+    assert post.calls[0]["messages"][1]["content"].count("some note") == 1
+
+
+# ------------------------------------------------- F1: the app context
+
+
+class _Ctx:
+    def __init__(self, state):
+        self._state = state
+
+    def __enter__(self):
+        self._state["entered"] = True
+
+    def __exit__(self, *args):
+        self._state["entered"] = False
+        return False
+
+
+def _fake_cq():
+    import types
+
+    state = {"entered": False, "outputs": 0, "runs": 0}
+
+    class _Modal:
+        @staticmethod
+        def enable_output():
+            state["outputs"] += 1
+            return _Ctx({})  # counting only; no flag
+
+    class _App:
+        def run(self):
+            state["runs"] += 1
+            return _Ctx(state)
+
+    class _Grade:
+        def remote(self, *args):
+            if not state["entered"]:
+                raise RuntimeError("Function has not been hydrated")
+            return {"verdict": "PASS", "tight": "PASS", "fails": []}
+
+    return types.SimpleNamespace(modal=_Modal(), _app=_App(),
+                                 grade=_Grade()), state
+
+
+def test_real_grade_path_needs_the_app_context(monkeypatch):
+    fake, state = _fake_cq()
+    monkeypatch.setattr(teacher, "_cloud_cq", lambda: fake)
+    with pytest.raises(RuntimeError, match="has not been hydrated"):
+        teacher.default_grade_fn("F1-1", b"BREP")
+    with teacher.app_context():
+        assert state["entered"] is True
+        graded = teacher.default_grade_fn("F1-1", b"BREP")
+        assert graded["tight"] == "PASS"
+    assert state["entered"] is False
+
+
+def test_main_runs_suite_inside_the_app_context(monkeypatch, tmp_path):
+    fake, state = _fake_cq()
+    monkeypatch.setattr(teacher, "_cloud_cq", lambda: fake)
+    monkeypatch.setenv("BASETEN_KEY", "x")
+    jobs_path = tmp_path / "jobs.jsonl"
+    jobs_path.write_text(
+        json.dumps({"id": "F1-1", "family": 1, "text": "t",
+                    "reference": "r"}) + "\n", encoding="utf-8")
+    seen = {}
+
+    def _suite(*args, **kwargs):
+        seen["entered"] = state["entered"]
+        seen["notes"] = kwargs.get("notes_text")
+        return [], {"n_ids": 0, "n_calls": 0, "n_kept_ids": 0,
+                    "cost_dollars": 0.0, "wonder_share": 0.0}
+
+    monkeypatch.setattr(teacher, "run_suite", _suite)
+    out = tmp_path / "run"
+    assert teacher.main(
+        ["--jobs", str(jobs_path), "--split", str(tmp_path / "no-split.json"),
+         "--ids", "all", "--out", str(out),
+         "--budget-dollars", "1"]) == 0
+    assert seen["entered"] is True  # run_suite ran inside _app.run()
+    assert state["runs"] == 1 and state["outputs"] == 1
+    assert seen["notes"] == ""  # notes file is empty: short prompt
+
+
+# ------------------------------------------------- F2: Wonder money
+
+
+def test_wonder_charged_at_meta_rates_not_spark():
+    cost = teacher.cost_of_usage(dict(REAL_SHAPE), wonder=True)
+    assert cost == pytest.approx(
+        (755 * 4.00 + 7552 * 0.20 + 3438 * 20.00) / 1e6)
+    assert cost != pytest.approx(teacher.cost_of_usage(dict(REAL_SHAPE)))
+
+
+def test_wonder_in_flight_reserve_is_at_least_35c_per_call():
+    assert teacher.WONDER_IN_FLIGHT_COST >= 0.35
+    assert teacher.over_budget(0.0, 2.0,
+                               n=teacher.WONDER_IN_FLIGHT_N,
+                               cost=teacher.WONDER_IN_FLIGHT_COST) is True
+    # 8 x $0.35 = $2.80 of reserve: a $3 budget with $0.50 spent stops.
+    assert teacher.over_budget(0.50, 3.0,
+                               n=teacher.WONDER_IN_FLIGHT_N,
+                               cost=teacher.WONDER_IN_FLIGHT_COST) is True
+    assert teacher.over_budget(0.10, 3.0,
+                               n=teacher.WONDER_IN_FLIGHT_N,
+                               cost=teacher.WONDER_IN_FLIGHT_COST) is False
+
+
+def test_escalate_spend_uses_wonder_rates(tmp_path):
+    def _spark(body):
+        return _reply("bad-code")
+
+    def _wonder(body):
+        assert body["model"] == teacher.WONDER_MODEL
+        return _reply("good-code")
+
+    def _exec(code):
+        return {"brep_bytes": code.encode(), "measure": None, "log": "",
+                "run_error": None}
+
+    def _grade(job_id, brep):
+        if brep == b"good-code":
+            return {"verdict": "PASS", "tight": "PASS", "fails": []}
+        return {"verdict": "FAIL", "tight": "FAIL",
+                "fails": ["mismatch 5%"],
+                "fails_tight": ["mismatch 5%"]}
+
+    out = str(tmp_path / "run")
+    records, summary = teacher.run_suite(
+        {"F1-1": JOBS_BY_ID["F1-1"]}, ["F1-1"], out, _spark, _wonder,
+        "MANUAL", budget=10.0, budget_w=10.0, escalate=True,
+        exec_fn=_exec, grade_fn=_grade)
+    wonder_recs = [r for r in records if r["teacher"] == "wonder"]
+    assert len(wonder_recs) == 1
+    assert wonder_recs[0]["cost"] == pytest.approx(
+        teacher.cost_of_usage(dict(REAL_SHAPE), wonder=True))
+    assert summary["cost_w_dollars"] == pytest.approx(
+        wonder_recs[0]["cost"], abs=1e-4)
 
 
 # ------------------------------------------------------- CLI

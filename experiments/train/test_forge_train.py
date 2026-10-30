@@ -380,6 +380,60 @@ def test_train_code_runs_in_box_measured_grader_side():
         forge_train.set_box_fns(*old)
 
 
+def test_default_box_measure_runs_inside_cloud_cq_app(monkeypatch):
+    """F1: the exam guard's measure call runs inside cloud_cq._app.run()
+    (forge_train's own app.run is a different App). A fake app carries
+    an "entered" flag; the real-path measure call outside the context
+    fails like Modal's "Function has not been hydrated"."""
+    import types
+
+    state = {"entered": False, "outputs": 0, "runs": 0,
+             "forge_runs": 0}
+
+    class _Ctx:
+        def __init__(self, flag):
+            self._flag = flag
+
+        def __enter__(self):
+            self._flag[0] = True
+
+        def __exit__(self, *args):
+            self._flag[0] = False
+            return False
+
+    entered = [False]
+
+    class _Modal:
+        @staticmethod
+        def enable_output():
+            state["outputs"] += 1
+            return _Ctx([False])
+
+    class _CloudApp:
+        def run(self):
+            state["runs"] += 1
+            return _Ctx(entered)
+
+    class _Measure:
+        def remote(self, brep_bytes):
+            if not entered[0]:
+                raise RuntimeError("Function has not been hydrated")
+            return {"volume": 1.0, "brep_len": len(brep_bytes)}
+
+    fake_cq = types.SimpleNamespace(modal=_Modal(), _app=_CloudApp(),
+                                    measure_brep=_Measure())
+    monkeypatch.setattr(forge_train, "_final_cq", lambda: fake_cq)
+    # Outside the context the real path fails, like unhydrated Modal.
+    with pytest.raises(RuntimeError, match="has not been hydrated"):
+        fake_cq.measure_brep.remote(b"B")
+    # The guard's hook enters cloud_cq's app run itself.
+    assert forge_train.default_box_measure(b"BREP!") == {
+        "volume": 1.0, "brep_len": 5}
+    assert state["runs"] == 1 and state["outputs"] == 1
+    if getattr(forge_train, "app", None) is not None:
+        assert forge_train.app is not fake_cq._app  # a different App
+
+
 def test_guard_uses_box_measure_for_code_side():
     """The guard's code side refuses a training part whose box-measured
     part matches an exam reference (fake box, fake refs)."""

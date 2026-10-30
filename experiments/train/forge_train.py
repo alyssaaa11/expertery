@@ -28,6 +28,7 @@ and wrap the remote calls in `app.run()`.
 """
 
 import argparse
+import contextlib
 import difflib
 import json
 import math
@@ -457,9 +458,32 @@ def default_box_exec(code, timeout=60.0):
     return _final_cq().run_answer_in_box(code)
 
 
+def cloud_cq_context():
+    """The cloud_cq grader app's run context (F1): the exam guard's
+    measure call must run inside it, because outside it `.remote`
+    raises "Function has not been hydrated". forge_train's own app.run
+    is a different App and does not hydrate the grader functions."""
+    cq = _final_cq()
+    modal_mod = getattr(cq, "modal", None)
+    app = getattr(cq, "_app", None)
+    if modal_mod is None or app is None:
+        return contextlib.nullcontext()
+    return _cloud_cq_stack(modal_mod, app)
+
+
+@contextlib.contextmanager
+def _cloud_cq_stack(modal_mod, app):
+    with modal_mod.enable_output():
+        with app.run():
+            yield
+
+
 def default_box_measure(brep_bytes):
-    """Real grader-side measure of a BREP (needs modal)."""
-    return _final_cq().measure_brep.remote(bytes(brep_bytes))
+    """Real grader-side measure of a BREP (needs modal), inside the
+    cloud_cq app's run context."""
+    cq = _final_cq()
+    with cloud_cq_context():
+        return cq.measure_brep.remote(bytes(brep_bytes))
 
 
 def run_train_code(code, timeout=60.0, sandbox_dir=None):

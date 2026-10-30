@@ -23,14 +23,19 @@ Budget guard: cost from usage ($1.25/M uncached input, $0.15/M cached,
 $4.25/M output); new calls stop when spent + 8 in-flight x $0.075 would
 pass the budget (in-flight answers still cost money). --budget-w is the
 separate Meta-credit budget for Wonder calls; Wonder spend is tracked
-with the same rates (the SPEC gives no Wonder rates).
+at Meta's rates ($4.00/M uncached input, $0.20/M cached, $20.00/M
+output) with an in-flight reserve of 8 x $0.35.
 
 Every calls.jsonl record carries factory_version (the learning loop
 reads it) and cached_tokens (the nested Baseten field first).
+factory_version is the first 12 hex of the sha256 of generator.py +
+teacher.py + teacher_notes.md bytes.
 """
 
 import argparse
 import concurrent.futures
+import contextlib
+import hashlib
 import json
 import os
 import sys
@@ -43,7 +48,39 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
-FACTORY_VERSION = "1"
+GENERATOR_PATH = os.path.join(HERE, "generator.py")
+TEACHER_PATH = os.path.join(HERE, "teacher.py")
+NOTES_PATH = os.path.join(HERE, "teacher_notes.md")
+
+
+def compute_factory_version(gen_path=None, teacher_path=None,
+                            notes_path=None):
+    """First 12 hex of sha256(generator.py + teacher.py + teacher_notes.md
+    bytes, in that order). A missing file counts as empty bytes. Paths
+    are injectable so tests can use fake files."""
+    digest = hashlib.sha256()
+    for path in (gen_path or GENERATOR_PATH,
+                 teacher_path or TEACHER_PATH,
+                 notes_path or NOTES_PATH):
+        try:
+            with open(path, "rb") as f:
+                digest.update(f.read())
+        except OSError:
+            digest.update(b"")
+    return digest.hexdigest()[:12]
+
+
+FACTORY_VERSION = compute_factory_version()
+
+
+def load_notes(path=None):
+    """The teacher notes (added to the prompt after the manual). Empty
+    (or missing) means the short prompt."""
+    try:
+        with open(path or NOTES_PATH, encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return ""
 
 SYSTEM_PROMPT = (
     "You write CadQuery Python code. Units are millimetres. "
@@ -69,8 +106,15 @@ COST_IN_PER_M = 1.25  # $/M uncached input tokens
 COST_CACHED_PER_M = 0.15  # $/M cached input tokens
 COST_OUT_PER_M = 4.25  # $/M output tokens
 
+WONDER_COST_IN_PER_M = 4.00  # Meta's rates, not Spark's
+WONDER_COST_CACHED_PER_M = 0.20
+WONDER_COST_OUT_PER_M = 20.00
+
 IN_FLIGHT_N = 8  # in-flight cost reserve: 8 x $0.075
 IN_FLIGHT_COST = 0.075
+
+WONDER_IN_FLIGHT_N = 8  # Wonder reserve: 8 x $0.35 (>= $0.35/call)
+WONDER_IN_FLIGHT_COST = 0.35
 
 VALID_IDS = ("pilot", "train", "all")
 
@@ -81,12 +125,22 @@ def load_manual(path=None):
         return f.read()
 
 
-def build_messages(job_text, manual_text):
-    """System + manual + job (the SPEC prompt)."""
+def prompt_user_text(job_text, manual_text, notes_text=None):
+    """The user prompt: manual, then the teacher notes (when not empty),
+    then the job text. Glimmer's training records keep the short prompt
+    (no notes): they store only id/text/code, never this prompt."""
+    text = MANUAL_PREFIX + manual_text
+    if (notes_text or "").strip():
+        text += "\n\nTeacher notes:\n" + notes_text.strip()
+    return text + "\n\n" + job_text
+
+
+def build_messages(job_text, manual_text, notes_text=None):
+    """System + manual (+ notes when not empty) + job (the SPEC prompt)."""
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": MANUAL_PREFIX + manual_text
-         + "\n\n" + job_text},
+        {"role": "user", "content": prompt_user_text(
+            job_text, manual_text, notes_text)},
     ]
 
 
@@ -170,8 +224,11 @@ def cached_tokens_of(usage):
         return 0
 
 
-def cost_of_usage(usage):
-    """Teacher $ from one usage dict (cached input is not double-charged)."""
+def cost_of_usage(usage, wonder=False):
+    """Teacher $ from one usage dict (cached input is not double-charged).
+
+    Wonder is charged at Meta's rates ($4.00 / $0.20 cached / $20.00 per
+    M), not Spark's."""
     usage = usage or {}
     try:
         prompt = float(usage.get("prompt_tokens", 0) or 0)
@@ -183,13 +240,24 @@ def cost_of_usage(usage):
         completion = 0.0
     cached = float(cached_tokens_of(usage))
     uncached = max(0.0, prompt - cached)
+    if wonder:
+        return (uncached * WONDER_COST_IN_PER_M
+                + cached * WONDER_COST_CACHED_PER_M
+                + completion * WONDER_COST_OUT_PER_M) / 1e6
     return (uncached * COST_IN_PER_M + cached * COST_CACHED_PER_M
             + completion * COST_OUT_PER_M) / 1e6
 
 
-def over_budget(spent, budget):
-    """Stop new calls when spent + the in-flight reserve passes budget."""
-    return spent + IN_FLIGHT_N * IN_FLIGHT_COST > budget
+def over_budget(spent, budget, n=None, cost=None):
+    """Stop new calls when spent + the in-flight reserve passes budget.
+
+    The default reserve is the Spark one (8 x $0.075); pass the Wonder
+    reserve (WONDER_IN_FLIGHT_N, WONDER_IN_FLIGHT_COST) for Wonder."""
+    if n is None:
+        n = IN_FLIGHT_N
+    if cost is None:
+        cost = IN_FLIGHT_COST
+    return spent + n * cost > budget
 
 
 def load_jobs(path):
@@ -285,12 +353,15 @@ def _cloud_cq():
 
 
 def do_teacher_call(job, teacher, model, post_fn, exec_fn, grade_fn,
-                    manual_text, call_timeout=CALL_TIMEOUT):
+                    manual_text, call_timeout=CALL_TIMEOUT,
+                    notes_text=None):
     """Run one (job, teacher) pair once: POST, extract, box, grade at
     1e-6. Never raises for a bad answer; a failed call is INVALID, never
     FAIL. A box/grader exception is a harness INVALID; an answer that
-    writes no BREP is the answer's FAIL."""
-    body = build_body(model, build_messages(job["text"], manual_text))
+    writes no BREP is the answer's FAIL. The teacher notes (when not
+    empty) go into the prompt after the manual."""
+    body = build_body(
+        model, build_messages(job["text"], manual_text, notes_text))
     t0 = time.monotonic()
     content, finish_reason, usage = "", None, {}
     code, verdict, fails, run_error = "", "INVALID", [], None
@@ -350,9 +421,37 @@ def do_teacher_call(job, teacher, model, post_fn, exec_fn, grade_fn,
     }
 
 
+def app_context():
+    """The Modal context real box/grader calls need: enable_output plus
+    the cloud_cq grader app's run (a different App from forge_train's
+    own app.run). Outside it `.remote` raises "Function has not been
+    hydrated" and every paid answer would come back harness INVALID.
+    Offline (no modal or no grader app) this is a nullcontext so unit
+    tests can run without Modal."""
+    cq = _cloud_cq()
+    modal_mod = getattr(cq, "modal", None)
+    if modal_mod is None:
+        try:
+            import modal as modal_mod
+        except ImportError:
+            modal_mod = None
+    app = getattr(cq, "_app", None)
+    if modal_mod is None or app is None:
+        return contextlib.nullcontext()
+    return _app_stack(modal_mod, app)
+
+
+@contextlib.contextmanager
+def _app_stack(modal_mod, app):
+    with modal_mod.enable_output():
+        with app.run():
+            yield
+
+
 def run_suite(jobs_by_id, ids, out_dir, spark_post_fn, wonder_post_fn,
               manual_text, budget, budget_w=None, retry_failed=False,
-              escalate=False, exec_fn=None, grade_fn=None, k=1):
+              escalate=False, exec_fn=None, grade_fn=None, k=1,
+              notes_text=None):
     """Ask the teacher for each id (8 workers), with the budget guard.
 
     First pass: one call per id (Spark). --retry-failed: a second pass
@@ -375,11 +474,12 @@ def run_suite(jobs_by_id, ids, out_dir, spark_post_fn, wonder_post_fn,
                 attempt, wonder):
         job = jobs_by_id[job_id]
         fut = pool.submit(do_teacher_call, job, teacher, model, post_fn,
-                          exec_fn, grade_fn, manual_text)
+                          exec_fn, grade_fn, manual_text,
+                          CALL_TIMEOUT, notes_text)
         futures[fut] = (job_id, teacher, attempt, wonder)
 
     def _charge(rec, wonder):
-        cost = cost_of_usage(rec.get("usage"))
+        cost = cost_of_usage(rec.get("usage"), wonder=wonder)
         if wonder:
             spent_w[0] += cost
         else:
@@ -388,13 +488,19 @@ def run_suite(jobs_by_id, ids, out_dir, spark_post_fn, wonder_post_fn,
 
     def _passes(pool, ids_attempts, teacher, model, post_fn, wonder,
                 budget_cap):
+        if wonder:
+            reserve_n, reserve_cost = (WONDER_IN_FLIGHT_N,
+                                      WONDER_IN_FLIGHT_COST)
+        else:
+            reserve_n, reserve_cost = IN_FLIGHT_N, IN_FLIGHT_COST
         futures = {}
         queue = list(ids_attempts)
         while queue or futures:
             while queue and len(futures) < MAX_WORKERS:
                 with lock:
                     cur = spent_w[0] if wonder else spent[0]
-                if over_budget(cur, budget_cap):
+                if over_budget(cur, budget_cap, n=reserve_n,
+                               cost=reserve_cost):
                     budget_stopped[0] = True
                     queue.clear()
                     break
@@ -547,14 +653,19 @@ def main(argv=None):
     ids = select_ids(jobs, args.ids, dev_ids, args.prior)
     jobs_by_id = {j["id"]: j for j in jobs}
     manual_text = load_manual()
+    notes_text = load_notes()
     affinity = uuid.uuid4().hex  # one value per run (prompt caching)
     spark_post_fn = real_post_fn(SPARK_URL, baseten_key, affinity)
     wonder_post_fn = real_post_fn(WONDER_URL, meta_key, affinity) \
         if args.escalate else None
-    _records, summary = run_suite(
-        jobs_by_id, ids, args.out, spark_post_fn, wonder_post_fn,
-        manual_text, args.budget_dollars, budget_w=args.budget_w,
-        retry_failed=args.retry_failed, escalate=args.escalate, k=args.k)
+    # Real box/grader calls need the grader app's run context (F1);
+    # outside it `.remote` raises "Function has not been hydrated".
+    with app_context():
+        _records, summary = run_suite(
+            jobs_by_id, ids, args.out, spark_post_fn, wonder_post_fn,
+            manual_text, args.budget_dollars, budget_w=args.budget_w,
+            retry_failed=args.retry_failed, escalate=args.escalate,
+            k=args.k, notes_text=notes_text)
     print("TEACHER ids=%d calls=%d kept=%d cost=$%.4f wonder=%.2f" % (
         summary["n_ids"], summary["n_calls"], summary["n_kept_ids"],
         summary["cost_dollars"], summary["wonder_share"]))
