@@ -12,7 +12,8 @@ split.json, or anything under results/. Nothing is running now.
 2. **E3 real guard (forge_train loader):** train_records.jsonl holds only {id,text,code}, so the file-name rule is not a
    real check. The loader cross-checks the run's sibling calls.jsonl (same folder; for a merged file, a `sources.json`
    next to it listing the run dirs): keep only ids with a PASS call whose teacher == "spark"; print kept/dropped ids;
-   refuse if no calls.jsonl/sources.json is found. **B1:** the trusted smoke examples (the file `run_smoke` loads) are exempt by explicit path, because
+   refuse if no calls.jsonl/sources.json is found. **B1:** the trusted smoke examples (`SMOKE_EXAMPLES`, the file `run_smoke` loads) are exempt by explicit path from BOTH
+   the calls.jsonl rule and the teacher-field rule (today a real smoke run keeps 0 records), because
    `run_smoke` loads them before the cap check; the free `smoke --cap-dollars 2.0 → CAP REFUSED` check must keep working. Write `results/factory-train-2026-10-30/sources.json`? NO: do not
    write under results/; Claude writes it. Tests with fake folders.
 3. **teacher.py (decision, user 2026-10-30, no Wonder output in training data):** `--escalate` exits 2 with a message
