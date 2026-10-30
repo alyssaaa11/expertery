@@ -1,0 +1,420 @@
+{
+ "transformers": "5.15.0",
+ "torch": "2.13.0+cu130",
+ "timeout_s": 2413,
+ "deadline_s": 2173,
+ "lora_pattern": ".*language_model.*\\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)",
+ "trainable_params": 104792064,
+ "examples": 154,
+ "dropped": 5,
+ "first_example": {
+  "prompt": "<|begin_of_text|><|start|>system<|message|>You write CadQuery Python code. Units are millimetres. Assign the final solid to a variable named result. Reply with exactly one Python code block and nothing else.\n\nReasoning strength: high.\n\n# Valid recipients: \"self\", \"user\".<|eot|><|start|>user<|message|>Units: millimetres. Z is up. A spool (bobbin) on the Z axis, centred at X = 0, Y = 0. Bottom flange: diameter 42.4, Z from 0 to 3.5. Core: diameter 21.8, Z from 3.5 to 23.2. Top flange: diameter 42.4, Z from 23.2 to 26.7. A centre bore of diameter 6.8 goes through everything along the Z axis. A wire slot 4.4 wide cuts through the bottom flange along X: X from -22.2 to 22.2, Y from -2.2 to 2.2, Z from 0 to 3.5.<|eot|><|start|>assistant",
+  "full": "<|begin_of_text|><|start|>system<|message|>You write CadQuery Python code. Units are millimetres. Assign the final solid to a variable named result. Reply with exactly one Python code block and nothing else.\n\nReasoning strength: high.\n\n# Valid recipients: \"self\", \"user\".<|eot|><|start|>user<|message|>Units: millimetres. Z is up. A spool (bobbin) on the Z axis, centred at X = 0, Y = 0. Bottom flange: diameter 42.4, Z from 0 to 3.5. Core: diameter 21.8, Z from 3.5 to 23.2. Top flange: diameter 42.4, Z from 23.2 to 26.7. A centre bore of diameter 6.8 goes through everything along the Z axis. A wire slot 4.4 wide cuts through the bottom flange along X: X from -22.2 to 22.2, Y from -2.2 to 2.2, Z from 0 to 3.5.<|eot|><|start|>assistant to=self<|message|>Need to create spool. Requirements: Units mm. Z up. spool on Z axis centered at X=0 Y=0. Bottom flange: diameter 42.4, Z from 0 to 3.5. Core: diameter 21.8, Z from 3.5 to 23.2. Top flange: diameter 42.4, Z from 23.2 to 26.7. Centre bore diameter 6.8 goes through everything along Z axis. Wire slot 4.4 wide cuts through bottom flange along X: X from -22.2 to 22.2, Y from -2.2 to 2.2, Z from 0 to 3.5.\n\nSo we need to build solid.\n\nSimplest: create cylinders for flange bottom, core, top flange.\n\nBottom flange: cylinder radius 21.2 height 3.5 at z0. Core cylinder radius 10.9 height = 23.2-3.5 = 19.7 at z 3.5. Top flange radius 21.2 height 3.5 at z 23.2.\n\nUnion them, then cut center bore, cut slot.\n\nNote: Provide final solid to variable named result.\n\nWe need to use Workplane. Could do Workplane(\"XY\"). Then create boxes? Better use Solid.makeCylinder? Or Workplane cylinder.\n\nSimpler: Use Workplane method: .cylinder(height, radius, centered=...). But note Workplane.cylinder takes height, radius, direct, centered. The default centered True means centered around reference point. We want bottom at specific Z. So we need to handle positioning.\n\nEasier: Create three cylinders as solids using Solid.makeCylinder or Workplane with translation.\n\nApproach: Create Workplane(\"XY\") and create cylinder with centered False? Let's check docs: centered: If True, cylinder will be centered around reference point. If False, corner of bounding box around cylinder will be on reference point and it will extend in positive x,y,z. That description is ambiguous for cylinder.\n\nAlternatively, use Solid.makeCylinder(radius,height,pnt,dir,angle). That makes cylinder with base at pnt, extending in dir. That's clearer.\n\nWe can make bottom flange: Solid.makeCylinder(radius=42.4/2, height=3.5, pnt=Vector(0,0,0), dir=Vector(0,0,1))\nCore: radius 21.8/2 =10.9 height 19.7 pnt (0,0,3.5)\nTop: radius 21.2 height 3.5 pnt (0,0,23.2)\n\nUnion them.\n\nThen cut bore: cylinder radius 3.4 height slightly longer than total to ensure through: total height 26.7, so use height 28, pnt (0,0,-0.5) maybe.\n\nCut slot: Box from X -22.2 to 22.2 => length in X = 44.4, Y from -2.2 to 2.2 => width in Y =4.4, Z from 0 to 3.5 => height 3.5, pnt at (-22.2,-2.2,0). Use Solid.makeBox.\n\nWe need to ensure Workplane result.\n\nWe can do:\n\nimport cadquery as cq\nfrom cadquery import Solid, Vector\n\nbottom = Solid.makeCylinder(...)\n...\n\nresult_solid = bottom.fuse(core).fuse(top)\nThen cut bore and slot: result_solid = result_solid.cut(bore).cut(slot)\n\nThen assign to result variable expected to be Workplane or Solid? Instruction says assign final solid to variable named result. Usually they expect Workplane object. But could be Solid. Safer to wrap in Workplane? The checker likely does result.val() if Workplane. If Solid, also okay? Best to make result as Workplane containing solid.\n\nWe can do result = cq.Workplane().newObject([result_solid]) ??? Or simply result = cq.Workplane(\"XY\").newObject([result_solid]) but need to check.\n\nAlternatively we can build using Workplane operations directly to avoid Solid fuse issues. Let's use Workplane.\n\nWe can create base Workplane and add cylinders via .place? Better to use Solid method then wrap.\n\nSimpler: Use Workplane to create union via .union().\n\nWe can do:\n\nresult = cq.Workplane(\"XY\").cylinder(3.5, 42.4/2, centered=False) ??? But centered=False would place bounding box corner at origin, not center. That would offset in X,Y. So not good.\n\nWe want cylinder centered on Z axis. If centered=True, then cylinder extends -height/2 to +height/2 around origin. So bottom flange centered at height/2 => Z 1.75. That would be centered at origin but we can translate.\n\nSimpler to use Workplane with workplane offset? Approach: Create three cylinders separately as Workplanes then fuse.\n\nWe can do:\n\nbottom = cq.Workplane(\"XY\").workplane(offset=3.5/2).circle(42.4/2).extrude(3.5/2, both=True) ??? Actually extrude both True from center plane would give correct. Let's think.\n\nIf we create workplane at offset = height/2, and extrude height with both=False? Wait extrude until distance normal to plane. If workplane is XY at z=offset, extrude both=True with distance height/2 would give from 0 to height. For bottom: offset = 1.75, extrude 1.75 both => -1.75 to +1.75 relative to plane at 1.75 => 0 to 3.5 correct. Similarly core: offset = (3.5+23.2)/2 =13.35, height 19.7, extrude 9.85 both. Top: offset = (23.2+26.7)/2 =24.95, height 3.5 extrude 1.75 both.\n\nAlternatively simpler: just use Solid.makeCylinder which is explicit.\n\nThen we need to convert Solid to Workplane for result variable? The instruction says Assign final solid to variable named result. It could be either Solid or Workplane. Usually in these tasks they check result.val() or result as Workplane. Safer to provide Workplane.\n\nWe can do:\n\nresult = cq.Workplane(obj=result_solid) ??? Let's see Workplane init: Workplane(inPlane='XY', origin=(0,0,0), obj=None) where obj is object to use initially for stack. So Workplane(obj=solid) would push solid onto stack.\n\nAlternatively cq.Workplane().newObject([solid]) .\n\nCheck CadQuery docs: Workplane.newObject(list) creates new workplane with objects.\n\nSimpler: result = cq.Workplane(\"XY\").add(solid) ??? There's add method.\n\nLet's search memory: Workplane has .add? Not listed but exists.\n\nBest to just do: result = cq.Workplane().newObject([result_solid]) . That should work.\n\nAlternatively we could just set result = result_solid . The evaluator might accept Solid. But to be safe, provide Workplane.\n\nWe need to ensure final shape is clean.\n\nPotential nuance: Wire slot X from -22.2 to 22.2, Y -2.2 to 2.2, Z 0 to 3.5. That is a rectangular slot through bottom flange along X. Note diameter of flange is 42.4, radius 21.2, but slot extends to 22.2 beyond radius. So slot extends beyond flange edge by 1.0mm each side. That's intentional per spec. So slot box will extend beyond.\n\nAlso center bore diameter 6.8 through everything.\n\nWe must ensure cut operations work.\n\nImplementation steps in code:\n\nimport cadquery as cq\nfrom cadquery import Vector, Solid\n\nbottom = Solid.makeCylinder(42.4/2, 3.5, Vector(0,0,0), Vector(0,0,1))\ncore = Solid.makeCylinder(21.8/2, 19.7, Vector(0,0,3.5), Vector(0,0,1))\ntop = Solid.makeCylinder(42.4/2, 3.5, Vector(0,0,23.2), Vector(0,0,1))\nspool = bottom.fuse(core).fuse(top)\nbore = Solid.makeCylinder(6.8/2, 30, Vector(0,0,-1), Vector(0,0,1)) # taller to ensure cut through\nslot = Solid.makeBox(44.4, 4.4, 3.5, Vector(-22.2, -2.2, 0), Vector(0,0,1)) # need check makeBox signature: makeBox(length,width,height,pnt,dir) length in X? Probably length X, width Y, height Z with dir Z. So pnt is corner.\nspool = spool.cut(bore).cut(slot)\nspool = spool.clean() maybe\nresult = cq.Workplane().newObject([spool])\n\nBut Solid.makeBox dir parameter defines direction of height. Default dir (0,0,1). So length corresponds to X, width Y, height Z. So pnt (-22.2,-2.2,0) will create box to (-22.2+44.4=22.2, -2.2+4.4=2.2, 0+3.5=3.5) correct.\n\nAlternatively we can use cq.Solid.makeBox.\n\nNeed to ensure fuse works: Solid.fuse returns new solid.\n\nPotentially need to handle tolerance.\n\nAlternatively build using Workplane operations sequentially: Start with bottom cylinder via Workplane circle extrude, then add core via workplane, etc., then cut bore and slot.\n\nLet's attempt Workplane sequential build to avoid Solid fuse tolerance issues:\n\nresult = cq.Workplane(\"XY\").circle(42.4/2).extrude(3.5) # this creates bottom flange from 0 to 3.5 because XY plane at origin extrude positive Z.\nThen core: result = result.workplane(offset=3.5).circle(21.8/2).extrude(19.7) # workplane offset from top of bottom? Actually workplane() creates new workplane on top face. So offset not needed; just faces(\">Z\").workplane(). But we can simply use .workplane(offset=3.5) ??? Better use faces.\n\nSimpler: After creating bottom, we can do result.faces(\">Z\").workplane().circle(...).extrude(...)\n\nBut bottom top face is at Z=3.5, so new workplane there, extrude 19.7 gives core Z 3.5 to 23.2 correct.\n\nThen top flange similarly.\n\nLet's design step:\n\nwp = cq.Workplane(\"XY\").circle(42.4/2).extrude(3.5)\nwp = wp.faces(\">Z\").workplane().circle(21.8/2).extrude(19.7)\nwp = wp.faces(\">Z\").workplane().circle(42.4/2).extrude(3.5)\n\nNow we have spool.\n\nNow cut bore: Use hole? Or cut. Easiest: wp.faces(\">Z\").workplane().circle(6.8/2).cutThruAll() but that would cut from top down through all. However cutThruAll cuts both directions, so from top face it would cut through all. That's fine but need to ensure it cuts through bottom as well. If we are on top face (>Z) and cutThruAll, it will cut through entire solid. Alternatively use .hole.\n\nSimpler: Use workplane on bottom face and extrude cut.\n\nWe can do: wp = wp.faces(\"<Z\").workplane().circle(6.8/2).cutThruAll()\n\nThat will bore.\n\nSlot: Need rectangular cut. The slot is X from -22.2 to 22.2, Y -2.2 to 2.2, Z 0 to 3.5. That's on bottom flange only. We could create a box and cut, or use workplane rectangle cut.\n\nUsing workplane: bottom face is at Z=0? Actually bottom face <Z is at Z=0. If we create workplane on bottom face and draw rectangle 44.4 x 4.4 centered at origin, then cutBlind up to 3.5.\n\nRectangle centered True with xLen 44.4 yLen 4.4 at origin gives X -22.2 to 22.2 Y -2.2 to 2.2 correct. Extrude 3.5.\n\nWe can do: wp = wp.faces(\"<Z\").workplane().rect(44.4, 4.4).cutBlind(3.5)\n\nBut need to ensure workplane origin is at (0,0,0) which is center of bottom face (since flange is centered). So rect will be correct.\n\nCheck orientation: Workplane on <Z face: The face normal is -Z. When we create workplane on that face, what is its orientation? The workplane's normal will be opposite? The docs: workplane(offset, invert) creates new 2D workplane located relative to first face on stack. The default invert False? But face normal direction matters. For bottom face, normal is -Z, so workplane's Z direction will be -Z? Or maybe it aligns with face normal. Need to check.\n\nIf workplane on <Z face has normal -Z, then extruding positive distance would go in -Z direction (downwards), not into the part. So we need to handle invert or negative extrude.\n\nAlternatively use \">Z\" face for bore cutThruAll avoids direction issue because cutThruAll cuts both directions.\n\nFor slot, we could use faces(\"<Z\") but need correct direction. Let's test logic: If we are on bottom face with normal -Z, then extrude/cutBlind with positive until will go opposite to solid (outside). So we need to cut in opposite direction, i.e., cutBlind(-3.5) or invert workplane.\n\nWe can specify workplane(invert=True) to flip.\n\nSimpler: Use solid cut with Box to avoid orientation confusion. Using Solid.makeBox is orientation-independent.\n\nWe could mix: Create spool via Workplane, then create slot Box solid and do wp.cut(...). But Workplane.cut expects another Workplane or Solid.\n\nWe can do wp.cut(cq.Workplane().box(...)).\n\nSimpler: Use Solid method for final cuts to guarantee correct.\n\nLet's do hybrid: Build spool as Workplane wp, get solid via wp.val(), then cut with Solid boxes, then wrap back.\n\nImplementation details:\n\nimport cadquery as cq\nfrom cadquery import Vector, Solid\n\nwp = cq.Workplane(\"XY\").circle(42.4/2).extrude(3.5)\nwp = wp.faces(\">Z\").workplane().circle(21.8/2).extrude(19.7)\nwp = wp.faces(\">Z\").workplane().circle(42.4/2).extrude(3.5)\nsolid = wp.val()\nbore = Solid.makeCylinder(6.8/2, 30, Vector(0,0,-1), Vector(0,0,1))\nslot = Solid.makeBox(44.4, 4.4, 3.5, Vector(-22.2,-2.2,0), Vector(0,0,1))\nsolid = solid.cut(bore).cut(slot)\nresult = cq.Workplane().newObject([solid])\n\nThat should satisfy.\n\nCheck heights: 19.7 = 23.2-3.5 =19.7 correct. Top flange height 3.5 from 23.2 to 26.7 =3.5 correct.\n\nCheck diameters: bottom 42.4, core 21.8, top 42.4.\n\nCheck bore: diameter 6.8 radius 3.4.\n\nCheck slot: 4.4 wide, along X, Y from -2.2 to 2.2 => width 4.4.\n\nAll good.\n\nPotential edge: Solid.makeBox with dir vector (0,0,1) maybe expects pnt is lower corner. Works.\n\nWe should ensure solid.clean() after cuts.\n\nWe need to output single Python code block with result variable.\n\nWe must import cadquery.\n\nWe should also handle that Workplane.newObject may not exist in older versions? It does.\n\nAlternative: result = cq.Workplane(\"XY\").add(solid) ??? Let's verify Workplane.add exists.\n\nSimpler: result = cq.Workplane(obj=solid) ??? That would put solid on stack but need to check.\n\nThe most robust: result = wp.cut(...) using Workplane cut with solids.\n\nWe can do:\n\nbore_wp = cq.Workplane(\"XY\").circle(6.8/2).extrude(30, both=True) # Actually need centered.\nBut easier: Create bore as Workplane solid and cut.\n\nWe can create bore solid as cq.Workplane(\"XY\").workplane(offset=-1).circle(6.8/2).extrude(30) then wp.cut(bore_wp)\n\nBut using Solid.makeCylinder is clearer.\n\nWe need to ensure wp.cut accepts Solid. Docs: cut(toCut: Union[Workplane, Solid, Compound]) -> so Solid is allowed.\n\nSo we can do wp = wp.cut(bore) directly, wp is Workplane, bore is Solid.\n\nSimilarly wp = wp.cut(slot)\n\nThen result = wp\n\nThat avoids needing to extract val.\n\nLet's implement that:\n\nwp = cq.Workplane(\"XY\").circle(42.4/2).extrude(3.5)\nwp = wp.faces(\">Z\").workplane().circle(21.8/2).extrude(19.7)\nwp = wp.faces(\">Z\").workplane().circle(42.4/2).extrude(3.5)\nbore = Solid.makeCylinder(6.8/2, 30, Vector(0,0,-1), Vector(0,0,1))\nslot = Solid.makeBox(44.4, 4.4, 3.5, Vector(-22.2,-2.2,0), Vector(0,0,1))\nwp = wp.cut(bore)\nwp = wp.cut(slot)\nresult = wp\n\nNeed to test mental.\n\nPotential issue: wp.faces(\">Z\").workplane() after first extrude, there is only one solid with one top face. Good.\n\nAfter second extrude, there are two solids fused? Actually Workplane extrude with combine True will fuse. So top face is now core top at Z 23.2, but also there is bottom flange top? But bottom flange top is internal? No, bottom flange top outside core is still exposed but at same Z 3.5? Actually core sits on top of bottom flange, covering central region. So there are two faces at different Z? Wait bottom flange top is at Z 3.5 but core covers central circle, so the remaining annular face at Z 3.5 is still there, and core top at Z 23.2. Selecting faces(\">Z\") will select the topmost face(s) in +Z direction, i.e., the core top at Z 23.2 (since it's highest). So second operation picks correct.\n\nAfter core extruded, topmost face is core top. Then we add top flange, correct.\n\nNow bore cut: wp.cut(bore) where bore is Solid at (0,0,-1) height 30. That will subtract.\n\nSlot cut: slot Box at (-22.2,-2.2,0) size 44.4x4.4x3.5. That intersects only bottom flange.\n\nNeed to ensure slot Box extends slightly beyond flange to fully cut. Spec says X from -22.2 to 22.2, Y -2.2 to 2.2, Z 0 to 3.5 exactly. So box as defined matches spec.\n\nResult variable should be wp after cuts.\n\nWe should also ensure final solid is clean.\n\nAdd .clean() maybe.\n\nPotential alternative: Use Workplane for slot to avoid Solid orientation confusion: Use wp.faces(\"<Z\").workplane(invert=True).rect(44.4,4.4).cutBlind(3.5) But using Solid is fine.\n\nWe must ensure result is assigned.\n\nWe need to output code block with imports.\n\nWe should include comments.\n\nMake sure to use correct radius values: 42.4/2 =21.2, 21.8/2=10.9, 6.8/2=3.4.\n\nHeight calculations: bottom_h=3.5, core_h=19.7, top_h=3.5\n\nWe should compute core_h as 23.2-3.5 =19.7 exactly to avoid floating errors.\n\nBetter to define variables.\n\nEdge: Use cq.Workplane(\"XY\") for initial. That places workplane at origin, circle centered at origin, extrude from Z 0 to 3.5 positive.\n\nWorks.\n\nWe should test with mental execution using CadQuery.\n\nPotential pitfalls: Workplane.circle creates wire, extrude creates solid. That's fine.\n\nSecond step: wp.faces(\">Z\").workplane().circle(...).extrude(...) This will create a new wire on the workplane at top face, extrude. The workplane origin is at center of face (which is at (0,0,23.2?) Actually after first two steps, topmost face center is at (0,0,23.2) with normal +Z, so workplane origin projected origin is (0,0,23.2). Circle at (0,0) on that workplane corresponds to global (0,0). Good.\n\nSimilarly for bottom flange initial, workplane at origin.\n\nAll good.\n\nWe should ensure final result is correctly positioned at Z 0 to 26.7.\n\nOne more nuance: The spool is supposed to be centered at X=0 Y=0, Z from 0 to 26.7. Our construction matches.\n\nWe should also consider that bottom flange slot cuts through bottom flange along X: X from -22.2 to 22.2, Y -2.2 to 2.2, Z 0 to 3.5. That is exactly our box.\n\nWe should ensure that after cutting bore and slot, we don't have extra solids.\n\nWe should output result.\n\nWe must ensure code runs without errors. Need to import Solid, Vector from cadquery? Actually Solid is in cadquery. Vector is in cadquery. We can do from cadquery import Solid, Vector.\n\nAlternatively use cq.Vector, cq.Solid.\n\nCheck CadQuery import paths: In CadQuery 2.x, Solid is cadquery.occ_impl.shapes.Solid or cadquery.Solid? Usually you can do from cadquery import Solid. Let's assume.\n\nSafer to use cq.Solid, cq.Vector to avoid import issues. But docs list Solid.makeBox, Solid.makeCylinder as class methods. So cq.Solid should be accessible.\n\nLet's use import cadquery as cq\n\nThen use cq.Solid, cq.Vector.\n\nDoes cq.Vector exist? Yes, cq.Vector is available.\n\nCheck: Solid.makeBox signature requires Vector for pnt and dir. Could also pass tuple.\n\nWe can pass cq.Vector(-22.2, -2.2, 0)\n\nWe need to ensure correct usage: cq.Solid.makeBox(length,width,height,pnt,dir) where pnt and dir are VectorLike. So we can pass tuple as well: (-22.2, -2.2, 0). Simpler to pass tuple.\n\nSimilarly for makeCylinder: radius, height, pnt, dir, angleDegrees. Use pnt as tuple.\n\nWe can avoid Vector import.\n\nImplement:\n\nimport cadquery as cq\n\nbottom_flange_dia = 42.4\ncore_dia = 21.8\ntop_flange_dia = 42.4\nbore_dia = 6.8\n...\n\nThen code.\n\nWe should ensure result variable is defined.\n\nWe need to ensure we don't accidentally create multiple solids on stack that are not fused. Using Workplane extrude with combine True fuses.\n\nPotential issue: After wp.cut(bore) and wp.cut(slot), the result still has one solid.\n\nWe should add .clean() maybe.\n\nLet's craft final code block.\n\nWe should test edge: cq.Solid.makeCylinder signature: makeCylinder(radius, height, pnt, dir, angleDegrees=360) . pnt default (0,0,0) dir (0,0,1). So we can call cq.Solid.makeCylinder(3.4, 30, cq.Vector(0,0,-1), cq.Vector(0,0,1))\n\nBut cq.Vector requires import.\n\nAlternative: Use cq.Workplane to create bore and slot as solids via .val().\n\nSimpler to create bore_wp and slot_wp as Workplanes then cut.\n\nWe could create bore as Workplane cylinder: bore_solid = cq.Workplane(\"XY\").circle(3.4).extrude(30, both=True).val() # This would create cylinder from -15 to +15 centered at origin, but we need from -1 to 29 to cover 0 to 26.7. Using both=True with height 15? Let's just use Solid.\n\nLet's verify Solid.makeBox and makeCylinder work with Vector.\n\nWe can also use cq.Solid.makeBox with pnt as cq.Vector.\n\nImplementation final:\n\nimport cadquery as cq\n\n# dimensions\n...\n\nwp = cq.Workplane(\"XY\").circle(42.4/2).extrude(3.5)\nwp = wp.faces(\">Z\").workplane().circle(21.8/2).extrude(19.7)\nwp = wp.faces(\">Z\").workplane().circle(42.4/2).extrude(3.5)\n\nbore = cq.Solid.makeCylinder(6.8/2, 30, cq.Vector(0,0,-1), cq.Vector(0,0,1))\nslot = cq.Solid.makeBox(44.4, 4.4, 3.5, cq.Vector(-22.2, -2.2, 0), cq.Vector(0,0,1))\n\nresult = wp.cut(bore).cut(slot)\n\nThat should be final.\n\nCheck slot Box: length 44.4 (X), width 4.4 (Y), height 3.5 (Z). pnt (-22.2,-2.2,0). dir (0,0,1). Good.\n\nBore: radius 3.4, height 30, pnt (0,0,-1), dir (0,0,1). That goes from Z -1 to 29, covering 0-26.7.\n\nWe could also make bore height 28 with pnt (0,0,-0.5) but 30 is safe.\n\nWe should ensure clean.\n\nPotential issue: Using cq.Solid.makeBox with pnt as Vector(-22.2, -2.2, 0) will create box with corner at that point and extending positive X,Y,Z. Good.\n\nWe need to ensure result is Workplane.\n\nWe should provide final code block with exactly one Python code block.\n\nWe should not add extra text.\n\nWe should ensure code uses correct imports and no undefined names.\n\nWe should include comments for clarity.\n\nWe should test for syntax.\n\nPotential alternative approach: Use cq.Workplane().box for slot: slot_solid = cq.Workplane(\"XY\").workplane(offset=3.5/2).box(44.4,4.4,3.5, centered=True).val() But box centered True would be centered at origin, so X -22.2 to 22.2, Y -2.2 to 2.2, Z 0 to 3.5 if offset correctly. Let's see: Workplane at offset 1.75, box centered True with height 3.5 would extend Z 0 to 3.5. Good. But using Solid is more explicit.\n\nWe should ensure we use cq.Vector correctly. In CadQuery, Vector is class, you can do cq.Vector(0,0,-1). That should work.\n\nWe should also consider that Solid.makeCylinder and makeBox are static methods that return Solid.\n\nWe should add result = result.clean() maybe but not required.\n\nWe should ensure final result variable is assigned.\n\nLet's craft final answer.<|eom|><|start|>assistant to=user<|message|>```python\nimport cadquery as cq\n\n# Dimensions\nbottom_dia = 42.4\ncore_dia = 21.8\ntop_dia = 42.4\nbore_dia = 6.8\n\nbottom_h = 3.5\ncore_h = 23.2 - 3.5  # 19.7\ntop_h = 3.5  # 26.7 - 23.2\n\n# Build spool: bottom flange (Z 0 to 3.5) + core (3.5 to 23.2) + top flange (23.2 to 26.7)\nwp = cq.Workplane(\"XY\").circle(bottom_dia / 2).extrude(bottom_h)\nwp = wp.faces(\">Z\").workplane().circle(core_dia / 2).extrude(core_h)\nwp = wp.faces(\">Z\").workplane().circle(top_dia / 2).extrude(top_h)\n\n# Centre bore through entire height along Z axis\nbore = cq.Solid.makeCylinder(bore_dia / 2, 30, cq.Vector(0, 0, -1), cq.Vector(0, 0, 1))\n\n# Wire slot through bottom flange: X -22.2 to 22.2, Y -2.2 to 2.2, Z 0 to 3.5\nslot = cq.Solid.makeBox(44.4, 4.4, 3.5, cq.Vector(-22.2, -2.2, 0), cq.Vector(0, 0, 1))\n\n# Apply cuts\nresult = wp.cut(bore).cut(slot)\n```<|eot|>"
+ },
+ "first_loss_tokens": [
+  " to",
+  "=self",
+  "<|message|>",
+  "Need",
+  " to",
+  " create",
+  " spool",
+  ".",
+  " Requirements",
+  ":",
+  " Units",
+  " mm",
+  ".",
+  " Z",
+  " up",
+  ".",
+  " spool",
+  " on",
+  " Z",
+  " axis",
+  " centered",
+  " at",
+  " X",
+  "=",
+  "0",
+  " Y",
+  "=",
+  "0",
+  ".",
+  " Bottom",
+  " flange",
+  ":",
+  " diameter",
+  " ",
+  "42",
+  ".",
+  "4",
+  ",",
+  " Z",
+  " from"
+ ],
+ "schedule": {
+  "micro_steps": 308,
+  "optimizer_steps": 39,
+  "groups": [
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   4
+  ]
+ },
+ "steps": [
+  {
+   "step": 1,
+   "micro_steps": 8,
+   "tokens": 49871,
+   "loss": 0.9454,
+   "lr": 0.0001,
+   "seconds": 3.55
+  },
+  {
+   "step": 2,
+   "micro_steps": 8,
+   "tokens": 53379,
+   "loss": 0.9521,
+   "lr": 0.0001,
+   "seconds": 3.48
+  },
+  {
+   "step": 3,
+   "micro_steps": 8,
+   "tokens": 42376,
+   "loss": 0.8595,
+   "lr": 9.98292246503335e-05,
+   "seconds": 5.15
+  },
+  {
+   "step": 4,
+   "micro_steps": 8,
+   "tokens": 60140,
+   "loss": 0.7926,
+   "lr": 9.931806517013612e-05,
+   "seconds": 7.44
+  },
+  {
+   "step": 5,
+   "micro_steps": 8,
+   "tokens": 66092,
+   "loss": 0.7131,
+   "lr": 9.847001329696653e-05,
+   "seconds": 6.7
+  },
+  {
+   "step": 6,
+   "micro_steps": 8,
+   "tokens": 38922,
+   "loss": 0.7464,
+   "lr": 9.729086208503174e-05,
+   "seconds": 3.96
+  },
+  {
+   "step": 7,
+   "micro_steps": 8,
+   "tokens": 32839,
+   "loss": 0.7036,
+   "lr": 9.578866633275288e-05,
+   "seconds": 2.23
+  },
+  {
+   "step": 8,
+   "micro_steps": 8,
+   "tokens": 56324,
+   "loss": 0.8149,
+   "lr": 9.397368756032445e-05,
+   "seconds": 3.65
+  },
+  {
+   "step": 9,
+   "micro_steps": 8,
+   "tokens": 49995,
+   "loss": 0.8288,
+   "lr": 9.185832391312644e-05,
+   "seconds": 4.8
+  },
+  {
+   "step": 10,
+   "micro_steps": 8,
+   "tokens": 45243,
+   "loss": 0.7265,
+   "lr": 8.945702546981969e-05,
+   "seconds": 5.0
+  },
+  {
+   "step": 11,
+   "micro_steps": 8,
+   "tokens": 40223,
+   "loss": 0.7614,
+   "lr": 8.678619553365659e-05,
+   "seconds": 2.54
+  },
+  {
+   "step": 12,
+   "micro_steps": 8,
+   "tokens": 64909,
+   "loss": 0.7679,
+   "lr": 8.386407858128706e-05,
+   "seconds": 5.59
+  },
+  {
+   "step": 13,
+   "micro_steps": 8,
+   "tokens": 49869,
+   "loss": 0.788,
+   "lr": 8.07106356344834e-05,
+   "seconds": 2.6
+  },
+  {
+   "step": 14,
+   "micro_steps": 8,
+   "tokens": 31697,
+   "loss": 0.8077,
+   "lr": 7.734740790612136e-05,
+   "seconds": 2.38
+  },
+  {
+   "step": 15,
+   "micro_steps": 8,
+   "tokens": 45985,
+   "loss": 0.7173,
+   "lr": 7.379736965185368e-05,
+   "seconds": 3.09
+  },
+  {
+   "step": 16,
+   "micro_steps": 8,
+   "tokens": 49861,
+   "loss": 0.7291,
+   "lr": 7.008477123264848e-05,
+   "seconds": 3.99
+  },
+  {
+   "step": 17,
+   "micro_steps": 8,
+   "tokens": 68589,
+   "loss": 0.6983,
+   "lr": 6.623497346023418e-05,
+   "seconds": 6.22
+  },
+  {
+   "step": 18,
+   "micro_steps": 8,
+   "tokens": 60259,
+   "loss": 0.7398,
+   "lr": 6.227427435703997e-05,
+   "seconds": 2.8
+  },
+  {
+   "step": 19,
+   "micro_steps": 8,
+   "tokens": 51711,
+   "loss": 0.7583,
+   "lr": 5.8229729514036705e-05,
+   "seconds": 4.14
+  },
+  {
+   "step": 20,
+   "micro_steps": 8,
+   "tokens": 45998,
+   "loss": 0.6149,
+   "lr": 5.4128967273616625e-05,
+   "seconds": 1.73
+  },
+  {
+   "step": 21,
+   "micro_steps": 8,
+   "tokens": 56607,
+   "loss": 0.6914,
+   "lr": 5e-05,
+   "seconds": 2.55
+  },
+  {
+   "step": 22,
+   "micro_steps": 8,
+   "tokens": 41249,
+   "loss": 0.6835,
+   "lr": 4.5871032726383386e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 23,
+   "micro_steps": 8,
+   "tokens": 54092,
+   "loss": 0.6445,
+   "lr": 4.17702704859633e-05,
+   "seconds": 3.49
+  },
+  {
+   "step": 24,
+   "micro_steps": 8,
+   "tokens": 64143,
+   "loss": 0.5994,
+   "lr": 3.772572564296005e-05,
+   "seconds": 6.93
+  },
+  {
+   "step": 25,
+   "micro_steps": 8,
+   "tokens": 49027,
+   "loss": 0.6145,
+   "lr": 3.3765026539765834e-05,
+   "seconds": 1.92
+  },
+  {
+   "step": 26,
+   "micro_steps": 8,
+   "tokens": 36174,
+   "loss": 0.5754,
+   "lr": 2.991522876735154e-05,
+   "seconds": 2.17
+  },
+  {
+   "step": 27,
+   "micro_steps": 8,
+   "tokens": 49141,
+   "loss": 0.6588,
+   "lr": 2.6202630348146324e-05,
+   "seconds": 3.36
+  },
+  {
+   "step": 28,
+   "micro_steps": 8,
+   "tokens": 50047,
+   "loss": 0.721,
+   "lr": 2.2652592093878666e-05,
+   "seconds": 2.44
+  },
+  {
+   "step": 29,
+   "micro_steps": 8,
+   "tokens": 45818,
+   "loss": 0.6565,
+   "lr": 1.928936436551661e-05,
+   "seconds": 3.4
+  },
+  {
+   "step": 30,
+   "micro_steps": 8,
+   "tokens": 45341,
+   "loss": 0.653,
+   "lr": 1.6135921418712956e-05,
+   "seconds": 1.88
+  },
+  {
+   "step": 31,
+   "micro_steps": 8,
+   "tokens": 53447,
+   "loss": 0.6964,
+   "lr": 1.3213804466343421e-05,
+   "seconds": 3.88
+  },
+  {
+   "step": 32,
+   "micro_steps": 8,
+   "tokens": 60514,
+   "loss": 0.6931,
+   "lr": 1.0542974530180327e-05,
+   "seconds": 2.07
+  },
+  {
+   "step": 33,
+   "micro_steps": 8,
+   "tokens": 35553,
+   "loss": 0.7123,
+   "lr": 8.141676086873572e-06,
+   "seconds": 1.86
+  },
+  {
+   "step": 34,
+   "micro_steps": 8,
+   "tokens": 42677,
+   "loss": 0.678,
+   "lr": 6.026312439675552e-06,
+   "seconds": 3.65
+  },
+  {
+   "step": 35,
+   "micro_steps": 8,
+   "tokens": 41077,
+   "loss": 0.6599,
+   "lr": 4.2113336672471245e-06,
+   "seconds": 2.74
+  },
+  {
+   "step": 36,
+   "micro_steps": 8,
+   "tokens": 70304,
+   "loss": 0.6542,
+   "lr": 2.7091379149682685e-06,
+   "seconds": 4.61
+  },
+  {
+   "step": 37,
+   "micro_steps": 8,
+   "tokens": 62044,
+   "loss": 0.6892,
+   "lr": 1.5299867030334814e-06,
+   "seconds": 3.12
+  },
+  {
+   "step": 38,
+   "micro_steps": 8,
+   "tokens": 52525,
+   "loss": 0.7061,
+   "lr": 6.819348298638839e-07,
+   "seconds": 2.72
+  },
+  {
+   "step": 39,
+   "micro_steps": 4,
+   "tokens": 25864,
+   "loss": 0.7059,
+   "lr": 1.7077534966650766e-07,
+   "seconds": 3.32
+  }
+ ],
+ "peak_gb": 93.6,
+ "gpu_total_gb": 150.1,
+ "adapter": "/vol/r3/adapter",
+ "train_total_s": 1176.8,
+ "stopped_at_deadline": false
+}
