@@ -153,4 +153,9 @@
   families where the generator built from unrounded/derived values (F3 21.2 vs 21.3, F10 rim 4.9 vs 8.2). Writing the
   blind rebuild had already flagged F3/F4/F10 as ambiguous. Check: re-parse each job text and assert every reference
   number appears in it (TEXT=REF), and do a blind rebuild from text before paying a teacher.
+- **Keep the Mac awake for long cloud sessions** (Oct 30). How learned: the base-Glimmer control hung after 11/60 answers;
+  the log showed "Stopping app - local client disconnected" and then endless `ConflictError: App state is
+  APP_STATE_STOPPED` heartbeats, while the user was away and the Mac idle. The ephemeral grader app (`cloud_cq._app.run()`)
+  lives only as long as the local client. Fix: run sessions under `caffeinate -is …`; check: `pmset -g assertions` shows
+  PreventUserIdleSystemSleep from caffeinate during the run.
 
