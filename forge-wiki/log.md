@@ -74,3 +74,5 @@
   exam guard on box, cached_tokens fix; ≈ $2.4. Claude re-checks all pass.
 - decision (user): learning loop, suggest-and-approve (SPEC §4, 27e8800 missed the file; written in e24a9a7, verifier items dac893d).
 - verified: verifier FAIL for pilot / GO for fix round (forge-factory-build-2026-10-30, 4/7/5); round 1b prompt ready, not launched.
+- 2026-10-30 verified: Muse r1b (d304368, ≈ $0.96) fixed F1/F2/F4 + gallery; verifier FAIL for pilot (G1 text≠reference in
+  4 families), GO for cheap Modal checks with filtered inputs. Round 1c prompt ready (00394af), not launched.

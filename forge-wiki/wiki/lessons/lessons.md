@@ -148,4 +148,9 @@
   local probe of the real path (`cloud_cq.grade.remote` without `cloud_cq._app.run()`) raised ExecutionError; the paid
   pilot would have graded nothing. Check: for every `.remote` call, find the `with <that module's app>.run():` around it,
   or run one free no-network probe of the real path before paying.
+- **A reference that passes against itself proves nothing about the job text** (Oct 30). How learned: SELF-CHECK OK and
+  check-refs looked clean, but the verifier parsed text numbers vs reference numbers for all 200 jobs and found 4
+  families where the generator built from unrounded/derived values (F3 21.2 vs 21.3, F10 rim 4.9 vs 8.2). Writing the
+  blind rebuild had already flagged F3/F4/F10 as ambiguous. Check: re-parse each job text and assert every reference
+  number appears in it (TEXT=REF), and do a blind rebuild from text before paying a teacher.
 
