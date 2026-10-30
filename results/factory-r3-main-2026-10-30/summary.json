@@ -1,0 +1,71 @@
+{
+ "factory_version": "dc3fd42d14db",
+ "n_ids": 160,
+ "n_calls": 154,
+ "n_pass": 140,
+ "n_kept_ids": 140,
+ "n_with_reasoning": 154,
+ "reasoning_chars_median": 19131.5,
+ "reasoning_chars_max": 50959,
+ "n_reasoning_mentions_manual": 101,
+ "n_reasoning_missing": 0,
+ "families": {
+  "1": {
+   "n_calls": 16,
+   "n_pass": 14,
+   "pass_rate": 0.875
+  },
+  "2": {
+   "n_calls": 16,
+   "n_pass": 16,
+   "pass_rate": 1.0
+  },
+  "3": {
+   "n_calls": 16,
+   "n_pass": 15,
+   "pass_rate": 0.9375
+  },
+  "4": {
+   "n_calls": 16,
+   "n_pass": 16,
+   "pass_rate": 1.0
+  },
+  "5": {
+   "n_calls": 16,
+   "n_pass": 13,
+   "pass_rate": 0.8125
+  },
+  "6": {
+   "n_calls": 16,
+   "n_pass": 15,
+   "pass_rate": 0.9375
+  },
+  "7": {
+   "n_calls": 16,
+   "n_pass": 13,
+   "pass_rate": 0.8125
+  },
+  "8": {
+   "n_calls": 16,
+   "n_pass": 12,
+   "pass_rate": 0.75
+  },
+  "9": {
+   "n_calls": 16,
+   "n_pass": 16,
+   "pass_rate": 1.0
+  },
+  "10": {
+   "n_calls": 10,
+   "n_pass": 10,
+   "pass_rate": 1.0
+  }
+ },
+ "prompt_tokens": 892196,
+ "completion_tokens": 991606,
+ "cached_tokens": 851584,
+ "cost_dollars": 4.3928,
+ "cost_w_dollars": 0.0,
+ "wonder_share": 0.0,
+ "budget_stopped": true
+}
