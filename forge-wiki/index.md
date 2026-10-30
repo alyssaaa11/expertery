@@ -7,6 +7,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
 
 ## findings
+- [training-experiments-2026-10-30](wiki/findings/training-experiments-2026-10-30.md): the two trainings (R1 38%, R3 48%) vs untrained 52%, why (manual gap, off-policy style, small dev set), the recommended self-distillation recipe
 - [scoreboard](wiki/findings/scoreboard.md): every measured Forge number on one page (accuracy, tokens, seconds)
 - [how-training-changes-weights-2026-10-30](wiki/findings/how-training-changes-weights-2026-10-30.md): plain guide + diagram: one training step, LoRA patch (105M of 29.6B), merge, the knobs you drive and warning signs
 - [freecad-gap-2026-10-29](wiki/findings/freecad-gap-2026-10-29.md): FreeCAD gap test: Glimmer 93%, Spark 100% → stay on CadQuery hard jobs

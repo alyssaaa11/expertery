@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-10-30 (after Muse round 1 + verifier)
+**Last updated**: 2026-10-30 ~21:40 (after the base control + superintel diagnosis)
 
 ---
 
@@ -69,6 +69,10 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
+- **NOW (21:40):** two trainings done, neither beats untrained Glimmer on dev (A 51.7%, R1 38.3%, R3 48.3%); diagnosis
+  and next recipe in [[training-experiments-2026-10-30]]. Nothing running. Waiting for the user: cheap check (R3 + card,
+  A + card on the old dev, ≈ $1.5-2) → card-conditioned self-distillation (≈ $14-21) with 100 fresh dev jobs.
+  Money ≈ $61.2 of $80. Deadline Nov 4 (internal: trained result by Nov 1 evening).
 - verified: factory built by Muse in 4 rounds (r1 e24a9a7 ≈ $2.4, r1b d304368 ≈ $0.96, r1c 5edd84a ≈ $1.62, r1d ff7f3a4
   ≈ $1.26). Claude re-ran: pytest 259 passed; make_jobs SELF-CHECK OK with TEXT=REF and CUTS 20/20 in all 10 families.
 - verified (results/cloud-checks-2-2026-10-30.log, Modal credits, $0 billed): check-refs factory 200/200, first-test 30/30;

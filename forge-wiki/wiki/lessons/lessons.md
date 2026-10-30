@@ -158,4 +158,23 @@
   APP_STATE_STOPPED` heartbeats, while the user was away and the Mac idle. The ephemeral grader app (`cloud_cq._app.run()`)
   lives only as long as the local client. Fix: run sessions under `caffeinate -is …`; check: `pmset -g assertions` shows
   PreventUserIdleSystemSleep from caffeinate during the run.
+- **Training on answers only teaches the student to skip thinking** (Oct 30). How learned: R1 dev 38.3% vs untrained
+  51.7%; train.json `first_loss_tokens` = ` to`, `=user`; 0 reasoning in 60/60 dev answers. Check: before any
+  training, print the first loss tokens of one rendered example; for a reasoning model they must open the thinking turn.
+- **Don't distill reasoning that depends on context the student will not have** (Oct 30). How learned: R3 trained on
+  Spark's reasoning written with the manual open; crashes rose 7 → 18 from invented API args that appear in Spark's
+  reasoning (yDir 61/159, inPlane 62/159) but never in its code. Check: grep the teacher reasoning for references to
+  the hidden context ("manual", argument names) and count them per record before training; give student and teacher
+  the same context, or use the student's own traces (superintel, arXiv 2405.05904, 2209.15189).
+- **Always run the untrained control on the same jobs** (Oct 30). How learned: R3's 48.3% looked like progress over
+  R1 until base Glimmer scored 51.7% on the same 60 answers. Check: every dev result table has an untrained row from
+  the same session stack.
+- **A 20-job dev set cannot detect ±10 points** (Oct 30). How learned: superintel's job-paired bootstrap: SE ≈ 8 points,
+  R3 − A CI [−18, +12]. Check: compute the paired CI before claiming a gain; use ~100 fresh jobs for a decision.
+- **Check which model is actually served** (Oct 30). How learned: the verifier read deploy/modal_forge.py: the model
+  name was read from the local env at import, so the container would have served the old model. Check: the session
+  prints `/v1/models` root and refuses on mismatch.
+- **Count crashes separately from wrong shapes** (Oct 30). How learned: grouping R3's run_error last lines showed 15 of
+  31 fails were invented CadQuery keywords, a different problem (API knowledge) from geometry. Check: tally
+  `run_error` last lines per dev run.
 

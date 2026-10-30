@@ -37,3 +37,12 @@ What remains to measure, once, on the same frozen 30 CadQuery jobs and with the 
 | seconds per answer | ? (to log in the same run) | ? |
 | $ per correct part | ? | ? |
 | data leaves the company? | prompt goes to the model | no; the rules are inside the model |
+
+## 4. Training results on the factory dev set (Oct 30, 20 jobs × 3, short prompt, strict referee)
+| Model | Pass | pass@3 | tokens/correct | Source |
+|---|---|---|---|---|
+| Untrained Glimmer | 51.7% | 85% | 9.2k | results/dev-base-2026-10-30 |
+| Trained R1 (Spark code only) | 38.3% | 75% | 1.7k | results/dev-2026-10-30 |
+| Trained R3 (Spark thinking + code) | 48.3% | 85% | 14.8k | results/dev-r3-2026-10-30 |
+Details and diagnosis: [[training-experiments-2026-10-30]]. Dev set noise ≈ ±8 points (SE).
+
