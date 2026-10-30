@@ -75,3 +75,20 @@ modal_glimmer.py`; `experiments/first-test/run_live.sh`; verifier report `~/agen
   "Built with Muse Spark Open". The "39 vs 48 intelligence index" comes from one secondary blog and is unconfirmed.
 - Local Glimmer q4 MLX exists at `~/models/muse-glimmer-30b-radixark-q4-mlx` (~15 GB). The Mac has 24 GB RAM (~8 GB
   free when checked), so it was not run locally.
+
+## Licences and terms for training data (checked 2026-10-30)
+How learned: a research subagent fetched the licence/terms pages (2026-10-30); the fetch tool returned condensed quotes,
+so re-check the live wording before the submission text quotes it.
+- verified: **Muse Wonder (api.meta.ai)**: Meta Model API Terms of Service §10.1(ix) forbid using Outputs "to train,
+  fine-tune, distill … any … model that competes with Meta's models or services" without Meta's prior written
+  authorization; evaluation/benchmarking of your own systems is allowed (https://dev.meta.ai/legal/terms-of-service).
+  "Competes" is not defined.
+- decision (Claude, recommended to the user 2026-10-30): **no Wonder output enters training data** unless Meta gives
+  written authorization; `--escalate` stays off for training records. Today no Wonder output is in any data (never run).
+- verified: **Muse Spark Open**: Muse Model License allows derivatives "trained … distilled … using the Software or any
+  outputs"; Meta claims no ownership of outputs; requires "Built with Muse Spark Open" in the UI or documentation; a
+  separate agreement only above $20M/year model-as-a-service; include the licence + Usage Policy in copies
+  (https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B/blob/main/LICENSE.md).
+- verified: **Muse Glimmer 30B**: Apache-2.0 per the model card (https://huggingface.co/meta-models/Muse-Glimmer-30B);
+  its Usage Policy has no training clause.
+
