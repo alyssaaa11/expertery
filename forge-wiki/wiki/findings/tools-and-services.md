@@ -42,6 +42,9 @@ modal_glimmer.py`; `experiments/first-test/run_live.sh`; verifier report `~/agen
 - Money: the user says the hackathon gave **$100 credit**. The dashboard (org "HerdShot", Billing and usage) showed
   $0.00 spend and no visible balance, with a **Visa card on file**. The hackathon key gets 403 on the billing API.
   Baseten docs say credits are applied to invoices before the card. Still to confirm after usage shows up.
+- verified (user, 2026-10-30): the key came by email from Baseten for the hackathon (one-time access); the user's Baseten
+  website shows no API keys and no credit balance. Forge's own ledger from calls.jsonl usage: ≈ $11.84 of Spark
+  (2026-10-30). The ledger is the only spend source; ask Baseten/hackathon support for the real balance if needed.
 
 ## Meta API and Muse Code
 - verified (Oct 28 eve): 7 more Muse Code sessions for the company, Keel and the runner ≈ $4.2 in total (see
