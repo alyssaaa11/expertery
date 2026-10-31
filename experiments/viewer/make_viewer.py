@@ -260,8 +260,24 @@ def collect_svgs(records, jobs, out_dir, budget, offline, render_fn):
 
 
 def default_render_fn(items, budget):
-    """Render via the Modal app (paid; never used by --offline/tests)."""
-    return render_cloud.render_svgs(items, budget)
+    """Render via ONE cloud sandbox (paid; never used by --offline/tests).
+
+    Claude small fix (2026-10-31): the Modal Function cannot be called
+    directly from the Mac; drive render_items locally with a sandbox
+    factory instead (the same pattern as make_jobs --cloud-check)."""
+    modal = render_cloud.modal
+    cq = render_cloud.cloud_cq
+    lifetime = render_cloud.sandbox_lifetime_s(len(items or []))
+
+    def _factory():
+        return modal.Sandbox.create(app=cq.lookup_exec_app(),
+                                    image=render_cloud.build_image(),
+                                    **render_cloud.box_kwargs(lifetime))
+
+    results, _elapsed, cost = render_cloud.render_items(
+        items, _factory, budget)
+    print("render cost $%.3f for %d items" % (cost, len(items or [])))
+    return results
 
 
 def summarize(records, jobs):
