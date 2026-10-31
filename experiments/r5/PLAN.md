@@ -13,27 +13,39 @@ Supersedes plan v1 (ac1bfa6). Verifier must-fixes M1-M10 are marked [Mx] where t
 ## Data (all code runs in the cloud box; nothing AI-written runs on the Mac)
 1. **New job sets** [M8]: make_jobs with new seeds and id prefixes, written here before any run:
    train `R5T` seed 20261031, 200 per family = 2,000 jobs; dev `R5D` seed 20261131, 10 per family = 100 jobs.
-   Dedup against jobs.jsonl, jobs_dev.jsonl, the exam (experiments/first-test) and each other: same text, same rounded
-   parameter tuple, or same measured volume + bbox (1e-6) → dropped and counted.
-2. **Pilot** [M6]: base Glimmer + card (arm A, A100-80GB, deploy/modal_glimmer.py) on the first 200 R5T jobs, k = 1,
-   64 workers (≥ 3 waves). Steady-state $/answer = $2.50/h × (wall − cold start) ÷ answers. Continue only if
-   ≤ $0.013 (the A + card rate today is $0.0138 at 8 workers). If higher: reduce the job count to fit the cap; never raise it.
+   Dedup against jobs.jsonl, jobs_dev.jsonl, the exam (experiments/first-test), and R5T vs R5D: same text, same rounded
+   parameter tuple, or same measured volume + bbox (1e-6) → dropped and counted [W2]. The volume/bbox measure and the
+   reference self-check run in the cloud box (cloud_cq measure_brep), cap $1. After building: write both files' sha256
+   and job counts here before any GPU step.
+2. **Pilot** [M6, W1]: base Glimmer + card (arm A, A100-80GB, deploy/modal_glimmer.py) on the first 200 R5T jobs, k = 1,
+   **16 workers** (the servers accept at most 16 requests at a time: max_inputs=16, one container; 200 jobs ≈ 12 waves).
+   Check on the first records: prompt_tokens ≈ 830+ (card in the prompt) and stored `reasoning` length equals
+   `reasoning_len` [M2]; otherwise STOP. Steady-state $/answer = $2.50/h × (wall − cold start) ÷ answers. Continue only if
+   ≤ $0.013 (the A + card rate today is $0.0138 at 8 workers). Pre-registered job count N = min(2,000, floor($24 ÷
+   rate)); the pilot's 200 count toward N. Never raise the cap.
 3. **First try** on all 2,000 R5T jobs (the pilot's 200 count). The referee (0.2%) marks PASS / FAIL. The runner stores
-   the full thinking text (`reasoning`) [M2]. Cap $26 including the pilot.
-4. **Self-fix** (no Spark) on every FAIL: Glimmer gets the job + its own wrong code + the referee's failed-check text,
-   and tries once more. PASS → a **self-fix row**. Cap $6.
+   the full thinking text (`reasoning`) from whichever field holds it (reasoning_content, reasoning, or text before
+   the code) [M2]. Cap **$24** including the pilot.
+4. **Self-fix** (no Spark) on every FAIL: Glimmer gets the job + its own wrong code + **reference-free feedback** and
+   tries once more. PASS (by the full referee) → a **self-fix row**. Feedback = the last 15 lines of the error trace if
+   it crashed, the number of separate solids, and the answer's OWN measured volume and bounding box; never the expected
+   values or check names that reveal them. The same feedback function is used in the product (no reference needed
+   there), so self-fix is a real product feature. Cap **$9** (≈ 633 FAILs × $0.013).
 5. **Spark hint** on what still fails: Spark Open (Baseten) sees the job, Glimmer's attempt and the failed checks, and
    returns ONE hint, ≤ 60 words, no code (replies with a code fence, `cq.` or `import` are rejected). Glimmer retries
    with the hint. PASS → kept, but [M7] dropped if its reasoning mentions the hint ("hint", "tutor", or ≥ 8 words copied
-   from the hint), and trained WITHOUT the hint. Caps: Baseten $10, Glimmer retries $3.
+   from the hint), and trained WITHOUT the hint. At most **230 hints** (the shortest-failing jobs first by family
+   balance). Caps: Baseten $10, Glimmer retries $3 [W3].
 
 ## Training rows (two kinds, all with thinking) [M1, M3, M4]
 - **First-try rows**: prompt = FT system prompt + RULE_CARD (sha256 586b5960…e80b) + job text; target = Glimmer's
   thinking + code. From step-3 PASSes and step-5 PASSes (hint removed).
-- **Self-fix rows**: prompt = the same + "Your code:\n…\nThe referee says:\n<failed checks>"; target = thinking + fixed
-  code. From step-4 PASSes and step-5 PASSes (hint removed).
+- **Self-fix rows**: prompt = the same + "Your code:\n…\nWhat happened:\n<reference-free feedback>"; target = thinking +
+  fixed code. From step-4 PASSes and step-5 PASSes (hint removed).
 - Every row must have non-empty thinking (≥ 200 chars); rows without are dropped and counted (no code-only rows: the
   R1 failure). At most 2 rows per job. No dev/exam id or text, no Wonder output, no hint text (asserted).
+- The card goes into the training container as a file baked into the image (not an env var); its sha256 is checked
+  inside the container before training [M4].
 - The loader accepts sources `glimmer-first`, `glimmer-selffix`, `glimmer-hinted` with R5T ids only (provenance check
   replaces the "Spark PASS in calls.jsonl" rule) [M3]. Shuffle with seed 20261031. Log rows, tokens and the first
   loss tokens per source; the first loss tokens must open the thinking turn for every source.
@@ -61,7 +73,7 @@ Frozen rules of experiments/final/PLAN.md step 6, amended BEFORE any exam run: t
 Cap $5. Run once.
 
 ## Money [N2]
-Modal: 26 + 6 + 3 + 18 + 9 + 5 = $67 worst case → 19.89 + 67 ≈ $87 of the $90 Modal budget. Baseten (Spark hints) $10.
+Modal: 1 (job sets) + 24 + 9 + 3 + 18 + 9 + 5 = $69 worst case → 19.89 + 69 ≈ $89 of the $90 Modal budget. Baseten (Spark hints) $10.
 Muse Code ≈ $3-5 Meta credit. Every paid step: verifier check + user yes first.
 
 ## Risks
