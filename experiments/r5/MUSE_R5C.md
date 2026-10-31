@@ -21,7 +21,8 @@ experiments/r5/build_mix.py, experiments/r5/test_r5.py.
      point of option B; verifier S3: 170/188 pilot-v2 passes quote rules). Print the drop share per source and STOP
      (non-zero exit) if more than 20% of rows are dropped.
    - `--first` is repeatable (pilot v2 calls.jsonl + rest-run calls.jsonl) [S1]. Refuse records from the v1 pilot
-     (results/r5-pilot-2026-10-31/: prompt_tokens < 900 means card v1 or no card) with a clear error.
+     (refuse any input file whose path is under results/r5-pilot-2026-10-31/; do NOT use prompt_tokens to tell v1 from v2:
+     the ranges overlap, verifier S4) with a clear error.
 3. Tests (offline, fake tokenizer): the no-card render has no card text and equals the no-card FT prompt; the default
    path is unchanged; the card-name drops (and that rule-quoting rows are kept); the >20% stop; repeatable --first; v1 refusal; the estimate without the card is smaller than with it.
 
