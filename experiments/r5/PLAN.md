@@ -58,7 +58,8 @@ first-try rows (seed 20261031) until it fits, keeping all self-fix rows. Save th
 stops training, the last saved adapter is used for dev and the stop is disclosed (amends the R3 rule for this run).
 
 ## Dev check (pre-registered; on the 100 R5D jobs, k = 1, same runner, referee, 16,000 tokens) [M9]
-Arms: A + card, R3 + card, FT + card. Product mode for each arm: one self-fix retry with the referee text only.
+Arms: A + card, R3 + card, FT + card. Product mode for each arm [E3]: one self-fix retry, triggered ONLY by
+reference-free signals (crash, invalid shape, or solids ≠ 1) and using selffix_feedback; then the full referee scores it.
 - **GO to the exam** if FT + card − max(A + card, R3 + card) ≥ +6 points on first try.
 - Otherwise the exam runs once with the **best arm** (= highest first-try pass rate on R5D; ties → cheaper tokens per
   correct), and the report says that R5 training did not beat it.
@@ -78,5 +79,6 @@ Muse Code ≈ $3-5 Meta credit. Every paid step: verifier check + user yes first
 
 ## Risks
 - Glimmer's own thinking is not always good thinking. The referee filter keeps only rows whose code passed.
-- Self-fix rows teach fixing from referee text; the product must show the same referee text (same function).
+- Self-fix rows teach fixing from reference-free feedback; the product uses the same selffix_feedback function. In the
+  TRAINING data the retry was triggered by a full-referee FAIL (reference-assisted trigger); disclosed [E3].
 - Only ~10 families: the trained model may be narrow. The exam's 30 jobs are hand-made and different, so it tests transfer.
