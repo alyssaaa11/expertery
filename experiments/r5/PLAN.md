@@ -69,9 +69,20 @@ Supersedes plan v1 (ac1bfa6). Verifier must-fixes M1-M10 are marked [Mx] where t
   - **as good as the card**: FT − (A + card) ≥ −3 points AND 95% CI lower bound ≥ −10;
   - **beats plain Glimmer**: FT − A ≥ +10 points;
   - **cheaper**: FT tokens per correct part ≤ (A + card)'s.
-  The exam runs once with FT (no card) and A + card. The other parts of the frozen step 6 are unchanged.
+  - All readings on FIRST try. CI = paired bootstrap over the 100 jobs, 10,000 resamples [P2]. "Cheaper" is measured
+    on COMPLETION tokens per correct part (dropping the card saves prompt tokens automatically). Thinking check kept:
+    FT answers with reasoning ≥ 200 chars must be ≥ 90%, else STOP ("thinking suppressed").
+  - Card-name filter: drop rows whose reasoning NAMES the card; rows that quote true rules are kept (verifier S3);
+    stop if > 20% dropped.
+  The exam runs once with FT (no card) and A + card; this amendment is written into experiments/final/PLAN.md step 6
+  before the exam [P3]. Cap $5 (≈ $3.3).
+- Rest run (started 19:23 after the user's "straight to B", before a verifier check of its command; the command is
+  logged here): `WORKERS=16 caffeinate -is zsh experiments/final/run_base_session.sh results/r5-first-2026-10-31 18.00
+  --pilot '' --run 'experiments/r5/jobs_r5t_rest.jsonl:rest-A:A:1'` with FORGE_RULE_CARD = card v2 (sha checked).
+  Expected ≈ $14.5 (verifier: pilot v2 $0.0080/answer).
 
 ## Training rows (two kinds, all with thinking) [M1, M3, M4]
+**(REPLACED for the prompt/arms by "Plan change: option B" below/above: rows are trained WITHOUT the card; dev arms A / A + card / FT no card. Kept parts: row kinds, filters, LoRA settings, caps, thinking check.)**
 - **First-try rows**: prompt = FT system prompt + RULE_CARD v2 (sha256 9d0929b2…29c7; v1 586b5960…e80b kept as RULE_CARD_V1.md) + job text; target = Glimmer's
   thinking + code. From step-3 PASSes and step-5 PASSes (hint removed).
 - **Self-fix rows**: prompt = the same + "Your code:\n…\nWhat happened:\n<reference-free feedback>"; target = thinking +
@@ -86,12 +97,14 @@ Supersedes plan v1 (ac1bfa6). Verifier must-fixes M1-M10 are marked [Mx] where t
 - Expected size (hypothesis): ≈ 1,350 first-try + ≈ 250-400 self-fix/hinted ≈ 1,600-1,750 rows, about 10× R3.
 
 ## Training [M5]
+**(REPLACED for the prompt/arms by "Plan change: option B" below/above: rows are trained WITHOUT the card; dev arms A / A + card / FT no card. Kept parts: row kinds, filters, LoRA settings, caps, thinking check.)**
 LoRA r 16, alpha 32, lr 1e-4, 2 epochs, max 8,192 tokens, H200, loss on thinking + code. Cap $18. Before starting,
 estimate the cost from tokens × the measured R3 throughput; if the estimate is over 75% of the cap ($13.50), subsample
 first-try rows (seed 20261031) until it fits, keeping all self-fix rows. Save the adapter every half epoch; if the cap
 stops training, the last saved adapter is used for dev and the stop is disclosed (amends the R3 rule for this run).
 
 ## Dev check (pre-registered; on the 100 R5D jobs, k = 1, same runner, referee, 16,000 tokens) [M9]
+**(REPLACED for the prompt/arms by "Plan change: option B" below/above: rows are trained WITHOUT the card; dev arms A / A + card / FT no card. Kept parts: row kinds, filters, LoRA settings, caps, thinking check.)**
 Arms: A + card, R3 + card, FT + card. Product mode for each arm [E3]: one self-fix retry, triggered ONLY by
 reference-free signals (crash, invalid shape, or solids ≠ 1) and using selffix_feedback; then the full referee scores it.
 - **GO to the exam** if FT + card − max(A + card, R3 + card) ≥ +6 points on first try.
@@ -103,6 +116,7 @@ reference-free signals (crash, invalid shape, or solids ≠ 1) and using selffix
 Cap $9.
 
 ## Final exam [M10]
+**(REPLACED for the prompt/arms by "Plan change: option B" below/above: rows are trained WITHOUT the card; dev arms A / A + card / FT no card. Kept parts: row kinds, filters, LoRA settings, caps, thinking check.)**
 Frozen rules of experiments/final/PLAN.md step 6, amended BEFORE any exam run: the FT arm = short prompt + RULE_CARD
 (v2 sha256 above); the report says B-max had the 5.7k manual and no card. Report first try and product mode (one self-fix).
 Cap $5. Run once.

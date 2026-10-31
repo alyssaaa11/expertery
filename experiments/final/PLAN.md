@@ -93,6 +93,12 @@ the 30 jobs, 10,000 resamples, each job's pass rate over its answers:
 - Reported per arm: pass rate (all / medium / hard), pass@3, tokens per correct part, seconds per answer (median and
   mean), $ per correct part (= arm wall-clock h × $2.50 ÷ PASS), chart accuracy vs $ per correct part.
 
+## Step 6 amendment (R5 option B, written 2026-10-31 BEFORE any exam run; experiments/r5/PLAN.md)
+The exam runs once with two arms: FT = the R5-trained model served WITHOUT the rule card (short prompt), and A + card v2
+(base Glimmer, short prompt + experiments/final/RULE_CARD.md sha256 9d0929b2…29c7). Runner, referee (0.2%), 16,000
+tokens, sampling and k = 3 as in step 6; bars (a)-(d) are reported against B2/BX as written, and FT vs A + card is
+reported with the same paired bootstrap. Disclosed: B2/BX used the 5.7k manual and no card. Cap $5.
+
 ## Step 7: offline demo (other agent's condition 3; only if it takes under ~2 h)
 hypothesis: download the merged model (~56 GB; 587 GB free) and convert it with `mlx_lm.convert -q` on the Mac, then
 answer one exam-style job offline. The model only writes text on the Mac; its code is still built in the cloud box
