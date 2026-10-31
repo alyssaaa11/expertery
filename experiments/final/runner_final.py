@@ -1218,8 +1218,13 @@ def load_factory_jobs_file(path):
         if not job.get("id") or not job.get("text"):
             raise ValueError("jobs file %r has a record without id/text"
                              % (path,))
-        out.append({"id": job["id"], "text": job["text"],
-                    "family": job.get("family")})
+        row = {"id": job["id"], "text": job["text"],
+               "family": job.get("family")}
+        # Claude small fix (2026-10-31, verifier B7): keep the reference for
+        # GRADING only (grade_fn_for); prompts use job["text"] only.
+        if job.get("reference"):
+            row["reference"] = job["reference"]
+        out.append(row)
     return out
 
 

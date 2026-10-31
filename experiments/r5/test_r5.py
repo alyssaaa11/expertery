@@ -784,3 +784,21 @@ def test_claude_fix_b6b_card_stripped_matches_runner(tmp_path, monkeypatch):
     card = os.path.join(here, "..", "final", "RULE_CARD.md")
     text = forge_train.check_rule_card(card)
     assert text == open(card, encoding="utf-8").read().strip()
+
+
+def test_claude_fix_b7_jobs_file_keeps_reference_for_grading(tmp_path):
+    import sys, os, json
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "final"))
+    import runner_final
+    p = tmp_path / "jobs.jsonl"
+    p.write_text(json.dumps({"id": "R5T-F1-1", "family": 1, "text": "make a box",
+                             "reference": "REFCODE"}) + "\n")
+    jobs = runner_final.load_factory_jobs_file(str(p))
+    assert jobs[0]["reference"] == "REFCODE"
+    calls = []
+    grade = runner_final.cloud_cq.factory_grade_fn(
+        jobs, lambda *a, **k: calls.append((a, k)) or "ok")
+    grade("factory", "R5T-F1-1", b"brep")
+    assert calls[0][1] == {"reference": "REFCODE"}
+    msgs = runner_final.ft_messages(jobs[0]["text"])
+    assert "REFCODE" not in json.dumps(msgs)
