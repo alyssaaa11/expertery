@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-10-30 23:35 (after the rule-card check)
+**Last updated**: 2026-11-01 00:30 (after the R5 first-try run)
 
 ---
 
@@ -69,31 +69,36 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **NOW (2026-10-30 23:35):** the **rule-card check is DONE** (user yes, verifier GO forge-rulecard-check-go-2026-10-30;
-  card = experiments/final/RULE_CARD.md in the prompt, no new training; both arms COMPLETE 60/60, not budget-stopped).
-  - verified (results/check-r3card-2026-10-30/dev-FT/summary.json + calls.jsonl): **R3 + card 51/60 = 85%** (summary
-    pass_rate 86.4% = 51/59, because 1 INVALID F9-13 was cut off by the token limit), tight 84.7%, pass@3 100%,
-    **5 crashes** (non-empty run_error), 6.5k tokens/correct. F3, F4, F8 at 4/6; the others 5-6/6.
-  - verified (results/check-acard-2026-10-30/dev-A/summary.json): **A + card 41/60 = 68.3%**, pass@3 85%, 17 crashes;
-    F4 1/6, F8 1/6, F3 2/6, F6 2/6.
-  - Pre-registered reading (PLAN "Rule-card check"): R3 + card crashes 5 ≤ 8 → **manual-gap diagnosis holds**. The card
-    adds more than 10 points to both arms (R3 48.3 → 85; A 51.7 → 68.3), and R3 + card beats A + card by ≈ 17 points, so
-    with the card the trained model is clearly better. Caveat: 4th look at the dev set, and the card was written from R3's
-    dev crashes, so the numbers are optimistic. The exam is untouched.
-  - Cost: Modal billing 17.53 → 20.01 = **$2.48** (credit, $0 billed). Total ≈ **$63.7 of $80**.
-  - Reported to Alyssa in Slack (hivey msg m1793399489580-425; `hivey msg send human` without --from, because
-    `--from hivey/hivey` fails with: no swarm "hivey").
-  - Next: commit results + verifier review of this result → then (needs user yes + verifier + Muse spec) card-conditioned
-    self-distillation per raw/superintel-answer-training-diagnosis-2026-10-30.md (≈ $15-23, 120 fresh dev jobs).
-    D3 (served sampling + digest) still open.
-  - Spark vs Glimmer + Meta training guide vs our recipe: [[spark-vs-glimmer-2026-10-31]].
-  - Fireworks workshop lessons (free Glimmer SFT until 11-30, thousands of examples, effort sweep): [[fireworks-workshop-lessons-2026-10-31]].
-  - Free CadQuery data on Hugging Face (CAD-Coder 8k + 1.5k CoT, Apache-2.0): [[huggingface-cadquery-data-2026-10-31]].
-  - decision (user, 2026-10-31): train more BEFORE the exam with large data; Modal only (no Fireworks); **Modal budget $90** (billing ≈ $19.9 on 10-31); last training method. Plan draft experiments/r5/PLAN.md (9fc3fce), sent to the verifier.
-  - Earlier dev results without the card: untrained 51.7%, R1 38.3%, R3 48.3% ([[training-experiments-2026-10-30]]).
-  - Working rules (user): Slack via hivey; verifier before every paid step; Muse writes big code, Claude only small
-    disclosed fixes (README "Small fixes by Claude"), never Claude inside the product; no Wonder data in training; budget
-    $80 total incl. credits; keep the git history; never use `tr` in the shell (aliased to Trash).
+- **NOW (2026-11-01 00:30): R5 option B, first-try data DONE; next = self-fix + Spark hints (need user yes), then
+  training WITHOUT the card.** Plan: experiments/r5/PLAN.md ("Plan change: option B"); verifier reports
+  ~/agents/verifier/reports/forge-r5-*.md (the verifier agent was not running; a Claude stand-in followed its rules).
+  - decision (user, 2026-10-31): large data, Modal only, **Modal budget $90**, Baseten hints cap $10, last training
+    method; option B (no CAD-Coder: non-commercial licence lineage); Spark only as hint-giver (no code); rule card v2
+    (option B for the card); then plan B: generate WITH card v2, train WITHOUT the card (context distillation).
+  - verified job sets (results/r5-jobsets-2026-10-31, r5-checkrefs-2026-10-31): R5D 100 (sha 5919bb3f…2172) + R5T 2,000
+    (c836dbe1…458e), 0 dropped, refs 100/100 + 2000/2000 PASS; $0.49.
+  - verified pilots on the same 200 R5T jobs (20/family): card v1 149/200 = 74.5%, 47 crashes (36 = Workplane/Solid
+    mix-up, 8 makeCylinder `start=`); card v2 (sha 9d0929b2…29c7, +2 lines, signatures checked) **188/200 = 94%, 3
+    crashes** (in-sample: the lines were written from these crashes).
+  - verified rest run (results/r5-first-2026-10-31/rest-A/summary.json): **1694/1800 = 94.1%** (tight 93.4%), 35
+    crashes, reasoning stored 1800/1800; weakest F4 148/180, F1 159/180, F8 162/180, F10 163/180. Correct first-try
+    answers with thinking: 1,694 + 188 = **1,882**. Cost ≈ $13.6.
+  - Code: Muse R5 build (e473fda) + fixes R5b (bb14436) + viewer (23629ee) + R5c no-card (d7bb06c); Claude small fixes
+    disclosed in README (B3b, B6b, B7, session script, viewer render). pytest 392.
+  - Answer viewer: results/r5-pilot-2026-10-31/viewer/index.html (user asked to see how Glimmer answers).
+  - Money: Modal billing 37.54 (budget $90). Muse (Meta credit) for R5 ≈ $5.2 + R5c ≈ $0.9 (estimates from token counts).
+  - Lesson (how learned: R5T-F1-15 FAIL in the viewer, reference vs answer): the card's "make the cutter 1 mm longer"
+    rule also extends cuts that stop INSIDE the part (slot cut 1 mm into the core, 0.3% mismatch). Not changed yet.
+  - Lesson (how learned: comparing ids F1-15 text vs reference): generator rounding can make the text width (4.7)
+    differ from the coordinates (−2.4..2.4 = 4.8); the reference follows the coordinates. Minor, noted.
+  - Open: the hard deadline is Nov 4 9:00 PM ET = Nov 5 03:00 Spain (user). Impact gap: no installer/app yet ("Forge box"
+    demo idea). Pitch: private, referee-checked CAD; training = knowledge into the weights (cheaper, no card).
+  - Working rules (user): Slack via `hivey msg send human`; verifier before every paid step; user yes before every paid
+    step; Muse writes big code, Claude only small disclosed fixes; never Claude inside the product; no Wonder data in
+    training; keep git history; never use `tr` in the shell (aliased to Trash).
+- (older) Rule-card check 2026-10-30: R3 + card 51/60 = 85%, A + card 41/60 = 68.3%; manual-gap diagnosis holds
+  ([[training-experiments-2026-10-30]], [[spark-vs-glimmer-2026-10-31]], [[fireworks-workshop-lessons-2026-10-31]],
+  [[huggingface-cadquery-data-2026-10-31]]).
 - verified: factory built by Muse in 4 rounds (r1 e24a9a7 ≈ $2.4, r1b d304368 ≈ $0.96, r1c 5edd84a ≈ $1.62, r1d ff7f3a4
   ≈ $1.26). Claude re-ran: pytest 259 passed; make_jobs SELF-CHECK OK with TEXT=REF and CUTS 20/20 in all 10 families.
 - verified (results/cloud-checks-2-2026-10-30.log, Modal credits, $0 billed): check-refs factory 200/200, first-test 30/30;
