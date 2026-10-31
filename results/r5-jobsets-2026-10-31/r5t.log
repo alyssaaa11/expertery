@@ -1,0 +1,115 @@
+dedup dropped 0 of 2000 (text or rounded params)
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-VZ1fneGGMYDJ3a0gu4x6Zc
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+cloud-check cost $0.00020/job over 20 jobs; projected $0.470 for 2333 jobs vs budget $0.70
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-VZ1fneGGMYDJ3a0gu4x6Zc
+cloud-check measured 333 old refs (300 factory, 33 exam)
+cloud-check saved 2000 measures to ../r5/jobs_r5t.jsonl.measures.json
+cloud-check 2000/2000 refs ok, spent $0.443
+cloud-check dropped 0 (see ../r5/jobs_r5t.jsonl.dropped.json)
+wrote 2000 jobs to ../r5/jobs_r5t.jsonl
+sha256 c836dbe17eeb890949b791554cbca8bfe8a9da83cd38bfd26736369de531458e jobs_r5t.jsonl

@@ -17,6 +17,10 @@ Supersedes plan v1 (ac1bfa6). Verifier must-fixes M1-M10 are marked [Mx] where t
    parameter tuple, or same measured volume + bbox (1e-6) → dropped and counted [W2]. The volume/bbox measure and the
    reference self-check run in the cloud box (cloud_cq measure_brep), cap $1. After building: write both files' sha256
    and job counts here before any GPU step.
+   - verified (2026-10-31 15:01, results/r5-jobsets-2026-10-31/r5d.log + r5t.log, verifier GO forge-r5b2): **R5D 100 jobs**
+     sha256 5919bb3fad92e22ad4f9cd0456c625e5284bb57638c0f753b7280335bc192172, 100/100 refs ok, 0 dropped, $0.073;
+     **R5T 2,000 jobs** sha256 c836dbe17eeb890949b791554cbca8bfe8a9da83cd38bfd26736369de531458e, 2,000/2,000 refs ok,
+     0 dropped (text/params/volume+bbox vs jobs, dev, exam, R5D), $0.443. Modal billing 19.89 → 20.38.
 2. **Pilot** [M6, W1]: base Glimmer + card (arm A, A100-80GB, deploy/modal_glimmer.py) on the first 200 R5T jobs, k = 1,
    **16 workers** (the servers accept at most 16 requests at a time: max_inputs=16, one container; 200 jobs ≈ 12 waves).
    Check on the first records: prompt_tokens ≈ 830+ (card in the prompt) and stored `reasoning` length equals

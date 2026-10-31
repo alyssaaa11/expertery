@@ -1,0 +1,21 @@
+dedup dropped 0 of 100 (text or rounded params)
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-6rn7UOtwt38Sq1Y2ynG8b2
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+cloud-check cost $0.00024/job over 20 jobs; projected $0.080 for 333 jobs vs budget $0.25
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-6rn7UOtwt38Sq1Y2ynG8b2
+cloud-check measured 233 old refs (200 factory, 33 exam)
+cloud-check saved 100 measures to ../r5/jobs_r5d.jsonl.measures.json
+cloud-check 100/100 refs ok, spent $0.073
+cloud-check dropped 0 (see ../r5/jobs_r5d.jsonl.dropped.json)
+wrote 100 jobs to ../r5/jobs_r5d.jsonl
+sha256 5919bb3fad92e22ad4f9cd0456c625e5284bb57638c0f753b7280335bc192172 jobs_r5d.jsonl
