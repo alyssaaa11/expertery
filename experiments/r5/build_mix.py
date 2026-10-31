@@ -17,6 +17,17 @@ Rules: rows with reasoning < 200 chars are dropped (no code-only rows);
 at most 2 rows per job. Asserts: no row contains "Hint from a tutor", no
 dev/exam id or text, no Wonder output. Prints rows per source and token
 totals.
+
+Option B (train WITHOUT the card): --drop-card-mentions drops rows
+whose reasoning NAMES the card ("rule card", "card says", "per the
+card", "cheat sheet", "the card", case-insensitive). Rows that only
+quote or follow true rules without naming the card are KEPT. The drop
+share is printed per source; more than 20% dropped overall stops the
+run (non-zero exit). --first is repeatable (pilot v2 calls.jsonl +
+rest-run calls.jsonl). Records from the v1 pilot are refused: any
+input file under results/r5-pilot-2026-10-31/ is an error (the v1
+pilot used card v1, a prompt mismatch; prompt_tokens ranges overlap,
+so paths -- not token counts -- tell v1 from v2, S4).
 """
 
 import argparse
@@ -37,6 +48,48 @@ HINT_MARKER = "Hint from a tutor"
 
 VALID_SOURCES = ("glimmer-first", "glimmer-selffix", "glimmer-hinted")
 HINT_COPY_WORDS = 8
+
+# Option B: reasoning that NAMES the card is dropped (rows that only
+# quote or follow true rules are kept). Case-insensitive substrings.
+CARD_MENTION_PATTERNS = ("rule card", "card says", "per the card",
+                         "cheat sheet", "the card")
+CARD_DROP_STOP_FRAC = 0.20
+
+# The v1 pilot (card v1, prompt mismatch) is kept as a record and never
+# trains: any input file under this dir is refused by path (S4: v1/v2
+# prompt_tokens ranges overlap, so token counts cannot tell them apart).
+V1_PILOT_DIRNAME = "r5-pilot-2026-10-31"
+
+
+def reasoning_names_card(reasoning):
+    """True when reasoning NAMES the card (option B drop rule).
+
+    Case-insensitive match on CARD_MENTION_PATTERNS. Reasoning that
+    only quotes or follows true rules without naming the card returns
+    False (kept: that is the point of option B).
+    """
+    text = (reasoning or "").lower()
+    return any(pat in text for pat in CARD_MENTION_PATTERNS)
+
+
+def refuse_v1_pilot_paths(paths):
+    """Refuse v1 pilot inputs by path (S4).
+
+    Raises ValueError naming the file when any input path lives under
+    results/r5-pilot-2026-10-31/ (the v1 pilot used card v1: a prompt
+    mismatch with the v2-trained rows).
+    """
+    for path in paths or ():
+        if not path:
+            continue
+        parts = os.path.abspath(str(path)).split(os.sep)
+        if V1_PILOT_DIRNAME in parts:
+            raise ValueError(
+                "refusing v1 pilot input %r: the v1 pilot "
+                "results/r5-pilot-2026-10-31/ used rule card v1 (prompt "
+                "mismatch); train only on v2 runs (pilot v2 + rest run)"
+                % (path,))
+    return True
 
 
 def load_calls(path):
@@ -76,17 +129,30 @@ def pass_records(calls):
             if (r.get("verdict", r.get("outcome")) == "PASS")]
 
 
-def build_rows(first_calls, selffix_calls, hint_calls, jobs_by_id):
-    """Build mix rows; returns (rows, counts) with drop counters."""
+def build_rows(first_calls, selffix_calls, hint_calls, jobs_by_id,
+               drop_card_mentions=False):
+    """Build mix rows; returns (rows, counts) with drop counters.
+
+    With drop_card_mentions=True (option B) rows whose reasoning NAMES
+    the card are dropped and counted per source in
+    counts["card_dropped_by_source"]; rows that only quote or follow
+    true rules are kept.
+    """
     rows, counts = [], {"glimmer-first": 0, "glimmer-selffix": 0,
                         "glimmer-hinted": 0, "dropped_short": 0,
-                        "dropped_hint_cite": 0}
+                        "dropped_hint_cite": 0, "dropped_card_mention": 0,
+                        "card_dropped_by_source": {}}
     per_job = {}
 
     def _add(job_id, text, code, reasoning, source):
         if not isinstance(reasoning, str) \
                 or len(reasoning) < MIN_REASONING_CHARS:
             counts["dropped_short"] += 1
+            return
+        if drop_card_mentions and reasoning_names_card(reasoning):
+            counts["dropped_card_mention"] += 1
+            by_src = counts["card_dropped_by_source"]
+            by_src[source] = by_src.get(source, 0) + 1
             return
         if per_job.get(job_id, 0) >= MAX_ROWS_PER_JOB:
             return
@@ -128,6 +194,26 @@ def build_rows(first_calls, selffix_calls, hint_calls, jobs_by_id):
     return rows, counts
 
 
+def card_drop_shares(counts):
+    """Card-mention drop share per source and overall (option B).
+
+    Per source: dropped_s / (kept_s + dropped_s); overall:
+    dropped / (kept + dropped), where kept counts rows that passed
+    every other filter. A source (or the run) with no candidate rows
+    has share 0.0.
+    """
+    by_src = (counts or {}).get("card_dropped_by_source") or {}
+    per_source = {}
+    for src in VALID_SOURCES:
+        dropped = by_src.get(src, 0)
+        denom = (counts or {}).get(src, 0) + dropped
+        per_source[src] = (dropped / denom) if denom else 0.0
+    total_dropped = (counts or {}).get("dropped_card_mention", 0)
+    total_kept = sum((counts or {}).get(src, 0) for src in VALID_SOURCES)
+    denom = total_kept + total_dropped
+    return per_source, (total_dropped / denom) if denom else 0.0
+
+
 def assert_mix(rows, dev_ids=(), exam_texts=(), dev_texts=()):
     """Fire on hint text, dev/exam ids or texts, or Wonder output."""
     dev_id_set = set(dev_ids or ())
@@ -167,8 +253,10 @@ def token_totals(rows):
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Build the R5 training mix.")
-    parser.add_argument("--first", required=True,
-                        help="first-try calls.jsonl (PASS only kept)")
+    parser.add_argument("--first", required=True, action="append",
+                        help="first-try calls.jsonl (PASS only kept); "
+                             "repeatable: pilot v2 + rest-run files "
+                             "concatenate (S1)")
     parser.add_argument("--selffix", default=None,
                         help="self-fix calls.jsonl")
     parser.add_argument("--hinted", default=None,
@@ -183,15 +271,37 @@ def main(argv=None):
                              "R5D texts)")
     parser.add_argument("--exam-texts", default=None,
                         help="exam texts JSON list (asserted absent)")
+    parser.add_argument("--drop-card-mentions", action="store_true",
+                        help="option B: drop rows whose reasoning NAMES "
+                             "the card (rows quoting true rules kept); "
+                             "stops non-zero when over 20%% are dropped")
     parser.add_argument("--out", required=True,
                         help="output train_records.jsonl")
     args = parser.parse_args(argv)
+    refuse_v1_pilot_paths(
+        list(args.first or []) + [args.selffix, args.hinted, args.jobs,
+                                  args.dev_ids, args.dev_jobs,
+                                  args.exam_texts])
     jobs_by_id = load_jobs(args.jobs)
-    first_calls = load_calls(args.first)
+    first_calls = []
+    for path in args.first:
+        first_calls.extend(load_calls(path))
     selffix_calls = load_calls(args.selffix) if args.selffix else []
     hint_calls = load_calls(args.hinted) if args.hinted else []
     rows, counts = build_rows(first_calls, selffix_calls, hint_calls,
-                              jobs_by_id)
+                              jobs_by_id,
+                              drop_card_mentions=args.drop_card_mentions)
+    if args.drop_card_mentions:
+        per_source, overall = card_drop_shares(counts)
+        print("CARD_MENTION_DROP overall=%.3f %s" % (
+            overall, json.dumps(
+                {src: round(per_source[src], 3) for src in VALID_SOURCES},
+                sort_keys=True)))
+        if overall > CARD_DROP_STOP_FRAC:
+            print("CARD_MENTION_STOP dropped %.1f%% of rows (over %.0f%%); "
+                  "refusing to write the mix" % (
+                      100.0 * overall, 100.0 * CARD_DROP_STOP_FRAC))
+            return 1
     dev_ids, exam_texts = [], []
     if args.dev_ids and os.path.isfile(args.dev_ids):
         with open(args.dev_ids, encoding="utf-8") as f:
@@ -215,10 +325,11 @@ def main(argv=None):
             f.write(json.dumps(row) + "\n")
     totals = token_totals(rows)
     print("MIX rows=%d first=%d selffix=%d hinted=%d "
-          "dropped_short=%d dropped_hint_cite=%d" % (
-              len(rows), counts["glimmer-first"],
-              counts["glimmer-selffix"], counts["glimmer-hinted"],
-              counts["dropped_short"], counts["dropped_hint_cite"]))
+          "dropped_short=%d dropped_hint_cite=%d dropped_card_mention=%d"
+          % (len(rows), counts["glimmer-first"],
+             counts["glimmer-selffix"], counts["glimmer-hinted"],
+             counts["dropped_short"], counts["dropped_hint_cite"],
+             counts["dropped_card_mention"]))
     print("MIX tokens %s" % json.dumps(totals, sort_keys=True))
     return 0
 

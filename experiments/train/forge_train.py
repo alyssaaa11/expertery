@@ -276,6 +276,23 @@ def ft_messages_for(text):
     return runner_final.ft_messages(text)
 
 
+def ft_messages_no_card(text):
+    """The FT prompt messages WITHOUT the rule card (option B).
+
+    Built with runner_final's own function while FORGE_RULE_CARD is
+    unset, so the result is byte-equal to what the FT arm sends with
+    no card -- even when the variable is exported in the shell (the
+    reference FT prompt for the no-card format check must be built
+    this way, S2). The previous value is restored afterwards.
+    """
+    old_card = os.environ.pop("FORGE_RULE_CARD", None)
+    try:
+        return ft_messages_for(text)
+    finally:
+        if old_card is not None:
+            os.environ["FORGE_RULE_CARD"] = old_card
+
+
 THINK_OPENER_WORDS = ("to=self", "think", "reasoning", "analysis")
 
 
@@ -848,6 +865,41 @@ def assert_r5_first_render(record, tokenizer, card_text):
     return fmt
 
 
+def assert_no_card_in_prompt(prompt, card_text):
+    """Abort when rule-card text appears in a no-card render (option B)."""
+    if card_text and card_text.strip() \
+            and card_text.strip() in (prompt or ""):
+        raise ValueError(
+            "rule card text found in a no-card training prompt; "
+            "refusing to train with the card in the prompt")
+    return True
+
+
+def assert_r5_first_render_no_card(record, tokenizer, card_text=None):
+    """Card-absent + FT-match assert on the first no-card render (option B).
+
+    Renders `record` (the first record that will actually train, with
+    reasoning) through check_format with runner_final's own FT messages
+    WITHOUT the rule card (FORGE_RULE_CARD unset for that call, S2),
+    and aborts unless the card text is absent from the prompt AND the
+    rendered prompt is byte-equal to the no-card FT arm's
+    (prompt_matches_ft). `card_text` is the card to assert absent (the
+    repo card, read best-effort by the caller: no card file is
+    required or checked in no-card mode); None skips the absence
+    assert. Returns the check_format result.
+    """
+    ft_messages = ft_messages_no_card(record["text"])
+    fmt = check_format(tokenizer, record, ft_messages,
+                       messages_fn=ft_messages_no_card)
+    if card_text is not None:
+        assert_no_card_in_prompt(fmt["prompt"], card_text)
+    if fmt["checks"].get("prompt_matches_ft") is not True:
+        raise ValueError(
+            "first no-card training render does not match the FT arm's "
+            "prompt; refusing to train")
+    return fmt
+
+
 def training_image_local_files():
     """(local path, remote path) pairs baked into the training image.
 
@@ -1261,12 +1313,13 @@ def load_bpe_tokenizer(path):
 
 
 def count_r5_row_tokens(records, bpe, system_with_card):
-    """Exact BPE tokens per R5 row, system prompt + card included (N1).
+    """Exact BPE tokens per R5 row, system prompt included (N1).
 
-    Each row counts the system message WITH the card (the same string
-    the FT arm sends) + job text + reasoning + fenced code, plus the
-    chat-template header overhead. Returns [tokens] aligned with
-    `records`.
+    Each row counts the system message (WITH the card by default; the
+    bare system prompt with option B --no-card -- the same string the
+    FT arm sends either way) + job text + reasoning + fenced code,
+    plus the chat-template header overhead. Returns [tokens] aligned
+    with `records`.
     """
     out = []
     for rec in records:
@@ -1721,12 +1774,14 @@ if modal is not None:
         checkpoint_every=CHECKPOINT_EVERY_STEPS,
         require_rule_card=False,
         r5_cap_dollars=None,
+        r5_no_card=False,
     ):
         """LoRA-tune Glimmer on [{"text", "code", "reasoning"?}] records;
         short prompt only, on H200 (with require_rule_card=True every
         row renders with runner_final's FT system prompt WITH the rule
         card, built here from the checked card text: the container
-        cannot import runner_final).
+        cannot import runner_final; with r5_no_card=True every row
+        renders with the FT system prompt WITHOUT the card, option B).
 
         `data` is the records themselves (a list of dicts, JSON-serialised
         by the entrypoint), or a volume-relative path holding JSONL when
@@ -1803,10 +1858,18 @@ if modal is not None:
                 {"role": "system",
                  "content": SYSTEM_PROMPT + "\n\n" + _card},
                 {"role": "user", "content": text}])
+        elif r5_no_card:
+            # Option B: the FT system prompt WITHOUT the card (byte-equal
+            # to runner_final.ft_messages with FORGE_RULE_CARD unset;
+            # no card file is required or checked in the image).
+            _r5_messages = (lambda text: [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": text}])
         else:
             _r5_messages = None
         tok = transformers.AutoTokenizer.from_pretrained(MODEL)
-        if require_rule_card and r5_cap_dollars is not None:
+        if (require_rule_card or r5_no_card) \
+                and r5_cap_dollars is not None:
             # N1 fallback (no cached tokenizer where the entrypoint
             # ran): count exact with the real tokenizer and apply the
             # 75% rule here, before training. Self-fix rows are kept.
@@ -1899,7 +1962,7 @@ if modal is not None:
                          if lab != -100][:40]
             out["first_example"] = {"prompt": prompt0, "full": full0}
             out["first_loss_tokens"] = loss_toks
-        if kept and require_rule_card:
+        if kept and (require_rule_card or r5_no_card):
             # R5: first loss tokens PER SOURCE (each must open the
             # thinking turn) + rows dropped for length per source.
             per_source, dropped_by_source = {}, {}
@@ -2353,15 +2416,17 @@ def _pipeline(data_arg, out_name, split, res_dir, train_kwargs,
     return split
 
 
-def first_ft_messages(kept):
+def first_ft_messages(kept, no_card=False):
     """Prebuilt FT messages for the record the in-train FORMAT_CHECK
     renders (or None when no records): the first kept record with
     reasoning, else the first kept record. The train container's
     pre-training format check needs them, and it cannot import
-    runner_final."""
+    runner_final. With no_card=True the messages are built with
+    FORGE_RULE_CARD unset (option B, S2)."""
     if not kept:
         return None
-    return ft_messages_for(first_format_record(kept)["text"])
+    text = first_format_record(kept)["text"]
+    return ft_messages_no_card(text) if no_card else ft_messages_for(text)
 
 
 def run_smoke(cap_dollars, spent_dollars=0.0):
@@ -2410,19 +2475,26 @@ R5_CARD_REPO_PATH = os.path.join(
 
 
 def run_full_r5(data, out_name, cap_dollars, spent_dollars=0.0,
-                max_steps=None, prompts=(), grad_accum=R5_GRAD_ACCUM):
+                max_steps=None, prompts=(), grad_accum=R5_GRAD_ACCUM,
+                no_card=False):
     """Full R5 pipeline on a build_mix.py train_records.jsonl file.
 
     Same LoRA (r 16, alpha 32, lr 1e-4, 2 epochs), max_tokens 8192, H200.
     Loader provenance: glimmer-first/-selffix/-hinted with R5T ids only.
     Every row's prompt is runner_final's FT system prompt WITH the rule
     card (built with runner_final's own function); the card text must
-    appear in the first rendered prompt or the run aborts. Shuffle seed
-    20261031. Adapter saved every half epoch. A cost estimate (exact
-    Glimmer BPE tokens x measured R3 throughput, system + card per row)
-    is printed; PLAN's 75% rule subsamples first-try rows (seed
-    20261031, all self-fix kept) when it exceeds 0.75 x the cap, then
-    the full cap still refuses.
+    appear in the first rendered prompt or the run aborts. With
+    no_card=True (option B, `full-r5 --no-card`) every row's prompt is
+    the FT system prompt WITHOUT the card (exactly what the FT arm
+    sends with FORGE_RULE_CARD unset); no card file is required or
+    checked, the estimate and the 75% rule count the system prompt
+    without the card, and the card text must be ABSENT from the first
+    rendered prompt or the run aborts. Shuffle seed 20261031. Adapter
+    saved every half epoch. A cost estimate (exact Glimmer BPE tokens
+    x measured R3 throughput, system + card per row, or system without
+    the card with no_card) is printed; PLAN's 75% rule subsamples
+    first-try rows (seed 20261031, all self-fix kept) when it exceeds
+    0.75 x the cap, then the full cap still refuses.
     """
     records, mix_report = load_mix_records(data)
     print("MIX %s" % json.dumps(mix_report))
@@ -2430,9 +2502,24 @@ def run_full_r5(data, out_name, cap_dollars, spent_dollars=0.0,
     bpe_path = glimmer_tokenizer_file()
     if bpe_path is not None:
         bpe = load_bpe_tokenizer(bpe_path)
-        card_text_est = check_rule_card(R5_CARD_REPO_PATH)
-        system_with_card = SYSTEM_PROMPT + "\n\n" + card_text_est.strip()
-        row_tokens = count_r5_row_tokens(kept, bpe, system_with_card)
+        if no_card:
+            system_text = SYSTEM_PROMPT
+        else:
+            card_text_est = check_rule_card(R5_CARD_REPO_PATH)
+            system_text = SYSTEM_PROMPT + "\n\n" + card_text_est.strip()
+        row_tokens = count_r5_row_tokens(kept, bpe, system_text)
+        kept, dropped_ids, estimate = apply_budget_headroom(
+            kept, row_tokens, cap_dollars)
+    elif no_card:
+        # No cached tokenizer here: whitespace estimate locally (the
+        # container counts exact with the real tokenizer and applies
+        # the 75% rule itself before training, via r5_cap_dollars).
+        # The estimate still counts the system prompt, without the card.
+        row_tokens = [
+            len((SYSTEM_PROMPT + " " + (r.get("text") or "") + " "
+                 + (r.get("reasoning") or "") + " "
+                 + build_answer_text(r.get("code") or "")).split())
+            for r in kept]
         kept, dropped_ids, estimate = apply_budget_headroom(
             kept, row_tokens, cap_dollars)
     else:
@@ -2462,29 +2549,52 @@ def run_full_r5(data, out_name, cap_dollars, spent_dollars=0.0,
     # runner_final's own function WITH the card: point FORGE_RULE_CARD
     # at the repo card (same bytes as the baked card: sha checked here
     # too) while building them. Built from the guarded records, so the
-    # checked record is one that actually trains.
-    card_text = check_rule_card(R5_CARD_REPO_PATH)
-    old_card = os.environ.get("FORGE_RULE_CARD")
-    os.environ["FORGE_RULE_CARD"] = R5_CARD_REPO_PATH
-    try:
-        ft0 = first_ft_messages(kept_guarded)
-        # B6: the card-in-prompt assert runs on the ACTUAL first
+    # checked record is one that actually trains. With no_card the
+    # messages are built with FORGE_RULE_CARD unset instead (S2), no
+    # card file is required or checked, and the card must be ABSENT
+    # from the first render.
+    if no_card:
+        ft0 = first_ft_messages(kept_guarded, no_card=True)
+        # Option B: the card-absent assert runs on the ACTUAL first
         # training render (the first record that will train, with
         # reasoning), rendered here with the offline stand-in (proves
-        # OUR wiring: FT messages + card on both sides); the container
+        # OUR wiring: no-card FT messages on both sides); the container
         # re-renders with the real tokenizer and aborts on mismatch
-        # before the first optimizer step.
+        # before the first optimizer step. The repo card is read
+        # best-effort for the absence assert only (never required).
+        card_text_nc = None
+        if os.path.isfile(R5_CARD_REPO_PATH):
+            with open(R5_CARD_REPO_PATH, encoding="utf-8") as f:
+                card_text_nc = f.read().strip()
         first_rec = first_format_record(kept_guarded)
-        fmt0 = assert_r5_first_render(first_rec,
-                                      FakeThinkingTokenizer(), card_text)
+        fmt0 = assert_r5_first_render_no_card(
+            first_rec, FakeThinkingTokenizer(), card_text_nc)
         print("R5_FIRST_RENDER %s has_reasoning=%s n_loss_tokens=%d"
               % (format_check_report(fmt0), fmt0["has_reasoning"],
                  fmt0["n_loss_tokens"]))
-    finally:
-        if old_card is None:
-            os.environ.pop("FORGE_RULE_CARD", None)
-        else:
-            os.environ["FORGE_RULE_CARD"] = old_card
+    else:
+        card_text = check_rule_card(R5_CARD_REPO_PATH)
+        old_card = os.environ.get("FORGE_RULE_CARD")
+        os.environ["FORGE_RULE_CARD"] = R5_CARD_REPO_PATH
+        try:
+            ft0 = first_ft_messages(kept_guarded)
+            # B6: the card-in-prompt assert runs on the ACTUAL first
+            # training render (the first record that will train, with
+            # reasoning), rendered here with the offline stand-in (proves
+            # OUR wiring: FT messages + card on both sides); the container
+            # re-renders with the real tokenizer and aborts on mismatch
+            # before the first optimizer step.
+            first_rec = first_format_record(kept_guarded)
+            fmt0 = assert_r5_first_render(first_rec,
+                                          FakeThinkingTokenizer(), card_text)
+            print("R5_FIRST_RENDER %s has_reasoning=%s n_loss_tokens=%d"
+                  % (format_check_report(fmt0), fmt0["has_reasoning"],
+                     fmt0["n_loss_tokens"]))
+        finally:
+            if old_card is None:
+                os.environ.pop("FORGE_RULE_CARD", None)
+            else:
+                os.environ["FORGE_RULE_CARD"] = old_card
     data_arg = stage_data(kept_guarded, out_name)
     per_half = max(1, int(math.ceil(
         (float(len(kept_guarded)) / float(grad_accum)) / 2.0))) \
@@ -2495,7 +2605,8 @@ def run_full_r5(data, out_name, cap_dollars, spent_dollars=0.0,
     kwargs = {"epochs": R5_EPOCHS, "lr": R5_LR, "r": R5_LORA_R,
               "alpha": R5_LORA_ALPHA, "max_tokens": R5_MAX_TOKENS,
               "grad_accum": grad_accum,
-              "ft_messages_0": ft0, "require_rule_card": True,
+              "ft_messages_0": ft0, "require_rule_card": (not no_card),
+              "r5_no_card": bool(no_card),
               "r5_cap_dollars": float(cap_dollars),
               "checkpoint_every": per_half}
     if max_steps is not None:
@@ -2541,6 +2652,10 @@ def main(argv=None):
                     help="earlier spend in this run (shares the cap)")
     r5.add_argument("--max-steps", type=int, default=None,
                     help="cap OPTIMIZER steps")
+    r5.add_argument("--no-card", action="store_true",
+                    help="option B: train with the FT system prompt WITHOUT "
+                         "the rule card (no card file required or checked; "
+                         "the card must be absent from the first render)")
     r5.add_argument("--prompt", action="append", default=[],
                     help="job text for the one-prompt format check")
     fc = sub.add_parser("format-check",
@@ -2563,7 +2678,8 @@ def main(argv=None):
         elif args.cmd == "full-r5":
             run_full_r5(args.data, args.out, args.cap_dollars,
                         spent_dollars=args.spent_dollars,
-                        max_steps=args.max_steps, prompts=args.prompt)
+                        max_steps=args.max_steps, prompts=args.prompt,
+                        no_card=args.no_card)
         else:
             run_full(args.data, args.out, args.cap_dollars,
                      spent_dollars=args.spent_dollars,

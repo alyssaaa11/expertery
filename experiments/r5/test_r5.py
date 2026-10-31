@@ -802,3 +802,189 @@ def test_claude_fix_b7_jobs_file_keeps_reference_for_grading(tmp_path):
     assert calls[0][1] == {"reference": "REFCODE"}
     msgs = runner_final.ft_messages(jobs[0]["text"])
     assert "REFCODE" not in json.dumps(msgs)
+
+
+# ------------------------------------------------------- option B: no card
+
+
+def _repo_card_text():
+    with open(forge_train.R5_CARD_REPO_PATH, encoding="utf-8") as f:
+        return f.read().strip()
+
+
+def test_no_card_render_matches_ft_without_card(monkeypatch):
+    monkeypatch.delenv("FORGE_RULE_CARD", raising=False)
+    text = "make a block"
+    rec = {"text": text, "code": "result = 1",
+           "reasoning": LONG_REASONING}
+    tok = forge_train.FakeThinkingTokenizer()
+    # The no-card training render is byte-equal to the no-card FT prompt.
+    prompt = forge_train.render_prompt(
+        tok, text, forge_train.ft_messages_no_card)
+    ft_prompt = tok.apply_chat_template(
+        runner_final.ft_messages(text), tokenize=False,
+        add_generation_prompt=True)
+    assert prompt == ft_prompt
+    fmt = forge_train.check_format(
+        tok, rec, runner_final.ft_messages(text),
+        messages_fn=forge_train.ft_messages_no_card)
+    assert fmt["verdict"] == "PASS"
+    assert fmt["checks"]["prompt_matches_ft"] is True
+    # No card text in the render; the absence assert passes on it and
+    # fires on a prompt with the card appended.
+    card_text = _repo_card_text()
+    assert card_text not in fmt["prompt"]
+    assert forge_train.assert_no_card_in_prompt(
+        fmt["prompt"], card_text) is True
+    with pytest.raises(ValueError, match="no-card"):
+        forge_train.assert_no_card_in_prompt(
+            fmt["prompt"] + "\n\n" + card_text, card_text)
+    fmt2 = forge_train.assert_r5_first_render_no_card(rec, tok, card_text)
+    assert fmt2["checks"]["prompt_matches_ft"] is True
+
+
+def test_no_card_reference_ignores_exported_card(monkeypatch, tmp_path):
+    # S2: the reference FT prompt is built with FORGE_RULE_CARD unset,
+    # even when it is exported in the shell.
+    card = tmp_path / "card.md"
+    card.write_text("RULES: be exact, always.")
+    monkeypatch.setenv("FORGE_RULE_CARD", str(card))
+    msgs = forge_train.ft_messages_no_card("make a block")
+    assert all("RULES" not in m["content"] for m in msgs)
+    assert os.environ.get("FORGE_RULE_CARD") == str(card)  # restored
+    monkeypatch.delenv("FORGE_RULE_CARD")
+    assert forge_train.ft_messages_no_card("make a block") == msgs
+
+
+def test_default_path_still_uses_card(monkeypatch, tmp_path):
+    # Without --no-card everything stays as today: the card is required
+    # in the first render and the reference carries it.
+    card = tmp_path / "card.md"
+    card.write_text("RULES: be exact, always.")
+    monkeypatch.setenv("FORGE_RULE_CARD", str(card))
+    rec = {"text": "make a block", "code": "result = 1",
+           "reasoning": LONG_REASONING}
+    fmt = forge_train.assert_r5_first_render(
+        rec, forge_train.FakeThinkingTokenizer(),
+        "RULES: be exact, always.")
+    assert fmt["checks"]["prompt_matches_ft"] is True
+    assert "RULES: be exact, always." in fmt["prompt"]
+    assert forge_train.first_ft_messages([rec]) == \
+        forge_train.ft_messages_for("make a block")
+    assert forge_train.first_ft_messages([rec], no_card=True) == \
+        forge_train.ft_messages_no_card("make a block")
+
+
+def test_card_mention_patterns_drop_case_insensitive():
+    jobs = {"R5T-F1-1": {"id": "R5T-F1-1", "text": "make a block",
+                         "family": 1}}
+
+    def _rec(reasoning):
+        return {"job": "R5T-F1-1", "verdict": "PASS", "code": "result = 1",
+                "reasoning": reasoning}
+
+    for phrase in ("rule card", "card says", "per the card",
+                   "cheat sheet", "the card", "RULE CARD"):
+        rows, counts = build_mix.build_rows(
+            [_rec(LONG_REASONING + " %s helped me here." % phrase)],
+            [], [], jobs, drop_card_mentions=True)
+        assert rows == [] and counts["dropped_card_mention"] == 1, phrase
+    # Rows that only quote or follow true rules are KEPT (option B).
+    quote = _rec(LONG_REASONING + " I called .val() on the Workplane "
+                 "to get the solid and passed only positional arguments "
+                 "to makeCylinder.")
+    assert build_mix.reasoning_names_card(quote["reasoning"]) is False
+    rows, counts = build_mix.build_rows(
+        [quote], [], [], jobs, drop_card_mentions=True)
+    assert len(rows) == 1 and counts["dropped_card_mention"] == 0
+    # Without the flag, card-naming rows are kept (default unchanged).
+    rows, _ = build_mix.build_rows(
+        [_rec(LONG_REASONING + " the rule card helped me here.")],
+        [], [], jobs)
+    assert len(rows) == 1
+
+
+def _write_mix_inputs(tmp_path, name, n_ok, n_card):
+    jobs = tmp_path / (name + "_jobs.jsonl")
+    first = tmp_path / (name + "_first.jsonl")
+    with open(jobs, "w", encoding="utf-8") as fj, \
+            open(first, "w", encoding="utf-8") as ff:
+        for i in range(n_ok + n_card):
+            jid = "R5T-F1-%d" % i
+            fj.write(json.dumps({"id": jid, "text": "make block %d" % i,
+                                 "family": 1}) + "\n")
+            if i < n_card:
+                reasoning = (LONG_REASONING + " As the rule card says, "
+                             "I checked the sizes.")
+            else:
+                reasoning = (LONG_REASONING + " I checked every size "
+                             "twice against the printed text.")
+            ff.write(json.dumps({"job": jid, "verdict": "PASS",
+                                 "code": "result = 1",
+                                 "reasoning": reasoning}) + "\n")
+    return str(jobs), str(first)
+
+
+def test_card_drop_stop_over_20_percent(tmp_path, capsys):
+    # 2 of 5 mention the card = 40% -> STOP, non-zero, no output file.
+    jobs, first = _write_mix_inputs(tmp_path, "stop", 3, 2)
+    out = str(tmp_path / "mix.jsonl")
+    rc = build_mix.main(["--first", first, "--jobs", jobs, "--out", out,
+                         "--drop-card-mentions"])
+    assert rc == 1
+    assert not os.path.exists(out)
+    printed = capsys.readouterr().out
+    assert "CARD_MENTION_DROP overall=0.400" in printed
+    assert "CARD_MENTION_STOP" in printed
+    # Exactly 20% is not OVER 20%: the mix is written.
+    jobs, first = _write_mix_inputs(tmp_path, "ok", 4, 1)
+    out = str(tmp_path / "mix2.jsonl")
+    rc = build_mix.main(["--first", first, "--jobs", jobs, "--out", out,
+                         "--drop-card-mentions"])
+    assert rc == 0
+    kept = [json.loads(line) for line in open(out) if line.strip()]
+    assert len(kept) == 4
+
+
+def test_first_repeatable_concatenates(tmp_path):
+    jobs_a, first_a = _write_mix_inputs(tmp_path, "a", 1, 0)
+    _, first_b = _write_mix_inputs(tmp_path, "b", 1, 0)
+    # Same job ids in both files: at most 2 rows per job, both kept.
+    out = str(tmp_path / "mix.jsonl")
+    rc = build_mix.main(["--first", first_a, "--first", first_b,
+                         "--jobs", jobs_a, "--out", out])
+    assert rc == 0
+    kept = [json.loads(line) for line in open(out) if line.strip()]
+    assert len(kept) == 2
+
+
+def test_v1_pilot_inputs_refused_by_path(tmp_path):
+    v1dir = tmp_path / "results" / "r5-pilot-2026-10-31"
+    v1dir.mkdir(parents=True)
+    v1 = v1dir / "calls.jsonl"
+    v1.write_text(json.dumps({"job": "R5T-F1-1", "verdict": "PASS",
+                              "code": "result = 1",
+                              "reasoning": LONG_REASONING}) + "\n")
+    with pytest.raises(ValueError, match="v1 pilot"):
+        build_mix.main(["--first", str(v1), "--jobs", "jobs.jsonl",
+                        "--out", "mix.jsonl"])
+    with pytest.raises(ValueError, match="v1 pilot"):
+        build_mix.refuse_v1_pilot_paths([str(v1)])
+    # Other dirs pass the check (paths -- not prompt_tokens -- decide).
+    assert build_mix.refuse_v1_pilot_paths(
+        ["results/r5-first-2026-10-31/calls.jsonl"]) is True
+
+
+def test_no_card_estimate_smaller_than_with_card():
+    bpe = forge_train.GlimmerBPE([])
+    recs = [{"text": "make a block", "code": "result = 1",
+             "reasoning": LONG_REASONING}]
+    card_text = _repo_card_text()
+    with_card = forge_train.count_r5_row_tokens(
+        recs, bpe, forge_train.SYSTEM_PROMPT + "\n\n" + card_text)
+    without = forge_train.count_r5_row_tokens(
+        recs, bpe, forge_train.SYSTEM_PROMPT)
+    assert len(with_card) == len(without) == 1
+    assert with_card[0] > without[0] > 0
+    assert forge_train.estimate_r5_cost(with_card)["dollars"] > \
+        forge_train.estimate_r5_cost(without)["dollars"]
