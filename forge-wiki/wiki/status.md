@@ -3,12 +3,12 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-10-30 ~21:40 (after the base control + superintel diagnosis)
+**Last updated**: 2026-10-30 23:35 (after the rule-card check)
 
 ---
 
 ## Goal
-Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET**; internal deadline: trained result by
+Meta hackathon (Indie track, Push the Frontier), submit by **Nov 4, 18:00 CET** (our safety target; the hard deadline is Nov 4 9:00 PM ET = **Nov 5 03:00 Spain time**, per decisions/factory-plan-2026-10-29.md; user 2026-10-31: "the deadline is Nov 5"); internal deadline: trained result by
 **Nov 1 evening**, otherwise submit the honest finding + pipeline (decision, agreed 2026-10-29).
 - decision (user, 2026-10-29): **new goal** = a trained Muse **Glimmer** 30B is **as correct as Glimmer + every fair cheap
   fix (B-max), but many times cheaper and faster, and runs privately** ([[new-goal-2026-10-29]]; method = distillation,
@@ -69,19 +69,28 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **NOW (2026-10-30 ~22:40, before the user cleared the chat):** the **rule-card check** is RUNNING (user yes, verifier GO
-  forge-rulecard-check-go-2026-10-30): (1) R3 + card → results/check-r3card-2026-10-30 (FORGE_MODEL_NAME=r3,
-  FORGE_RULE_CARD=~/projects/forge/experiments/final/RULE_CARD.md, cap $4.50, deploy 22:30), then (2) A + card
-  → results/check-acard-2026-10-30 (cap $3.00); one shell chain under caffeinate, ends ≈ 00:15, ≈ $3.3.
-  - verified (C2 done, 22:38): served root /vol/r3/merged; first records prompt_tokens 838/830 (≈ 240 without the card)
-    → the card IS in the prompt; first two answers PASS.
-  - Reading pre-registered in experiments/final/PLAN.md "Rule-card check": R3+card crashes (non-empty run_error) ≤ 8 →
-    manual-gap diagnosis holds; 9-14 unclear; ≥ 15 wrong; pass rates within ±10 points = no clear difference.
-  - After it: report to Alyssa in Slack (hivey msg send human --from hivey/hivey), commit results, verifier review, then
-    (if confirmed) card-conditioned self-distillation per raw/superintel-answer-training-diagnosis-2026-10-30.md
-    (≈ $15-23, 120 fresh dev jobs, needs user yes + verifier + Muse spec). D3 (served sampling + digest) still open.
-  - Results so far on dev: untrained 51.7%, R1 38.3%, R3 48.3% ([[training-experiments-2026-10-30]]).
-  - Money ≈ $61.2 of $80 before the check (Modal billing 17.53 at the start of the check).
+- **NOW (2026-10-30 23:35):** the **rule-card check is DONE** (user yes, verifier GO forge-rulecard-check-go-2026-10-30;
+  card = experiments/final/RULE_CARD.md in the prompt, no new training; both arms COMPLETE 60/60, not budget-stopped).
+  - verified (results/check-r3card-2026-10-30/dev-FT/summary.json + calls.jsonl): **R3 + card 51/60 = 85%** (summary
+    pass_rate 86.4% = 51/59, because 1 INVALID F9-13 was cut off by the token limit), tight 84.7%, pass@3 100%,
+    **5 crashes** (non-empty run_error), 6.5k tokens/correct. F3, F4, F8 at 4/6; the others 5-6/6.
+  - verified (results/check-acard-2026-10-30/dev-A/summary.json): **A + card 41/60 = 68.3%**, pass@3 85%, 17 crashes;
+    F4 1/6, F8 1/6, F3 2/6, F6 2/6.
+  - Pre-registered reading (PLAN "Rule-card check"): R3 + card crashes 5 ≤ 8 → **manual-gap diagnosis holds**. The card
+    adds more than 10 points to both arms (R3 48.3 → 85; A 51.7 → 68.3), and R3 + card beats A + card by ≈ 17 points, so
+    with the card the trained model is clearly better. Caveat: 4th look at the dev set, and the card was written from R3's
+    dev crashes, so the numbers are optimistic. The exam is untouched.
+  - Cost: Modal billing 17.53 → 20.01 = **$2.48** (credit, $0 billed). Total ≈ **$63.7 of $80**.
+  - Reported to Alyssa in Slack (hivey msg m1793399489580-425; `hivey msg send human` without --from, because
+    `--from hivey/hivey` fails with: no swarm "hivey").
+  - Next: commit results + verifier review of this result → then (needs user yes + verifier + Muse spec) card-conditioned
+    self-distillation per raw/superintel-answer-training-diagnosis-2026-10-30.md (≈ $15-23, 120 fresh dev jobs).
+    D3 (served sampling + digest) still open.
+  - Spark vs Glimmer + Meta training guide vs our recipe: [[spark-vs-glimmer-2026-10-31]].
+  - Fireworks workshop lessons (free Glimmer SFT until 11-30, thousands of examples, effort sweep): [[fireworks-workshop-lessons-2026-10-31]].
+  - Free CadQuery data on Hugging Face (CAD-Coder 8k + 1.5k CoT, Apache-2.0): [[huggingface-cadquery-data-2026-10-31]].
+  - decision (user, 2026-10-31): train more BEFORE the exam with large data; Modal only (no Fireworks); **Modal budget $90** (billing ≈ $19.9 on 10-31); last training method. Plan draft experiments/r5/PLAN.md (9fc3fce), sent to the verifier.
+  - Earlier dev results without the card: untrained 51.7%, R1 38.3%, R3 48.3% ([[training-experiments-2026-10-30]]).
   - Working rules (user): Slack via hivey; verifier before every paid step; Muse writes big code, Claude only small
     disclosed fixes (README "Small fixes by Claude"), never Claude inside the product; no Wonder data in training; budget
     $80 total incl. credits; keep the git history; never use `tr` in the shell (aliased to Trash).
