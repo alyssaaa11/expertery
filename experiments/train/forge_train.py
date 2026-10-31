@@ -775,7 +775,7 @@ R5_MIN_REASONING_CHARS = 200
 # The rule card is baked into the training image as a file (not an env
 # var); its sha256 is checked inside the container before training.
 RULE_CARD_SHA256 = (
-    "586b59607b0123dc5a64734d8a854ad1b3ca4eb83a1c223aacb175d7a6dbe80b")
+    "9d0929b235888958c70a4e7528fc99f5f30f303f99293aa534c633c5cd5729c7")
 RULE_CARD_BAKED_PATH = "/training/rule_card.md"
 
 # Measured R3 throughput (results/train-r3/train.json): 1,939,926 step

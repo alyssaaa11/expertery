@@ -5,9 +5,12 @@ CadQuery rule card (CadQuery 2.8). Use only these calls and arguments.
   `box(dx, dy, dz, centered=(False, False, False))` then `.translate((a, y0, z0))`.
 - Cylinders on any axis: `cq.Solid.makeCylinder(radius, height, cq.Vector(x, y, z), cq.Vector(dx, dy, dz))`:
   the point is the START of the range, the direction is the tube's axis ((1,0,0) along X, (0,1,0) along Y, (0,0,1) along Z).
+  Positional arguments only: there is no `start=` or `center=` keyword.
   `Workplane.cylinder()` takes no point; do not use it for placed cylinders.
 - Cones / frustums: `cq.Solid.makeCone(r_bottom, r_top, height, cq.Vector(x, y, z), cq.Vector(0, 0, 1))`.
-- Boolean ops on Solids: `a.fuse(b)`, `a.cut(b)`; on Workplanes: `.union()`, `.cut()`.
+- Two kinds of objects, never mix them. A Solid (from `cq.Solid.make...`) joins with `a.fuse(b)` and cuts with
+  `a.cut(b)` (b must be a Solid). A Workplane joins with `.union(x)` and cuts with `.cut(x)` (x: Workplane or Solid).
+  Workplanes have no `.fuse()` and no `.solid()`: to get the Solid out of a Workplane use `wp.val()`.
 - Through holes: make the cutter 1 mm longer on each side of the part.
 - Rounded rectangle window: `cq.Workplane("XY").rect(w, h).extrude(t).edges("|Z").fillet(r)` (`rect()` has no radius;
   there is no `roundedRect`).

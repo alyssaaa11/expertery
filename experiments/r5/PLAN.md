@@ -41,8 +41,23 @@ Supersedes plan v1 (ac1bfa6). Verifier must-fixes M1-M10 are marked [Mx] where t
    from the hint), and trained WITHOUT the hint. At most **230 hints** (the shortest-failing jobs first by family
    balance). Caps: Baseten $10, Glimmer retries $3 [W3].
 
+## Pilot result and card v2 (2026-10-31)
+- verified (results/r5-pilot-2026-10-31/pilot-A/summary.json, session.log): pilot A + card v1 on 200 R5T jobs (20 per
+  family), 16 workers, A100-80GB: **149/200 = 74.5%** PASS at 0.2% (74% tight), 0 INVALID, **47 crashes**; reasoning
+  stored for 200/200 (len == reasoning_len); prompt ≈ 834 tokens (card in). Steady-state $/answer = $2.50/h × (2008 −
+  285 s) ÷ 200 = **$0.006** ≤ $0.013 → pre-registered N = min(2000, floor(24 ÷ 0.006)) = **2,000**. Modal 20.43 → 22.36
+  (incl. cold start).
+- Per family: F1 17/20, F2 20/20, F3 10/20 (10 crashes), F4 6/20 (14), F5 18/20, F6 15/20, F7 20/20, F8 11/20, F9 16/20, F10 16/20.
+- Crash causes (last error line): 28 `Workplane has no attribute 'solid'`, 7 `no attribute 'wrapped'` (a Workplane passed
+  to Solid.cut), 1 `Workplane has no attribute 'fuse'`, 8 `makeCylinder() unexpected keyword 'start'`, 3 other.
+- decision (user, 2026-10-31, option B): **rule card v2** adds two lines (Solid vs Workplane: `.val()`, no `.solid()`/
+  `.fuse()` on Workplanes; makeCylinder positional only). Every signature checked with `inspect` in CadQuery 2.8. All
+  later steps (first try, self-fix, hints, training, dev, exam) use v2. The v1 pilot is kept as a record and is NOT
+  used for training (prompt mismatch). The pilot is redone with v2 on the same 200 jobs (cap $4), which also gives a
+  paired v1 vs v2 comparison.
+
 ## Training rows (two kinds, all with thinking) [M1, M3, M4]
-- **First-try rows**: prompt = FT system prompt + RULE_CARD (sha256 586b5960…e80b) + job text; target = Glimmer's
+- **First-try rows**: prompt = FT system prompt + RULE_CARD v2 (sha256 9d0929b2…29c7; v1 586b5960…e80b kept as RULE_CARD_V1.md) + job text; target = Glimmer's
   thinking + code. From step-3 PASSes and step-5 PASSes (hint removed).
 - **Self-fix rows**: prompt = the same + "Your code:\n…\nWhat happened:\n<reference-free feedback>"; target = thinking +
   fixed code. From step-4 PASSes and step-5 PASSes (hint removed).
@@ -74,7 +89,7 @@ Cap $9.
 
 ## Final exam [M10]
 Frozen rules of experiments/final/PLAN.md step 6, amended BEFORE any exam run: the FT arm = short prompt + RULE_CARD
-(sha256 above); the report says B-max had the 5.7k manual and no card. Report first try and product mode (one self-fix).
+(v2 sha256 above); the report says B-max had the 5.7k manual and no card. Report first try and product mode (one self-fix).
 Cap $5. Run once.
 
 ## Money [N2]
