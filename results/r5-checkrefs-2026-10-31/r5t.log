@@ -1,0 +1,129 @@
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-62AzWSouvg1ja7d9bBJghN
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+Stopping app - local client disconnected. Use `modal run --detach` to keep apps running even if your local client disconnects.
+[modal-client] 2026-10-31T17:08:05+0100 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/async_utils.py", line 590, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/runner.py", line 68, in _heartbeat
+    await client._stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConflictError: App state is APP_STATE_STOPPED
+[modal-client] 2026-10-31T17:08:20+0100 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/async_utils.py", line 590, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/runner.py", line 68, in _heartbeat
+    await client._stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConflictError: App state is APP_STATE_STOPPED
+[modal-client] 2026-10-31T17:08:35+0100 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/async_utils.py", line 590, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/runner.py", line 68, in _heartbeat
+    await client._stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConflictError: App state is APP_STATE_STOPPED
+[modal-client] 2026-10-31T17:09:47+0100 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/async_utils.py", line 590, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/runner.py", line 68, in _heartbeat
+    await client._stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConflictError: App state is APP_STATE_STOPPED
+[modal-client] 2026-10-31T17:10:02+0100 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/async_utils.py", line 590, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/runner.py", line 68, in _heartbeat
+    await client._stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConflictError: App state is APP_STATE_STOPPED
+[modal-client] 2026-10-31T17:10:17+0100 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/async_utils.py", line 590, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/runner.py", line 68, in _heartbeat
+    await client._stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConflictError: App state is APP_STATE_STOPPED
+[modal-client] 2026-10-31T17:10:33+0100 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/async_utils.py", line 590, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/runner.py", line 68, in _heartbeat
+    await client._stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConflictError: App state is APP_STATE_STOPPED
+[modal-client] 2026-10-31T17:10:48+0100 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/async_utils.py", line 590, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/runner.py", line 68, in _heartbeat
+    await client._stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConflictError: App state is APP_STATE_STOPPED
+[modal-client] 2026-10-31T17:11:03+0100 Loop attempt for _run_app.<locals>.heartbeat failed
+Traceback (most recent call last):
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_utils/async_utils.py", line 590, in loop_coro
+    await asyncio.wait_for(async_f(), timeout=timeout)
+  File "~/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/runner.py", line 68, in _heartbeat
+    await client._stub.AppHeartbeat(request, retry=Retry(attempt_timeout=HEARTBEAT_TIMEOUT))
+modal.exception.ConflictError: App state is APP_STATE_STOPPED
+Traceback (most recent call last):
+  File "~/projects/forge/experiments/final/cloud_cq.py", line 920, in <module>
+    _sys.exit(main())
+              ^^^^^^
+  File "~/projects/forge/experiments/final/cloud_cq.py", line 903, in main
+    check_refs(exam=args.exam, jobs_file=args.jobs_file)
+  File "~/projects/forge/experiments/final/cloud_cq.py", line 753, in check_refs
+    graded = grade_fn(exam, job["id"], build_brep_fn(exam, job))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/projects/forge/experiments/final/cloud_cq.py", line 482, in _grade
+    return remote_fn(exam_arg, job_id, brep_bytes,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_object.py", line 49, in wrapped
+    return await method(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_functions.py", line 2081, in remote
+    return await self._call_function(args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_functions.py", line 2018, in _call_function
+    return await invocation.run_function()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_functions.py", line 508, in run_function
+    self.attempt_token = await self._retry_input(metadata)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/projects/forge/.venv/lib/python3.12/site-packages/modal/_functions.py", line 528, in _retry_input
+    retry_response = await self.stub.AttemptRetry(retry_request, metadata=metadata)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+modal.exception.ConflictError: function fu-tYgYDyOPSatgLbOsbrfanp is stopped
