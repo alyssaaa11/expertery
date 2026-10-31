@@ -891,3 +891,117 @@ def test_legacy_record_without_reasoning_never_aborts():
     assert fmt["verdict"] == "FAIL"  # prompt mismatch ...
     assert fmt["has_reasoning"] is False
     assert forge_train.format_gate_aborts(fmt) is False  # ... but no abort
+
+
+# ------------------------------------------------------- R5 B6: card in prompt
+
+
+def test_r5_render_matches_ft_with_card(tmp_path, monkeypatch):
+    card = tmp_path / "card.md"
+    card.write_text("RULES: be exact, always.")
+    monkeypatch.setenv("FORGE_RULE_CARD", str(card))
+    rec = {"text": TEXT, "code": CODE, "reasoning": REASONING}
+    tok = THINK_TOK()
+    fmt = forge_train.check_format(
+        tok, rec, forge_train.ft_messages_for(TEXT),
+        forge_train.ft_messages_for)
+    assert fmt["verdict"] == "PASS"
+    assert fmt["checks"]["prompt_matches_ft"] is True
+    assert "RULES: be exact, always." in fmt["prompt"]
+    # The legacy short render does NOT match the card-carrying FT arm.
+    legacy = forge_train.check_format(tok, rec)
+    assert legacy["checks"]["prompt_matches_ft"] is False
+
+
+def test_assert_r5_first_render_uses_actual_record(tmp_path, monkeypatch):
+    card = tmp_path / "card.md"
+    card.write_text("RULES: be exact, always.")
+    monkeypatch.setenv("FORGE_RULE_CARD", str(card))
+    rec = {"text": TEXT, "code": CODE, "reasoning": REASONING}
+    fmt = forge_train.assert_r5_first_render(
+        rec, THINK_TOK(), "RULES: be exact, always.")
+    assert fmt["checks"]["prompt_matches_ft"] is True
+    with pytest.raises(ValueError, match="rule card"):
+        forge_train.assert_r5_first_render(
+            rec, THINK_TOK(), "SOME OTHER CARD")
+
+
+def test_training_image_bakes_the_card():
+    files = forge_train.training_image_local_files()
+    assert files == [(forge_train.R5_CARD_REPO_PATH,
+                      forge_train.RULE_CARD_BAKED_PATH)]
+    assert forge_train.RULE_CARD_BAKED_PATH == "/training/rule_card.md"
+    assert forge_train.sha256_of_file(
+        forge_train.R5_CARD_REPO_PATH) == forge_train.RULE_CARD_SHA256
+
+
+# ------------------------------------------------------- R5 N1: token estimate
+
+
+def test_gpt2_split_basics():
+    assert forge_train._gpt2_split("hello world!") == [
+        "hello", " world", "!"]
+    assert forge_train._gpt2_split("don't") == ["don't"]
+    assert forge_train._gpt2_split("abc123") == ["abc", "123"]
+
+
+def test_bpe_count_uses_merges():
+    bpe = forge_train.GlimmerBPE([["h", "e"], ["he", "l"], ["hel", "l"],
+                                  ["hell", "o"]])
+    assert bpe.count("hello") == 1
+    assert bpe.count("") == 0
+    assert bpe.count("hello world") == 1 + bpe.count(" world")
+    assert bpe.count(" world") > 1  # unmerged tail stays split
+
+
+def test_real_glimmer_tokenizer_counts():
+    path = forge_train.glimmer_tokenizer_file()
+    if path is None:
+        pytest.skip("no cached Glimmer tokenizer")
+    bpe = forge_train.load_bpe_tokenizer(path)
+    assert bpe.count("hello") == 1
+    code = "result = cq.Workplane('XY').box(30, 20, 10)"
+    assert bpe.count(code) > len(code.split())  # whitespace undercounts
+
+
+def test_count_r5_row_tokens_includes_system_and_card():
+    bpe = forge_train.GlimmerBPE([])
+    rec = {"text": "make a block", "code": "result = 1",
+           "reasoning": "think hard"}
+    with_card = forge_train.count_r5_row_tokens(
+        [rec], bpe, "SYSTEM CARD TEXT")
+    without = forge_train.count_r5_row_tokens([rec], bpe, "")
+    assert len(with_card) == 1 and with_card[0] > without[0] > 0
+
+
+def test_estimate_r5_cost_math():
+    est = forge_train.estimate_r5_cost([1650], epochs=2,
+                                       throughput=1650.0,
+                                       rate_per_hour=3600.0)
+    assert est == {"tokens": 1650, "seconds": 2.0, "dollars": 2.0}
+
+
+def test_apply_budget_headroom_keeps_selffix_and_fits():
+    recs = ([{"id": "F%d" % i, "source": "glimmer-first"}
+             for i in range(4)]
+            + [{"id": "S%d" % i, "source": "glimmer-selffix"}
+               for i in range(2)]
+            + [{"id": "H0", "source": "glimmer-hinted"}])
+    toks = [1000, 1000, 1000, 1000, 100, 100, 1000]
+    kept, dropped, est = forge_train.apply_budget_headroom(
+        recs, toks, 1.0, epochs=2, throughput=1000.0,
+        rate_per_hour=3600.0)
+    # $0.002/token: self-fix rows ($0.40) fit in 0.75 x $1 alone.
+    assert [r["id"] for r in kept] == ["S0", "S1"]  # order kept
+    assert len(dropped) == 5
+    assert est["dollars"] <= 0.75
+    kept2, dropped2, _ = forge_train.apply_budget_headroom(
+        recs, toks, 1.0, epochs=2, throughput=1000.0,
+        rate_per_hour=3600.0)
+    assert [r["id"] for r in kept2] == ["S0", "S1"]  # seed-deterministic
+    assert dropped2 == dropped
+    # Everything fits: nothing dropped.
+    kept3, dropped3, _ = forge_train.apply_budget_headroom(
+        recs, toks, 1000.0, epochs=2, throughput=1000.0,
+        rate_per_hour=3600.0)
+    assert dropped3 == [] and len(kept3) == 7

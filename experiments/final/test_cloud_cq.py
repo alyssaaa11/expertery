@@ -393,6 +393,103 @@ def test_check_refs_factory_reads_jobs_file(tmp_path, monkeypatch, capsys):
     assert "REFS 1/1 PASS" in capsys.readouterr().out
 
 
+# ------------------------------------------------------- R5 B5: R5 ids
+
+
+def test_factory_reference_prefers_baked_and_explains_unknown():
+    baked = [{"id": "F1-1", "reference": "baked-src"}]
+    assert cloud_cq.factory_reference("F1-1", jobs=baked) == "baked-src"
+    # Old ids use the baked file even when a reference is also passed.
+    assert cloud_cq.factory_reference(
+        "F1-1", jobs=baked, reference="other") == "baked-src"
+    # R5 ids (not baked) grade against the passed reference.
+    assert cloud_cq.factory_reference(
+        "R5T-F1-1", jobs=baked, reference="r5-src") == "r5-src"
+    # Unknown without a reference: clear error, never StopIteration.
+    with pytest.raises(ValueError, match="unknown factory job"):
+        cloud_cq.factory_reference("R5T-F1-1", jobs=baked)
+    with pytest.raises(ValueError, match="unknown factory job"):
+        cloud_cq.factory_reference("R5T-F1-1", jobs=baked,
+                                   reference="  ")
+
+
+def test_factory_reference_matches_baked_file_for_old_ids():
+    jobs = cloud_cq.load_factory_jobs()
+    assert len(jobs) > 0
+    for job in jobs[:5]:
+        assert cloud_cq.factory_reference(job["id"]) == job["reference"]
+
+
+def test_factory_grade_fn_carries_r5_reference():
+    seen = []
+
+    def _remote(*args, **kwargs):
+        seen.append((args, kwargs))
+        return {"verdict": "PASS"}
+
+    jobs = [{"id": "R5T-F1-1", "reference": "r5-src"},
+            {"id": "F1-1", "text": "t"}]
+    grade = cloud_cq.factory_grade_fn(jobs, _remote)
+    grade("factory", "R5T-F1-1", b"b")
+    assert seen[-1] == (("factory", "R5T-F1-1", b"b"),
+                        {"reference": "r5-src"})
+    # No reference anywhere: the old 3-arg call shape, exactly.
+    grade("factory", "F1-1", b"b")
+    assert seen[-1] == (("factory", "F1-1", b"b"), {})
+    grade("first-test", "M1", b"b")
+    assert seen[-1] == (("first-test", "M1", b"b"), {})
+
+
+def test_check_refs_grades_an_r5_file(tmp_path, capsys):
+    jobs = [{"id": "R5T-F1-%d" % i, "family": 1, "text": "t%d" % i,
+             "reference": "result = %d" % i} for i in range(2)]
+    path = tmp_path / "jobs_r5t.jsonl"
+    path.write_text("\n".join(json.dumps(j) for j in jobs) + "\n",
+                    encoding="utf-8")
+    seen = []
+
+    def _grade(exam, job_id, brep):
+        seen.append(job_id)
+        return {"verdict": "PASS", "tight": "PASS"}
+
+    n_pass, n = cloud_cq.check_refs(
+        exam="factory", jobs_file=str(path),
+        build_brep_fn=lambda e, j: b"b", grade_fn=_grade)
+    assert (n_pass, n) == (2, 2)
+    assert seen == ["R5T-F1-0", "R5T-F1-1"]
+    assert "REFS 2/2 PASS" in capsys.readouterr().out
+    with pytest.raises(ValueError, match="jobs-file"):
+        cloud_cq.check_refs(
+            exam="first-test", jobs_file=str(path),
+            build_brep_fn=lambda e, j: b"b", grade_fn=_grade)
+
+
+def test_check_refs_default_grade_fn_carries_reference(tmp_path,
+                                                      monkeypatch):
+    import types as _types
+
+    jobs = [{"id": "R5D-F1-1", "family": 1, "text": "t",
+             "reference": "r5d-src"}]
+    path = tmp_path / "jobs_r5d.jsonl"
+    path.write_text("\n".join(json.dumps(j) for j in jobs) + "\n",
+                    encoding="utf-8")
+    seen = []
+
+    def _remote(*args, **kwargs):
+        seen.append((args, kwargs))
+        return {"verdict": "PASS", "tight": "PASS"}
+
+    monkeypatch.setattr(cloud_cq, "grade",
+                        _types.SimpleNamespace(remote=_remote),
+                        raising=False)
+    n_pass, n = cloud_cq.check_refs(
+        exam="factory", jobs_file=str(path),
+        build_brep_fn=lambda e, j: b"b")
+    assert (n_pass, n) == (1, 1)
+    assert seen[-1] == (("factory", "R5D-F1-1", b"b"),
+                        {"reference": "r5d-src"})
+
+
 # ------------------------------------------------------- regrade
 
 

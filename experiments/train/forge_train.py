@@ -113,14 +113,21 @@ def build_messages(text):
     ]
 
 
-def render_prompt(tokenizer, text):
-    """Prompt string via the tokenizer's chat template."""
+def render_prompt(tokenizer, text, messages_fn=None):
+    """Prompt string via the tokenizer's chat template.
+
+    `messages_fn(text)` builds the prompt messages (default
+    build_messages, the short prompt). R5 rows pass runner_final's FT
+    messages WITH the rule card (B6), so the training render is byte-
+    equal to what the FT arm sends at serve time.
+    """
     return tokenizer.apply_chat_template(
-        build_messages(text), tokenize=False, add_generation_prompt=True
+        (messages_fn or build_messages)(text), tokenize=False,
+        add_generation_prompt=True
     )
 
 
-def build_full_messages(text, code, reasoning=None):
+def build_full_messages(text, code, reasoning=None, messages_fn=None):
     """Assistant side as message dicts: one user-facing turn holding the
     code block, preceded (when `reasoning` is a non-empty string) by a
     thinking turn holding Spark's worked solution.
@@ -128,15 +135,17 @@ def build_full_messages(text, code, reasoning=None):
     The thinking turn travels as the `reasoning_content` field of the
     assistant message: the Glimmer chat template renders it as its own
     `assistant to=self` turn (no hand-written special tokens).
+    `messages_fn` builds the prompt messages (default build_messages;
+    R5 rows use runner_final's FT messages with the card).
     """
     answer = build_answer_text(code)
     message = {"role": "assistant", "content": answer}
     if isinstance(reasoning, str) and reasoning.strip():
         message["reasoning_content"] = reasoning
-    return build_messages(text) + [message]
+    return (messages_fn or build_messages)(text) + [message]
 
 
-def render_full(tokenizer, text, code, reasoning=None):
+def render_full(tokenizer, text, code, reasoning=None, messages_fn=None):
     """Prompt + assistant answer via the chat template.
 
     With `reasoning` the full text holds the thinking turn first, then
@@ -144,12 +153,13 @@ def render_full(tokenizer, text, code, reasoning=None):
     + answer + eos when the template renders history differently (same
     fallback as the smoke test) -- but only for records WITHOUT
     reasoning: for a record with reasoning the fallback would silently
-    drop the thinking turn, so it raises instead (H1).
+    drop the thinking turn, so it raises instead (H1). `messages_fn`
+    builds the prompt messages (R5 rows: FT messages with the card).
     """
-    prompt = render_prompt(tokenizer, text)
+    prompt = render_prompt(tokenizer, text, messages_fn)
     answer = build_answer_text(code)
     full = tokenizer.apply_chat_template(
-        build_full_messages(text, code, reasoning),
+        build_full_messages(text, code, reasoning, messages_fn),
         tokenize=False,
     )
     if not full.startswith(prompt):
@@ -163,16 +173,18 @@ def render_full(tokenizer, text, code, reasoning=None):
 
 
 def encode_example(tokenizer, text, code, max_tokens=MAX_TOKENS,
-                   reasoning=None):
+                   reasoning=None, messages_fn=None):
     """Tokenize one example; loss only on the assistant part.
 
     With `reasoning` the loss covers both assistant turns (thinking +
     answer), never the prompt. Returns {"input_ids", "labels", "tokens",
     "dropped"} where labels are -100 before the assistant part.
     Examples longer than max_tokens are dropped (dropped=True,
-    ids/labels empty).
+    ids/labels empty). `messages_fn` builds the prompt messages (R5
+    rows: FT messages with the card).
     """
-    prompt, full = render_full(tokenizer, text, code, reasoning)
+    prompt, full = render_full(tokenizer, text, code, reasoning,
+                               messages_fn)
     prompt_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
     ids = tokenizer(full, add_special_tokens=False)["input_ids"]
     if len(ids) > max_tokens:
@@ -181,7 +193,8 @@ def encode_example(tokenizer, text, code, max_tokens=MAX_TOKENS,
     return {"input_ids": ids, "labels": labels, "tokens": len(ids), "dropped": False}
 
 
-def filter_batch(tokenizer, examples, max_tokens=MAX_TOKENS):
+def filter_batch(tokenizer, examples, max_tokens=MAX_TOKENS,
+                 messages_fn=None):
     """Encode examples, dropping ones longer than max_tokens.
 
     Returns (kept, dropped_count).
@@ -190,7 +203,7 @@ def filter_batch(tokenizer, examples, max_tokens=MAX_TOKENS):
     dropped = 0
     for ex in examples:
         enc = encode_example(tokenizer, ex["text"], ex["code"], max_tokens,
-                             ex.get("reasoning"))
+                             ex.get("reasoning"), messages_fn)
         if enc["dropped"]:
             dropped += 1
         else:
@@ -266,7 +279,7 @@ def ft_messages_for(text):
 THINK_OPENER_WORDS = ("to=self", "think", "reasoning", "analysis")
 
 
-def check_format(tokenizer, record, ft_messages=None):
+def check_format(tokenizer, record, ft_messages=None, messages_fn=None):
     """Render one record and check the thinking-then-answer format.
 
     Returns {"prompt", "full", "loss_tokens" (first 40 decoded),
@@ -278,12 +291,15 @@ def check_format(tokenizer, record, ft_messages=None):
     high.' line). `ft_messages` is the prebuilt FT message list (the
     Modal paths receive it from the repo side, which the container
     cannot import); None builds it here with runner_final.
+    `messages_fn` renders the training side with the same messages
+    builder (R5 rows: runner_final's FT messages WITH the rule card,
+    B6, so prompt_matches_ft is True for R5 rows).
     """
     text, code = record["text"], record["code"]
     reasoning = record.get("reasoning")
     has = isinstance(reasoning, str) and bool(reasoning.strip())
     prompt, full = render_full(tokenizer, text, code,
-                               reasoning if has else None)
+                               reasoning if has else None, messages_fn)
     if ft_messages is None:
         ft_messages = ft_messages_for(text)
     ft_prompt = tokenizer.apply_chat_template(
@@ -809,6 +825,40 @@ def assert_card_in_prompt(prompt, card_text):
     return True
 
 
+def assert_r5_first_render(record, tokenizer, card_text):
+    """Card + FT-match assert on the ACTUAL first training render (B6).
+
+    Renders `record` (the first record that will actually train, with
+    reasoning) through check_format with runner_final's own FT messages
+    WITH the rule card (FORGE_RULE_CARD must already point at it), and
+    aborts unless the card text is in the prompt AND the rendered prompt
+    is byte-equal to the FT arm's (prompt_matches_ft). Returns the
+    check_format result. `tokenizer` is the offline stand-in locally
+    (proves OUR wiring) and the real tokenizer in the container.
+    """
+    ft_messages = ft_messages_for(record["text"])
+    fmt = check_format(tokenizer, record, ft_messages,
+                       messages_fn=ft_messages_for)
+    assert_card_in_prompt(fmt["prompt"], card_text)
+    if fmt["checks"].get("prompt_matches_ft") is not True:
+        raise ValueError(
+            "first training render does not match the FT arm's prompt; "
+            "refusing to train")
+    return fmt
+
+
+def training_image_local_files():
+    """(local path, remote path) pairs baked into the training image.
+
+    Besides the model image itself, R5 bakes the rule card as a file at
+    /training/rule_card.md (B6; FORGE_RULE_CARD points at it and its
+    sha256 is checked inside the container).
+    """
+    return [(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          "..", "final", "RULE_CARD.md"),
+             RULE_CARD_BAKED_PATH)]
+
+
 def load_mix_records(path):
     """Read R5 train_records.jsonl rows (JSONL or JSON array).
 
@@ -865,18 +915,20 @@ def shuffle_mix(records, seed=R5_SHUFFLE_SEED):
     return out
 
 
-def first_loss_tokens_per_source(tokenizer, records, n_tokens=40):
+def first_loss_tokens_per_source(tokenizer, records, n_tokens=40,
+                                 messages_fn=None):
     """First loss tokens per source (each must open the thinking turn).
 
     Uses check_format on the first record of each source; the caller
     logs these (train.json holds first_loss_tokens per source).
+    `messages_fn` renders R5 rows with the FT messages + card (B6).
     """
     out = {}
     for source in R5_MIX_SOURCES:
         sub = [r for r in records if r.get("source") == source]
         if not sub:
             continue
-        fmt = check_format(tokenizer, sub[0])
+        fmt = check_format(tokenizer, sub[0], None, messages_fn)
         out[source] = {"loss_tokens": fmt["loss_tokens"],
                        "n_loss_tokens": fmt["n_loss_tokens"],
                        "verdict": fmt["verdict"],
@@ -907,6 +959,379 @@ def refuse_over_cap(estimate_dollars, cap_dollars):
             "cost estimate $%.2f is over the $%.2f cap; refusing to start"
             % (estimate_dollars, cap_dollars))
     return False
+
+
+# --------------------------------------- N1: real Glimmer token estimate
+# PLAN's 75% rule: the cost estimate counts tokens with the Glimmer BPE
+# (tokenizer.json is data) and includes the system prompt + card per
+# row; when it exceeds 0.75 x --cap-dollars, first-try rows are
+# subsampled (seed 20261031, all self-fix rows kept) until it fits.
+
+R5_BUDGET_HEADROOM = 0.75
+R5_SUBSAMPLE_SEED = 20261031
+R5_DROPPABLE_SOURCES = ("glimmer-first", "glimmer-hinted")
+R5_SELF_FIX_SOURCES = ("glimmer-selffix",)
+CHAT_TEMPLATE_OVERHEAD_TOKENS = 64  # role headers per row (small vs the
+# rows; the container recounts exact with the real tokenizer)
+
+_BPE_CACHE = {}
+
+
+def glimmer_tokenizer_file():
+    """Cached Glimmer tokenizer.json, or None when absent.
+
+    Uses .cache/glimmer-tokenizer when present; otherwise the exact
+    count happens inside the container before training (train() with
+    r5_cap_dollars), where transformers is installed.
+    """
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__)))),
+        ".cache", "glimmer-tokenizer", "tokenizer.json")
+    return path if os.path.isfile(path) else None
+
+
+def _bpe_bytes_to_unicode():
+    """GPT-2 byte->unicode table (the ByteLevel alphabet)."""
+    bs = (list(range(ord("!"), ord("~") + 1))
+          + list(range(ord("\xa1"), ord("\xac") + 1))
+          + list(range(ord("\xae"), ord("\xff") + 1)))
+    cs = bs[:]
+    n = 0
+    for b in range(256):
+        if b not in bs:
+            bs.append(b)
+            cs.append(256 + n)
+            n += 1
+    return {b: chr(c) for b, c in zip(bs, cs)}
+
+
+_BYTE_UNI = _bpe_bytes_to_unicode()
+
+_BPE_CONTRACTIONS = ("'s", "'t", "'re", "'ve", "'m", "'ll", "'d")
+
+
+def _cat_is(ch, *prefixes):
+    """True when ch's Unicode category starts with a prefix (L/M/N)."""
+    import unicodedata as _ud
+
+    return _ud.category(ch).startswith(prefixes)
+
+
+def _is_letter(ch):
+    return _cat_is(ch, "L")
+
+
+def _is_number(ch):
+    return _cat_is(ch, "N")
+
+
+def _is_upper_run(ch):
+    return _cat_is(ch, "Lu", "Lt", "Lm", "Lo", "M")
+
+
+def _is_lower_run(ch):
+    return _cat_is(ch, "Ll", "Lm", "Lo", "M")
+
+
+def _match_contraction(text, i):
+    """Length of a trailing 's/'t/... contraction at i (0 when none)."""
+    for cont in _BPE_CONTRACTIONS:
+        if text[i:i + len(cont)].lower() == cont:
+            return len(cont)
+    return 0
+
+
+def _gpt2_symbol_end(text, j):
+    """End of a symbol run at j (non-space, non-letter, non-digit)."""
+    n = len(text)
+    k = j + 1
+    while k < n and not text[k].isspace() \
+            and not _is_letter(text[k]) and not _is_number(text[k]):
+        k += 1
+    while k < n and text[k] in "\r\n/":
+        k += 1
+    return k
+
+
+def _gpt2_letters_end(text, j):
+    """End of a letter run at j (alternatives 1-2 + contraction).
+
+    Alt 1 (U* L2+): greedy upper-run, then a lower-run tail (U* may be
+    empty for all-lowercase words; backtracking over U/L2 overlap marks
+    is implemented). Alt 2 (U+ L2*): maximal upper run plus lower tail.
+    -1 when neither matches.
+    """
+    n = len(text)
+    k = j
+    while k < n and _is_upper_run(text[k]):
+        k += 1
+    s = k
+    while s >= j:
+        e = s
+        while e < n and _is_lower_run(text[e]):
+            e += 1
+        if e > s:
+            return e + _match_contraction(text, e)
+        s -= 1
+    k = j
+    while k < n and _is_upper_run(text[k]):
+        k += 1
+    if k > j:
+        while k < n and _is_lower_run(text[k]):
+            k += 1
+        return k + _match_contraction(text, k)
+    return -1
+
+
+def _gpt2_split(text):
+    """The Glimmer pre-tokenizer Split (GPT-2 pattern, Unicode-aware).
+
+    Ordered alternatives: letter runs with an optional contraction,
+    1-3 digits, symbol runs, newlines, other whitespace. The two
+    whitespace-only alternatives both just consume whitespace runs (the
+    end-of-string lookahead distinction changes no boundary). Returns
+    the piece list.
+    """
+    toks = []
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        # \s*[\r\n]+ (newlines, with any preceding spaces)
+        if ch in "\r\n" or ch.isspace():
+            j = i
+            while j < n and text[j].isspace() \
+                    and text[j] not in "\r\n":
+                j += 1
+            k = j
+            while k < n and text[k] in "\r\n":
+                k += 1
+            if k > j:
+                toks.append(text[i:k])
+                i = k
+                continue
+            if j >= n:
+                toks.append(text[i:j])  # trailing spaces: own piece
+                i = j
+                continue
+            nxt = text[j]
+            if not nxt.isspace() and not _is_letter(nxt) \
+                    and not _is_number(nxt):
+                # A symbol follows: alternative 4 owns the spaces.
+                end = _gpt2_symbol_end(text, j)
+                toks.append(text[i:end])
+                i = end
+                continue
+            if _is_letter(nxt):
+                pass  # letters take the spaces as their prefix below
+            else:
+                toks.append(text[i:j])  # spaces before digits: own piece
+                i = j
+                continue
+        # Letter runs (alternatives 1-2): one optional non-letter/
+        # non-digit prefix char, then the run + contraction.
+        if ch not in "\r\n" and (ch.isspace() or not _is_letter(ch)
+                                 and not _is_number(ch)):
+            end = _gpt2_letters_end(text, i + 1) if i + 1 < n else -1
+            if end != -1:
+                toks.append(text[i:end])
+                i = end
+                continue
+            if ch.isspace():
+                # Lone spaces (before digits): one run, own piece.
+                k = i + 1
+                while k < n and text[k].isspace() \
+                        and text[k] not in "\r\n":
+                    k += 1
+                toks.append(text[i:k])
+                i = k
+                continue
+            # Any other lone prefix falls through to digits/symbols.
+        elif ch not in "\r\n":
+            end = _gpt2_letters_end(text, i)
+            if end != -1:
+                toks.append(text[i:end])
+                i = end
+                continue
+        # \p{N}{1,3}
+        if _is_number(ch):
+            k = i + 1
+            while k < n and k < i + 3 and _is_number(text[k]):
+                k += 1
+            toks.append(text[i:k])
+            i = k
+            continue
+        # ' ?[^\s\p{L}\p{N}]+[\r\n/]*' (symbols, optional leading space)
+        j = i
+        if ch == " ":
+            j = i + 1
+        if j < n and not text[j].isspace() \
+                and not _is_letter(text[j]) \
+                and not _is_number(text[j]):
+            end = _gpt2_symbol_end(text, j)
+            toks.append(text[i:end])
+            i = end
+            continue
+        toks.append(ch)
+        i += 1
+    return toks
+
+
+class GlimmerBPE:
+    """Token counter from a tokenizer.json BPE model (pure Python).
+
+    Pre-tokenizes with the file's GPT-2-style Split, maps each piece
+    through ByteLevel, and applies the file's merge ranks. Counts only
+    (no vocab needed: every byte maps, and unmerged pieces stay split).
+    `merges` accepts the file's [[left, right], ...] pairs.
+    """
+
+    def __init__(self, merges):
+        self.ranks = {}
+        for i, pair in enumerate(merges or ()):
+            try:
+                left, right = pair
+            except (TypeError, ValueError):
+                continue
+            self.ranks[(left, right)] = i
+        self._cache = {}
+
+    def pieces(self, text):
+        """BPE pieces of one pre-token string (cached per string)."""
+        try:
+            return self._cache[text]
+        except KeyError:
+            pass
+        word = tuple(_BYTE_UNI[b] for b in text.encode("utf-8"))
+        if len(word) < 2:
+            self._cache[text] = word
+            return word
+        pairs = {(word[i], word[i + 1]) for i in range(len(word) - 1)}
+        while pairs:
+            best = None
+            best_rank = None
+            for pair in pairs:
+                rank = self.ranks.get(pair)
+                if rank is not None and (best_rank is None
+                                         or rank < best_rank):
+                    best, best_rank = pair, rank
+            if best is None:
+                break
+            first, second = best
+            merged, k = [], 0
+            while k < len(word):
+                if k < len(word) - 1 and word[k] == first \
+                        and word[k + 1] == second:
+                    merged.append(first + second)
+                    k += 2
+                else:
+                    merged.append(word[k])
+                    k += 1
+            word = tuple(merged)
+            if len(word) == 1:
+                break
+            pairs = {(word[i], word[i + 1])
+                     for i in range(len(word) - 1)}
+        self._cache[text] = word
+        return word
+
+    def count(self, text):
+        """Glimmer tokens in `text` (0 for empty)."""
+        if not text:
+            return 0
+        return sum(len(self.pieces(piece))
+                   for piece in _gpt2_split(text))
+
+
+def load_bpe_tokenizer(path):
+    """GlimmerBPE from a tokenizer.json file (cached per path)."""
+    if path in _BPE_CACHE:
+        return _BPE_CACHE[path]
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    try:
+        merges = data["model"]["merges"]
+    except (KeyError, TypeError):
+        raise ValueError(
+            "no BPE merges in tokenizer %r" % (path,))
+    bpe = GlimmerBPE(merges)
+    _BPE_CACHE[path] = bpe
+    return bpe
+
+
+def count_r5_row_tokens(records, bpe, system_with_card):
+    """Exact BPE tokens per R5 row, system prompt + card included (N1).
+
+    Each row counts the system message WITH the card (the same string
+    the FT arm sends) + job text + reasoning + fenced code, plus the
+    chat-template header overhead. Returns [tokens] aligned with
+    `records`.
+    """
+    out = []
+    for rec in records:
+        total = CHAT_TEMPLATE_OVERHEAD_TOKENS
+        total += bpe.count(system_with_card or "")
+        total += bpe.count(rec.get("text") or "")
+        total += bpe.count(rec.get("reasoning") or "")
+        total += bpe.count(build_answer_text(rec.get("code") or ""))
+        out.append(total)
+    return out
+
+
+def estimate_r5_cost(row_tokens, epochs=R5_EPOCHS,
+                     throughput=R3_EFFECTIVE_TOKENS_PER_S,
+                     rate_per_hour=H200_RATE):
+    """Cost estimate from exact per-row tokens x R3 wall throughput."""
+    total = sum(row_tokens or ())
+    seconds = total * epochs / throughput
+    return {"tokens": total, "seconds": round(seconds, 1),
+            "dollars": round(seconds * rate_per_hour / 3600.0, 4)}
+
+
+def apply_budget_headroom(records, row_tokens, cap_dollars,
+                          epochs=R5_EPOCHS,
+                          throughput=R3_EFFECTIVE_TOKENS_PER_S,
+                          rate_per_hour=H200_RATE,
+                          headroom=R5_BUDGET_HEADROOM,
+                          seed=R5_SUBSAMPLE_SEED):
+    """PLAN's 75% rule (N1): subsample first-try rows until it fits.
+
+    `row_tokens` aligns with `records`. When the estimate exceeds
+    headroom x cap, first-try rows (glimmer-first/-hinted, seeded
+    shuffle) are dropped until it fits; ALL self-fix rows are kept, in
+    original order. Returns (kept, dropped_ids, estimate). Dropping
+    stops when it fits or no first-try rows are left (the full-cap
+    refuse_over_cap backstop decides the rest).
+    """
+    row_tokens = list(row_tokens or ())
+    est = estimate_r5_cost(row_tokens, epochs, throughput, rate_per_hour)
+    limit = float(cap_dollars) * float(headroom)
+    if est["dollars"] <= limit:
+        return list(records), [], est
+    drop_order = [i for i, rec in enumerate(records)
+                  if rec.get("source") in R5_DROPPABLE_SOURCES]
+    import random as _random
+
+    shuffled = list(drop_order)
+    _random.Random(seed).shuffle(shuffled)
+    drop_set = set()
+    for idx in reversed(shuffled):
+        drop_set.add(idx)
+        rest = [t for i, t in enumerate(row_tokens) if i not in drop_set]
+        est = estimate_r5_cost(rest, epochs, throughput, rate_per_hour)
+        if est["dollars"] <= limit:
+            break
+    kept = [rec for i, rec in enumerate(records) if i not in drop_set]
+    if est["dollars"] > limit:
+        # Even self-fix rows alone do not fit: keep them anyway and let
+        # refuse_over_cap decide (disclosed, never silent).
+        kept = [rec for rec in records
+                if rec.get("source") not in R5_DROPPABLE_SOURCES]
+        drop_set = set(range(len(records))) - {
+            i for i, rec in enumerate(records)
+            if rec.get("source") not in R5_DROPPABLE_SOURCES}
+    dropped_ids = [records[i].get("id") for i in sorted(drop_set)]
+    return kept, dropped_ids, est
 
 
 def half_epoch_checkpoints(n_examples, epochs, grad_accum):
@@ -1266,6 +1691,10 @@ if modal is not None:
         .entrypoint([])
         .pip_install("peft")
     )
+    # B6: the rule card rides into the image as a file (not an env var);
+    # FORGE_RULE_CARD points at it and its sha256 is checked inside.
+    for _card_local, _card_remote in training_image_local_files():
+        image = image.add_local_file(_card_local, _card_remote)
     hf_cache = modal.Volume.from_name("forge-hf-cache", create_if_missing=True)
     lora_vol = modal.Volume.from_name("forge-lora", create_if_missing=True)
     app = modal.App("forge-train")
@@ -1290,9 +1719,13 @@ if modal is not None:
         ft_messages_0=None,
         checkpoint_every=CHECKPOINT_EVERY_STEPS,
         require_rule_card=False,
+        r5_cap_dollars=None,
     ):
         """LoRA-tune Glimmer on [{"text", "code", "reasoning"?}] records;
-        short prompt only, on H200.
+        short prompt only, on H200 (with require_rule_card=True every
+        row renders with runner_final's FT system prompt WITH the rule
+        card, built here from the checked card text: the container
+        cannot import runner_final).
 
         `data` is the records themselves (a list of dicts, JSON-serialised
         by the entrypoint), or a volume-relative path holding JSONL when
@@ -1362,14 +1795,43 @@ if modal is not None:
             out["rule_card_sha256"] = RULE_CARD_SHA256
             prepare_r5_card_env(RULE_CARD_BAKED_PATH)
             out["rule_card_path"] = RULE_CARD_BAKED_PATH
+            # B6: every row renders with the FT system prompt WITH the
+            # card (same construction as runner_final.ft_messages with
+            # FORGE_RULE_CARD set: system + "\n\n" + card).
+            _r5_messages = (lambda text, _card=card_text: [
+                {"role": "system",
+                 "content": SYSTEM_PROMPT + "\n\n" + _card},
+                {"role": "user", "content": text}])
+        else:
+            _r5_messages = None
         tok = transformers.AutoTokenizer.from_pretrained(MODEL)
+        if require_rule_card and r5_cap_dollars is not None:
+            # N1 fallback (no cached tokenizer where the entrypoint
+            # ran): count exact with the real tokenizer and apply the
+            # 75% rule here, before training. Self-fix rows are kept.
+            _lens = []
+            for _ex in examples:
+                _p, _f = _remote_render(
+                    tok, _ex["text"], _ex["code"],
+                    _record_reasoning(_ex), _r5_messages)
+                _lens.append(len(
+                    tok(_f, add_special_tokens=False)["input_ids"]))
+            examples, _dropped, _est = apply_budget_headroom(
+                examples, _lens, r5_cap_dollars, epochs)
+            out["r5_subsample"] = {
+                "dropped": len(_dropped), "ids": sorted(_dropped),
+                "estimate": _est}
+            print("R5_SUBSAMPLE dropped=%d ids=%s estimate=%s "
+                  "(75%% rule, in-container exact count)"
+                  % (len(_dropped), json.dumps(sorted(_dropped)),
+                     json.dumps(_est)))
         # Format check first: render the first example (thinking turn +
         # code turn when it has reasoning) and print PASS/FAIL before
         # training. The FT messages travel with the entrypoint call: the
         # container cannot import runner_final.
         if examples:
             _fmt = check_format(tok, first_format_record(examples),
-                                ft_messages_0)
+                                ft_messages_0, _r5_messages)
             print(format_check_report(_fmt)
                   + " has_reasoning=%s n_loss_tokens=%d"
                   % (_fmt["has_reasoning"], _fmt["n_loss_tokens"]))
@@ -1409,7 +1871,8 @@ if modal is not None:
 
         def encode(ex):
             prompt, full = _remote_render(tok, ex["text"], ex["code"],
-                                          _record_reasoning(ex))
+                                          _record_reasoning(ex),
+                                          _r5_messages)
             p_ids = tok(prompt, add_special_tokens=False)["input_ids"]
             ids = tok(full, add_special_tokens=False)["input_ids"]
             labels = [-100] * len(p_ids) + ids[len(p_ids):]
@@ -1418,7 +1881,8 @@ if modal is not None:
         kept, dropped = [], 0
         for ex in examples:
             prompt, full = _remote_render(tok, ex["text"], ex["code"],
-                                          _record_reasoning(ex))
+                                          _record_reasoning(ex),
+                                          _r5_messages)
             if len(tok(full, add_special_tokens=False)["input_ids"]) > max_tokens:
                 dropped += 1
                 continue
@@ -1427,7 +1891,8 @@ if modal is not None:
         if kept:
             prompt0, full0 = _remote_render(tok, kept[0]["text"],
                                             kept[0]["code"],
-                                            _record_reasoning(kept[0]))
+                                            _record_reasoning(kept[0]),
+                                            _r5_messages)
             ids0, labels0, _, _ = encode(kept[0])
             loss_toks = [tok.decode([i]) for i, lab in zip(ids0, labels0)
                          if lab != -100][:40]
@@ -1442,7 +1907,8 @@ if modal is not None:
                 if src not in R5_MIX_SOURCES:
                     continue
                 prompt_e, full_e = _remote_render(
-                    tok, ex["text"], ex["code"], _record_reasoning(ex))
+                    tok, ex["text"], ex["code"], _record_reasoning(ex),
+                    _r5_messages)
                 if len(tok(full_e,
                            add_special_tokens=False)["input_ids"]) \
                         > max_tokens:
@@ -1575,21 +2041,30 @@ if modal is not None:
 
     @app.function(image=image, cpu=1, timeout=15 * 60,
                  volumes={HF_CACHE_MOUNT: hf_cache})
-    def format_check_tokenizer(record, ft_messages):
+    def format_check_tokenizer(record, ft_messages, r5_card_text=None):
         """Tiny CPU format check: loads ONLY the tokenizer (no GPU, no
         weights) and runs the same check_format as the offline path.
 
         `record` is one {"text", "code", "reasoning"?} dict; `ft_messages`
         is the prebuilt FT message list from the repo side (this
-        container cannot import runner_final). Prints the PASS/FAIL
-        line and returns the plain-JSON result (the caller prints the
-        full text + loss tokens). Run BEFORE the factory re-run via
-        `format-check --data` on a machine without local transformers.
+        container cannot import runner_final). With `r5_card_text` the
+        training side renders with the FT system prompt WITH the card
+        (B6; R5 rows). Prints the PASS/FAIL line and returns the
+        plain-JSON result (the caller prints the full text + loss
+        tokens). Run BEFORE the factory re-run via `format-check
+        --data` on a machine without local transformers.
         """
         import transformers
 
         tok = transformers.AutoTokenizer.from_pretrained(MODEL)
-        result = check_format(tok, dict(record), list(ft_messages))
+        messages_fn = None
+        if r5_card_text is not None:
+            messages_fn = (lambda text, _card=r5_card_text: [
+                {"role": "system",
+                 "content": SYSTEM_PROMPT + "\n\n" + _card},
+                {"role": "user", "content": text}])
+        result = check_format(tok, dict(record), list(ft_messages),
+                              messages_fn)
         print(format_check_report(result))
         return ensure_plain_json(result)
 
@@ -1736,9 +2211,9 @@ if modal is not None:
         print("SERVE_JSON " + json.dumps(out))
         return out
 
-def _remote_render(tok, text, code, reasoning=None):
+def _remote_render(tok, text, code, reasoning=None, messages_fn=None):
     """Render (prompt, full) with the tokenizer's chat template."""
-    return render_full(tok, text, code, reasoning)
+    return render_full(tok, text, code, reasoning, messages_fn)
 
 
 def _record_reasoning(ex):
@@ -1942,15 +2417,37 @@ def run_full_r5(data, out_name, cap_dollars, spent_dollars=0.0,
     Every row's prompt is runner_final's FT system prompt WITH the rule
     card (built with runner_final's own function); the card text must
     appear in the first rendered prompt or the run aborts. Shuffle seed
-    20261031. Adapter saved every half epoch. A cost estimate (tokens x
-    measured R3 throughput) is printed and refuses to start over the cap.
+    20261031. Adapter saved every half epoch. A cost estimate (exact
+    Glimmer BPE tokens x measured R3 throughput, system + card per row)
+    is printed; PLAN's 75% rule subsamples first-try rows (seed
+    20261031, all self-fix kept) when it exceeds 0.75 x the cap, then
+    the full cap still refuses.
     """
     records, mix_report = load_mix_records(data)
     print("MIX %s" % json.dumps(mix_report))
     kept = shuffle_mix(records)
-    estimate = estimate_mix_cost(kept)
+    bpe_path = glimmer_tokenizer_file()
+    if bpe_path is not None:
+        bpe = load_bpe_tokenizer(bpe_path)
+        card_text_est = check_rule_card(R5_CARD_REPO_PATH)
+        system_with_card = SYSTEM_PROMPT + "\n\n" + card_text_est.strip()
+        row_tokens = count_r5_row_tokens(kept, bpe, system_with_card)
+        kept, dropped_ids, estimate = apply_budget_headroom(
+            kept, row_tokens, cap_dollars)
+    else:
+        # No cached tokenizer here: whitespace estimate locally (the
+        # container counts exact with the real tokenizer and applies
+        # the 75% rule itself before training, via r5_cap_dollars).
+        row_tokens = None
+        dropped_ids = []
+        estimate = estimate_mix_cost(kept)
     print("COST_ESTIMATE %s (R3 wall throughput %.0f tok/s, H200 $%.2f/h)"
           % (json.dumps(estimate), R3_EFFECTIVE_TOKENS_PER_S, H200_RATE))
+    if dropped_ids:
+        print("R5_SUBSAMPLE dropped=%d ids=%s (75%% rule, seed %d; all "
+              "self-fix rows kept)" % (len(dropped_ids),
+                                       json.dumps(sorted(dropped_ids)),
+                                       R5_SUBSAMPLE_SEED))
     refuse_over_cap(estimate["dollars"], cap_dollars)
     split = split_cap(cap_dollars, spent_dollars)
     split["cap_dollars"] = float(cap_dollars)
@@ -1958,6 +2455,8 @@ def run_full_r5(data, out_name, cap_dollars, spent_dollars=0.0,
         raise RuntimeError("modal is not installed; cannot run remotely")
     res_dir = results_dir(out_name)
     kept_guarded = guard_or_abort(kept, res_dir)
+    if not kept_guarded:
+        raise ValueError("no training records survived the guard")
     # The FT messages (for the in-train format check) are built with
     # runner_final's own function WITH the card: point FORGE_RULE_CARD
     # at the repo card (same bytes as the baked card: sha checked here
@@ -1968,14 +2467,23 @@ def run_full_r5(data, out_name, cap_dollars, spent_dollars=0.0,
     os.environ["FORGE_RULE_CARD"] = R5_CARD_REPO_PATH
     try:
         ft0 = first_ft_messages(kept_guarded)
-        prompt0 = ft0 and FakeThinkingTokenizer().apply_chat_template(
-            ft0, tokenize=False, add_generation_prompt=True)
+        # B6: the card-in-prompt assert runs on the ACTUAL first
+        # training render (the first record that will train, with
+        # reasoning), rendered here with the offline stand-in (proves
+        # OUR wiring: FT messages + card on both sides); the container
+        # re-renders with the real tokenizer and aborts on mismatch
+        # before the first optimizer step.
+        first_rec = first_format_record(kept_guarded)
+        fmt0 = assert_r5_first_render(first_rec,
+                                      FakeThinkingTokenizer(), card_text)
+        print("R5_FIRST_RENDER %s has_reasoning=%s n_loss_tokens=%d"
+              % (format_check_report(fmt0), fmt0["has_reasoning"],
+                 fmt0["n_loss_tokens"]))
     finally:
         if old_card is None:
             os.environ.pop("FORGE_RULE_CARD", None)
         else:
             os.environ["FORGE_RULE_CARD"] = old_card
-    assert_card_in_prompt(prompt0 or "", card_text)
     data_arg = stage_data(kept_guarded, out_name)
     per_half = max(1, int(math.ceil(
         (float(len(kept_guarded)) / float(grad_accum)) / 2.0))) \
@@ -1987,6 +2495,7 @@ def run_full_r5(data, out_name, cap_dollars, spent_dollars=0.0,
               "alpha": R5_LORA_ALPHA, "max_tokens": R5_MAX_TOKENS,
               "grad_accum": grad_accum,
               "ft_messages_0": ft0, "require_rule_card": True,
+              "r5_cap_dollars": float(cap_dollars),
               "checkpoint_every": per_half}
     if max_steps is not None:
         kwargs["max_steps"] = max_steps

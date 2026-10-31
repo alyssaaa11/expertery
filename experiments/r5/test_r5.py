@@ -331,7 +331,12 @@ def test_hint_stripped_and_citing_dropped():
         "hint": "Check the hole centre please.",
     }]
     rows, counts = build_mix.build_rows([], [], hinted, jobs)
-    assert counts["glimmer-hinted"] == 2  # both kinds, hint stripped
+    # N2: hint-retry PASSes become FIRST-TRY rows only (never self-fix:
+    # the retry never saw wrong code or feedback).
+    assert counts["glimmer-hinted"] == 1
+    assert len(rows) == 1
+    assert rows[0]["text"] == "make a block"  # hint stripped
+    assert "Your code:" not in rows[0]["text"]  # not a self-fix row
     assert all(build_mix.HINT_MARKER not in r["text"] for r in rows)
     # Reasoning that cites the tutor is dropped.
     hinted[0]["reasoning"] = ("As the tutor hinted, the hole centre is "
@@ -467,3 +472,282 @@ def test_rule_card_check_and_prompt_assert(tmp_path):
     # The real card's sha matches the R5 constant.
     assert forge_train.sha256_of_file(
         forge_train.R5_CARD_REPO_PATH) == forge_train.RULE_CARD_SHA256
+
+
+# ------------------------------------------------------- B1/B2/B3 cloud box
+
+
+def _recording_ctx(state, name):
+    """A context manager recording entry; the "app" one sets in_app."""
+    import contextlib
+
+    @contextlib.contextmanager
+    def _ctx():
+        state["entered"].append(name)
+        if name == "app":
+            state["in_app"] = True
+        try:
+            yield
+        finally:
+            if name == "app":
+                state["in_app"] = False
+
+    return _ctx()
+
+
+def _fake_cloud(monkeypatch, fail_first=False, always_fail=False):
+    """Fake modal/_app/box/grader on the real cloud_cq module.
+
+    The fake measure remote raises unless called inside the app context
+    (B1); the fake exec requires the shared sandbox kwarg (B3)."""
+    import types as _types
+
+    import cloud_cq as _cq
+
+    state = {"entered": [], "in_app": False, "boxes": [],
+             "terminated": [], "exec_calls": []}
+
+    class _Box:
+        def __init__(self, name):
+            self.name = name
+
+        def terminate(self):
+            state["terminated"].append(self.name)
+
+    def _factory():
+        box = _Box("box%d" % len(state["boxes"]))
+        state["boxes"].append(box)
+        return box
+
+    def _run(code, sandbox=None):
+        state["exec_calls"].append((code, sandbox))
+        if sandbox is None or sandbox not in state["boxes"]:
+            raise AssertionError("exec outside the shared box")
+        if always_fail:
+            raise RuntimeError("box dead")
+        if fail_first and len(state["exec_calls"]) == 1:
+            raise RuntimeError("box dead")
+        return {"brep_bytes": b"BREP:" + code.encode()}
+
+    def _measure_remote(brep):
+        if not state["in_app"]:
+            raise RuntimeError("not hydrated: remote outside app context")
+        return {"volume": 1.0, "bbox": [0, 0, 0, 1, 1, 1], "solids": 1}
+
+    monkeypatch.setattr(
+        _cq, "modal", _types.SimpleNamespace(
+            enable_output=lambda: _recording_ctx(state, "output")))
+    monkeypatch.setattr(
+        _cq, "_app", _types.SimpleNamespace(
+            run=lambda: _recording_ctx(state, "app")))
+    monkeypatch.setattr(_cq, "run_answer_in_box", _run)
+    monkeypatch.setattr(_cq, "measure_brep", _types.SimpleNamespace(
+        remote=_measure_remote))
+    return state, _factory
+
+
+def test_cloud_check_runs_remote_calls_inside_app_context(monkeypatch):
+    state, factory = _fake_cloud(monkeypatch)
+    jobs = [{"id": "R5T-F1-%d" % i, "reference": "ref%d" % i}
+            for i in range(3)]
+    measures, spent, stopped = make_jobs.cloud_check_jobs(
+        jobs, 100.0, sandbox_factory=factory)
+    assert stopped is False and len(measures) == 3
+    assert all(m.get("volume") == 1.0 for m in measures.values())
+    # B1: both contexts were entered around the remote calls.
+    assert "output" in state["entered"] and "app" in state["entered"]
+    assert state["in_app"] is False  # contexts exited afterwards
+    # B3: ONE box built, shared by every exec, terminated at the end.
+    assert len(state["boxes"]) == 1
+    assert all(box is state["boxes"][0]
+               for _, box in state["exec_calls"])
+    assert state["terminated"] == ["box0"]
+    assert spent > 0  # honest measured charge, not the flat prior
+
+
+def test_cloud_check_rebuilds_box_once_then_continues(monkeypatch):
+    state, factory = _fake_cloud(monkeypatch, fail_first=True)
+    jobs = [{"id": "J%d" % i, "reference": "ref%d" % i}
+            for i in range(3)]
+    measures, spent, stopped = make_jobs.cloud_check_jobs(
+        jobs, 100.0, sandbox_factory=factory,
+        cost_fn=lambda e, m: 0.0)
+    assert stopped is False and len(measures) == 3
+    assert len(state["boxes"]) == 2  # rebuilt once
+    assert sorted(state["terminated"]) == ["box0", "box1"]
+
+
+def test_cloud_check_stops_when_rebuilt_box_dies(monkeypatch):
+    state, factory = _fake_cloud(monkeypatch, always_fail=True)
+    jobs = [{"id": "J%d" % i, "reference": "ref%d" % i}
+            for i in range(3)]
+    measures, spent, stopped = make_jobs.cloud_check_jobs(
+        jobs, 100.0, sandbox_factory=factory,
+        cost_fn=lambda e, m: 0.0)
+    assert stopped is True
+    assert measures["J0"]["error"].startswith("harness:")
+    assert "J1" not in measures and "J2" not in measures
+    assert len(state["boxes"]) == 2
+
+
+def test_cloud_check_projection_stops_over_budget(capsys):
+    jobs = [{"id": "J%d" % i, "reference": "ref%d" % i}
+            for i in range(25)]
+
+    def _exec(code):
+        return {"brep_bytes": b"BREP"}
+
+    def _measure(brep):
+        return {"volume": 2.0, "bbox": [0, 0, 0, 1, 1, 1], "solids": 1}
+
+    measures, spent, stopped = make_jobs.cloud_check_jobs(
+        jobs, 22.0, exec_fn=_exec, measure_fn=_measure,
+        cost_fn=lambda e, m: 1.0)
+    assert stopped is True and len(measures) == 20 and spent == 20.0
+    assert "projected $25.000" in capsys.readouterr().out
+
+
+def test_estimate_job_cost_math():
+    assert make_jobs.estimate_job_cost(3600.0, 3600.0, cores=1,
+                                       gib=4.0) == pytest.approx(0.38)
+    assert make_jobs.sandbox_size() == (1.0, 4.0)
+    assert make_jobs.estimate_job_cost(0.0, 0.0, cores=1,
+                                       gib=4.0) == 0.0
+
+
+def test_finalize_seed_jobs_drops_unchecked_and_failed():
+    jobs = [{"id": "J%d" % i} for i in range(5)]
+    measures = {
+        "J0": {"volume": 1.0, "bbox": [0] * 6, "solids": 1},
+        "J1": {"error": "harness: boom"},
+        "J2": {"volume": 1.0, "bbox": [0] * 6, "solids": 2},
+        "J3": {"volume": 1.0, "bbox": [0] * 6, "solids": 1,
+               "valid": False},
+    }
+    kept, dropped, failed = make_jobs.finalize_seed_jobs(jobs, measures)
+    assert [j["id"] for j in kept] == ["J0"]
+    assert failed is True
+    reasons = {d["id"]: d["reason"] for d in dropped}
+    assert reasons["J1"].startswith("reference failed:")
+    assert "2 solids" in reasons["J2"]
+    assert reasons["J3"] == "reference invalid"
+    assert reasons["J4"] == "not checked (stopped early)"
+    _, _, failed2 = make_jobs.finalize_seed_jobs(jobs, {})
+    assert failed2 is False
+
+
+# ------------------------------------------------------- B4 measured dedup
+
+
+def test_volume_bbox_dupes_compare_against_old_sets():
+    jobs = [{"id": "N1"}, {"id": "N2"}]
+    measures = {"N1": {"volume": 5.0, "bbox": [0, 0, 0, 1, 1, 1]},
+                "N2": {"volume": 9.0, "bbox": [0, 0, 0, 2, 2, 2]}}
+    dupes = make_jobs.volume_bbox_duplicates(
+        jobs, measures, against=[(5.0, [0, 0, 0, 1, 1, 1])])
+    assert dupes == ["N1"]
+    assert make_jobs.volume_bbox_duplicates(jobs, measures) == []
+
+
+def test_measures_save_load_roundtrip(tmp_path):
+    path = str(tmp_path / "x.measures.json")
+    n = make_jobs.save_measures(path, {
+        "A": {"volume": 1.5, "bbox": [0, 0, 0, 1, 1, 1], "solids": 1},
+        "B": {"error": "boom"}})
+    assert n == 1
+    assert make_jobs.load_measures_file(path) == {
+        "A": (1.5, [0, 0, 0, 1, 1, 1])}
+    assert make_jobs.load_measures_file(
+        str(tmp_path / "missing")) is None
+    corpus = tmp_path / "corpus.jsonl"
+    corpus.write_text(json.dumps({"id": "F1-1", "text": "t"}) + "\n")
+    assert make_jobs.load_measures_file(str(corpus)) is None
+
+
+def test_exam_cloud_items_cover_the_exam():
+    items, ids = make_jobs.exam_cloud_items()
+    assert len(items) >= 30 and len(items) == len(ids)
+    assert ids[0] == "EXAM-M1" and items[0]["id"] == "EXAM-M1"
+    assert 'result = JOBS[0]["build"]()' in items[0]["reference"]
+
+
+def test_main_seed_cloud_check_drops_failed_and_fails(monkeypatch,
+                                                     tmp_path):
+    monkeypatch.setattr(make_jobs, "exam_texts", lambda: [])
+    monkeypatch.setattr(make_jobs, "exam_cloud_items",
+                        lambda: ([], []))
+    out = str(tmp_path / "jobs_r5t.jsonl")
+
+    def _fake_check(batch, budget):
+        measures = {}
+        for i, b in enumerate(batch):
+            if b["id"] == "R5T-F1-1":
+                measures[b["id"]] = {"error": "harness: boom"}
+            else:
+                # Distinct volumes: identical measures would (correctly)
+                # dedup against each other.
+                measures[b["id"]] = {
+                    "volume": 1.0 + i * 0.01,
+                    "bbox": [0, 0, 0, 1 + i * 0.01, 1, 1],
+                    "solids": 1}
+        return measures, 0.01, False
+
+    monkeypatch.setattr(make_jobs, "cloud_check_jobs", _fake_check)
+    rc = make_jobs.main(["--seed", "20261031", "--per-family", "1",
+                         "--prefix", "R5T", "--out", out,
+                         "--cloud-check", "--budget", "100"])
+    assert rc == 1  # a reference failed: non-zero exit
+    kept = [json.loads(line) for line in open(out) if line.strip()]
+    assert all(j["id"] != "R5T-F1-1" for j in kept)
+    assert len(kept) == 9
+    dropped = json.load(open(out + ".dropped.json"))
+    assert len(dropped) == 1 and dropped[0]["id"] == "R5T-F1-1"
+    assert dropped[0]["reason"].startswith("reference failed:")
+    assert len(json.load(open(out + ".measures.json"))) == 9
+
+
+def test_main_seed_cloud_check_stop_is_nonzero(monkeypatch, tmp_path):
+    monkeypatch.setattr(make_jobs, "exam_texts", lambda: [])
+    monkeypatch.setattr(make_jobs, "exam_cloud_items",
+                        lambda: ([], []))
+    out = str(tmp_path / "jobs_r5t.jsonl")
+
+    def _fake_check(batch, budget):
+        measures = {b["id"]: {"volume": 1.0,
+                              "bbox": [0, 0, 0, 1, 1, 1], "solids": 1}
+                    for b in batch}
+        return measures, 0.01, True  # stopped before all were checked
+
+    monkeypatch.setattr(make_jobs, "cloud_check_jobs", _fake_check)
+    rc = make_jobs.main(["--seed", "20261031", "--per-family", "1",
+                         "--prefix", "R5T", "--out", out,
+                         "--cloud-check", "--budget", "100"])
+    assert rc == 1
+
+
+# ------------------------------------------------------- N2 dev-jobs assert
+
+
+def test_dev_jobs_text_assert_fires_from_r5d_file(tmp_path):
+    r5t = tmp_path / "r5t.jsonl"
+    r5t.write_text(json.dumps(
+        {"id": "R5T-F1-1", "text": "make a block", "family": 1}) + "\n")
+    first = tmp_path / "first.jsonl"
+    first.write_text(json.dumps(
+        {"job": "R5T-F1-1", "verdict": "PASS", "code": "result = 1",
+         "reasoning": LONG_REASONING}) + "\n")
+    dev_ids = tmp_path / "dev.json"
+    dev_ids.write_text(json.dumps({"dev": ["R5D-F1-1"]}))
+    r5d = tmp_path / "r5d.jsonl"
+    r5d.write_text(json.dumps(
+        {"id": "R5D-F1-1", "text": "make a block", "family": 1}) + "\n")
+    out = str(tmp_path / "mix.jsonl")
+    with pytest.raises(ValueError, match="dev/exam text"):
+        build_mix.main(["--first", str(first), "--jobs", str(r5t),
+                        "--dev-ids", str(dev_ids),
+                        "--dev-jobs", str(r5d), "--out", out])
+    # Without --dev-jobs the old lookup never fires (R5D text is not in
+    # the R5T file): documents the bug this fixes.
+    assert build_mix.main(["--first", str(first), "--jobs", str(r5t),
+                           "--dev-ids", str(dev_ids),
+                           "--out", out]) == 0

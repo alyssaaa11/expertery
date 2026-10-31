@@ -438,6 +438,49 @@ def factory_job(job_id, jobs=None):
     raise ValueError("unknown factory job %r" % (job_id,))
 
 
+def factory_reference(job_id, jobs=None, reference=None):
+    """Reference source for a factory job id (R5 B5).
+
+    Baked-first: a known id always grades against the baked jobs file
+    (old ids grade exactly as before, even when a reference is also
+    passed). An unknown id (R5T/R5D, not yet baked) grades against the
+    passed `reference`. Unknown without a reference raises ValueError,
+    never StopIteration.
+    """
+    known = None
+    for job in jobs if jobs is not None else load_factory_jobs():
+        if job.get("id") == job_id:
+            known = job
+            break
+    if known is not None:
+        return known["reference"]
+    if isinstance(reference, str) and reference.strip():
+        return reference
+    raise ValueError(
+        "unknown factory job %r (not in the grader's jobs file; "
+        "pass the job's reference with the call)" % (job_id,))
+
+
+def factory_grade_fn(jobs, remote_fn):
+    """Grade closure that carries each job's reference (R5 B5).
+
+    Returns grade_fn(exam, job_id, brep) for check_refs / the runner:
+    factory jobs with a reference pass it along (the grader uses it
+    for ids outside the baked file); first-test jobs, or factory jobs
+    without one, call remote_fn exactly as before.
+    """
+    by_id = {j.get("id"): j for j in jobs or () if isinstance(j, dict)}
+
+    def _grade(exam_arg, job_id, brep_bytes):
+        ref = by_id.get(job_id, {}).get("reference")
+        if exam_arg == "factory" and isinstance(ref, str) and ref.strip():
+            return remote_fn(exam_arg, job_id, brep_bytes,
+                             reference=ref)
+        return remote_fn(exam_arg, job_id, brep_bytes)
+
+    return _grade
+
+
 def grade_shapes_for_exam(exam, job_id, answer_shape, first_jobs=None,
                           factory_jobs=None, expected=None):
     """Score a built answer shape under one exam (needs cadquery).
@@ -520,13 +563,17 @@ if modal is not None:
     _app = modal.App(GRADER_APP_NAME)
 
     @_app.function(image=_image(), cpu=1, timeout=300)
-    def grade(exam, job_id, brep_bytes):
+    def grade(exam, job_id, brep_bytes, reference=None):
         """Grade one BREP (bytes) for one job id in one exam.
 
         first-test scores against expected.json exactly as runner.py
         does; factory builds the job's reference program in the grader
         and scores both ways (0.2% verdict + 1e-6 tight). Never runs
         model code: the BREP is only imported and measured.
+
+        R5 B5: for factory, a passed `reference` grades ids outside the
+        baked jobs.jsonl (R5T/R5D); baked ids always use the baked file
+        (old verdicts unchanged). Unknown ids raise ValueError.
         """
         import sys as _sys
 
@@ -547,9 +594,19 @@ if modal is not None:
             jobs = [_json.loads(line) for line in open(
                 "/grader/factory/jobs.jsonl", encoding="utf-8")
                 if line.strip()]
-            job = next(j for j in jobs if j["id"] == job_id)
+            known = next(
+                (j for j in jobs if j["id"] == job_id), None)
+            if known is not None:
+                source = known["reference"]
+            elif isinstance(reference, str) and reference.strip():
+                source = reference
+            else:
+                raise ValueError(
+                    "unknown factory job %r (not in "
+                    "/grader/factory/jobs.jsonl; pass reference=...)"
+                    % (job_id,))
             ns = {"__name__": "__main__"}
-            exec(compile(job["reference"], "<reference>", "exec"), ns)
+            exec(compile(source, "<reference>", "exec"), ns)
             ref = _checks.to_shape(ns["result"])
             expected = _checks.measure(ref)
         else:
@@ -563,7 +620,11 @@ if modal is not None:
                     return _json.load(f)
 
             expected_all = _load("/grader/first-test/expected.json")
-            job = next(j for j in _jobs.JOBS if j["id"] == job_id)
+            job = next(
+                (j for j in _jobs.JOBS if j["id"] == job_id), None)
+            if job is None:
+                raise ValueError(
+                    "unknown first-test job %r" % (job_id,))
             ref = job["build"]()
             expected = expected_all[job_id]
         old = _checks.TOL_DIFF
@@ -649,25 +710,38 @@ def default_build_brep(exam, job):
         return f.read()
 
 
-def check_refs(exam="first-test", build_brep_fn=None, grade_fn=None):
+def check_refs(exam="first-test", build_brep_fn=None, grade_fn=None,
+               jobs=None, jobs_file=None):
     """Send each reference through the grader at 1e-6.
 
     Prints `REFS n/total PASS`. `build_brep_fn(exam, job)` returns BREP
     bytes for one job (default: trusted local export); `grade_fn(exam,
     job_id, brep_bytes)` defaults to the cloud grader (needs the grader
-    app context). Both are injected in tests. Returns (n_pass, n_jobs).
+    app context) and carries each factory job's reference, so R5T/R5D
+    files check without being baked in. Both are injected in tests.
+    `jobs` (a list) or `jobs_file` (a factory jobs file, e.g. an R5 set)
+    overrides the default corpus; `jobs_file` with first-test refuses.
+    Returns (n_pass, n_jobs).
     """
-    if exam == "factory":
-        jobs = load_factory_jobs()
-    elif exam == "first-test":
-        jobs = [j for j in _first_test_jobs() if j.get("level") != "dry"]
-    else:
-        raise ValueError("unknown exam %r" % (exam,))
+    if jobs is None:
+        if jobs_file is not None:
+            if exam != "factory":
+                raise ValueError(
+                    "--jobs-file only applies to exam 'factory'")
+            jobs = load_factory_jobs(jobs_file)
+        elif exam == "factory":
+            jobs = load_factory_jobs()
+        elif exam == "first-test":
+            jobs = [j for j in _first_test_jobs()
+                    if j.get("level") != "dry"]
+        else:
+            raise ValueError("unknown exam %r" % (exam,))
     if build_brep_fn is None:
         build_brep_fn = default_build_brep
     if grade_fn is None:
-        def grade_fn(exam_arg, job_id, brep_bytes, _exam=exam):
-            return grade.remote(exam_arg, job_id, brep_bytes)
+        grade_fn = factory_grade_fn(
+            jobs if exam == "factory" else (),
+            grade.remote)
     n_pass, n_jobs = 0, 0
     for job in jobs:
         n_jobs += 1
@@ -805,6 +879,10 @@ def main(argv=None):
     parser.add_argument("--regrade", metavar="DIR", default=None,
                         help="baseline results dir holding calls.jsonl")
     parser.add_argument("--exam", choices=VALID_EXAMS, default="first-test")
+    parser.add_argument("--jobs-file", default=None,
+                        help="factory jobs file for --check-refs "
+                             "(e.g. an R5 set; every reference graded "
+                             "against itself must PASS)")
     args = parser.parse_args(argv)
     if args.check_refs and args.regrade:
         parser.error("use one of --check-refs or --regrade")
@@ -817,7 +895,7 @@ def main(argv=None):
         # fails with "App is already running".
         with modal.enable_output():
             with _app.run():
-                check_refs(exam=args.exam)
+                check_refs(exam=args.exam, jobs_file=args.jobs_file)
         return 0
     if args.regrade:
         if modal is None:

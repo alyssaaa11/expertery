@@ -7,9 +7,11 @@ Inputs: the R5T first-try, self-fix and hint-retry calls.jsonl files
 - first-try rows: job text -> thinking + code (source glimmer-first);
 - self-fix rows: job + wrong code + reference-free feedback -> thinking
   + fixed code (source glimmer-selffix);
-- hint-retry PASSes: added as BOTH kinds with the hint STRIPPED; dropped
-  when the reasoning says "hint"/"tutor" or copies >= 8 words of the hint
-  (source glimmer-hinted).
+- hint-retry PASSes: added as FIRST-TRY rows only (N2: the hint retry
+  was prompted as job + hint, i.e. first-try form, so its reasoning
+  never saw the wrong code or feedback a self-fix row would show),
+  with the hint STRIPPED; dropped when the reasoning says "hint"/"tutor"
+  or copies >= 8 words of the hint (source glimmer-hinted).
 
 Rules: rows with reasoning < 200 chars are dropped (no code-only rows);
 at most 2 rows per job. Asserts: no row contains "Hint from a tutor", no
@@ -119,18 +121,10 @@ def build_rows(first_calls, selffix_calls, hint_calls, jobs_by_id):
         if hint and reasoning_cites_hint(reasoning, hint):
             counts["dropped_hint_cite"] += 1
             continue
-        # Both kinds, hint STRIPPED: plain job text and selffix text.
+        # N2: FIRST-TRY kind only, hint STRIPPED (plain job text). Never
+        # a self-fix row: the hint retry never saw wrong code/feedback.
         _add(rec["job"], job["text"], rec.get("code") or "",
               reasoning, "glimmer-hinted")
-        if per_job.get(rec["job"], 0) < MAX_ROWS_PER_JOB:
-            wrong = rec.get("selffix_wrong_code") or rec.get(
-                "first_code", "")
-            feedback = rec.get("selffix_feedback") or \
-                "The code ran but the shape was wrong. Fix the code."
-            text = runner_final.build_selffix_user_text(
-                job["text"], wrong, feedback)
-            _add(rec["job"], text, rec.get("code") or "",
-                  reasoning, "glimmer-hinted")
     return rows, counts
 
 
@@ -183,6 +177,10 @@ def main(argv=None):
                         help="R5T jobs file (job texts)")
     parser.add_argument("--dev-ids", default=None,
                         help="split/dev ids JSON (asserted absent)")
+    parser.add_argument("--dev-jobs", default=None,
+                        help="R5D jobs file: dev TEXTS are loaded from "
+                             "here (N2; the R5T jobs file cannot hold "
+                             "R5D texts)")
     parser.add_argument("--exam-texts", default=None,
                         help="exam texts JSON list (asserted absent)")
     parser.add_argument("--out", required=True,
@@ -203,8 +201,14 @@ def main(argv=None):
     if args.exam_texts and os.path.isfile(args.exam_texts):
         with open(args.exam_texts, encoding="utf-8") as f:
             exam_texts = json.load(f)
-    dev_texts = [jobs_by_id[i]["text"] for i in dev_ids
-                 if i in jobs_by_id]
+    if args.dev_jobs and os.path.isfile(args.dev_jobs):
+        # N2: R5D texts come from the R5D file (the R5T jobs file never
+        # holds them, so the old lookup never fired).
+        dev_texts = [j["text"] for j in load_jobs(args.dev_jobs).values()
+                     if isinstance(j.get("text"), str)]
+    else:
+        dev_texts = [jobs_by_id[i]["text"] for i in dev_ids
+                     if i in jobs_by_id]
     assert_mix(rows, dev_ids, exam_texts, dev_texts)
     with open(args.out, "w", encoding="utf-8") as f:
         for row in rows:

@@ -235,6 +235,30 @@ def should_retry_selffix(record, trigger=SELFFIX_TRIGGER_REFEREE):
         return True
 
 
+def grade_fn_for(jobs):
+    """Cloud-grader call carrying each factory job's reference (R5 B5).
+
+    Returns grade_fn(exam, job_id, brep) for run_ft_suite: factory jobs
+    with a reference pass it along, so R5T/R5D ids grade without being
+    baked into the grader image (the grader still prefers the baked
+    file for known ids, so old verdicts are unchanged). First-test
+    jobs have no reference and call exactly as before. Everything
+    resolves at call time (main() already refused without Modal, and
+    offline tests mock run_ft_suite without ever grading).
+    """
+    state = {}
+
+    def _grade(exam_arg, job_id, brep):
+        if "fn" not in state:
+            def _remote(*args, **kwargs):
+                return cloud_cq.grade.remote(*args, **kwargs)
+
+            state["fn"] = cloud_cq.factory_grade_fn(jobs, _remote)
+        return state["fn"](exam_arg, job_id, brep)
+
+    return _grade
+
+
 def load_hints_file(path):
     """hints.jsonl -> {job id: hint text} (rejected hints excluded)."""
     out = {}
@@ -1314,8 +1338,7 @@ def main(argv=None):
                     glimmer_key, manual_text,
                     post_fn=post_fn, sleep_fn=time.sleep,
                     exec_fn=lambda code: cloud_cq.run_answer_in_box(code),
-                    grade_fn=lambda exam, jid, brep: cloud_cq.grade.remote(
-                        exam, jid, brep),
+                    grade_fn=grade_fn_for(jobs),
                     workers=args.workers, k=args.k, budget=args.budget,
                     gpu_start=args.gpu_start)
         finals = [r for r in _sent if r.get("bx_final") is True]
@@ -1383,8 +1406,7 @@ def main(argv=None):
                 jobs, args.out, endpoint, run_model, run_key, exam,
                 post_fn=post_fn, sleep_fn=time.sleep,
                 exec_fn=lambda code: cloud_cq.run_answer_in_box(code),
-                grade_fn=lambda exam_arg, jid, brep: cloud_cq.grade.remote(
-                    exam_arg, jid, brep),
+                grade_fn=grade_fn_for(jobs),
                 k=args.k, workers=args.workers, budget=args.budget,
                 gpu_start=args.gpu_start, arm=run_arm,
                 hints=hints, selffix_jobs=selffix_jobs)

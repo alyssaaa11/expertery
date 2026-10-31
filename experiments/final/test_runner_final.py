@@ -657,6 +657,33 @@ def test_main_arm_a_needs_glimmer_keys_and_routes_there(
     assert seen["model"] == "muse-glimmer" and seen["arm"] == "A"
 
 
+def test_grade_fn_for_passes_factory_reference(monkeypatch):
+    """R5 B5: the runner's grade call carries factory references (R5
+    ids grade without being baked in); other calls keep their shape."""
+    import types
+
+    seen = []
+
+    def _remote(*args, **kwargs):
+        seen.append((args, kwargs))
+        return {"verdict": "PASS"}
+
+    fake_cq = types.SimpleNamespace(
+        grade=types.SimpleNamespace(remote=_remote),
+        factory_grade_fn=runner_final.cloud_cq.factory_grade_fn)
+    monkeypatch.setattr(runner_final, "cloud_cq", fake_cq)
+    jobs = [{"id": "R5T-F1-1", "text": "t", "reference": "r5-src"},
+            {"id": "M1", "text": "u"}]
+    grade = runner_final.grade_fn_for(jobs)
+    assert grade("factory", "R5T-F1-1", b"b") == {"verdict": "PASS"}
+    assert seen[-1] == (("factory", "R5T-F1-1", b"b"),
+                        {"reference": "r5-src"})
+    grade("factory", "M1", b"b")
+    assert seen[-1] == (("factory", "M1", b"b"), {})
+    grade("first-test", "M1", b"b")
+    assert seen[-1] == (("first-test", "M1", b"b"), {})
+
+
 class _Ctx:
     def __enter__(self):
         return self
