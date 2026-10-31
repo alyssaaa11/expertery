@@ -56,6 +56,21 @@ Supersedes plan v1 (ac1bfa6). Verifier must-fixes M1-M10 are marked [Mx] where t
   used for training (prompt mismatch). The pilot is redone with v2 on the same 200 jobs (cap $4), which also gives a
   paired v1 vs v2 comparison.
 
+## Plan change: option B, train WITHOUT the card (user, 2026-10-31 ~19:20)
+- Why: card v2 lifted base Glimmer to 94% on the pilot jobs (in-sample), so a trained model can hardly beat "A + card"
+  on accuracy. decision (user): "straight to B": generate WITH card v2 (first try, self-fix, hints), but TRAIN with the
+  short prompt WITHOUT the card (context distillation: the rules move into the weights). The A-on-R5D baseline is not
+  run separately; it is measured in the dev step.
+- Training rows: prompt = the FT system prompt WITHOUT the card + the job text (self-fix rows: + wrong code + feedback);
+  target = Glimmer's thinking + code generated WITH the card. Drop rows whose thinking mentions the card/rule card/
+  cheat sheet ("rule card", "card says", "per the card") or ≥ 8 words copied from the card (same idea as M7).
+- FT is served WITHOUT the card (FORGE_RULE_CARD unset). Dev arms on the 100 R5D jobs, k = 1: A (no card), A + card v2,
+  FT (no card). Pre-registered reading:
+  - **as good as the card**: FT − (A + card) ≥ −3 points AND 95% CI lower bound ≥ −10;
+  - **beats plain Glimmer**: FT − A ≥ +10 points;
+  - **cheaper**: FT tokens per correct part ≤ (A + card)'s.
+  The exam runs once with FT (no card) and A + card. The other parts of the frozen step 6 are unchanged.
+
 ## Training rows (two kinds, all with thinking) [M1, M3, M4]
 - **First-try rows**: prompt = FT system prompt + RULE_CARD v2 (sha256 9d0929b2…29c7; v1 586b5960…e80b kept as RULE_CARD_V1.md) + job text; target = Glimmer's
   thinking + code. From step-3 PASSes and step-5 PASSes (hint removed).
