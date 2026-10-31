@@ -1,45 +1,70 @@
-# R5: large-data SFT of Glimmer on Modal (ACCEPTED by the user 2026-10-31, pending verifier review; nothing run)
+# R5: train Glimmer on its own guided solutions (plan v2, 2026-10-31; nothing run)
 
-Why: the R1/R3 trainings used 154-167 examples. Generative code needs thousands (Fireworks workshop, transcript
-[01:02:02]; Meta Glimmer post-training guide: ≥ 500, 5-10k for strong domain results). Free data exists:
-gudo7208/CAD-Coder (Apache-2.0, arXiv 2505.19713). Wiki: findings/huggingface-cadquery-data-2026-10-31.md.
-User decisions (2026-10-31): train more BEFORE the exam, with large data; use Modal (no Fireworks); **Modal budget
-$90** (Modal billing ≈ $19.9 so far). **This is the last training method**: whatever the exam says is what we submit.
+## Goal (user, 2026-10-31, in their words: "one model guides the little one; the little one becomes more powerful by itself")
+Two private models: Spark guides, Glimmer learns. Today Glimmer + rule card needs many steps and still fails about 2 in 5
+hard factory jobs. After training, Glimmer must (1) get it right on the FIRST try more often, and (2) fix its own
+mistakes from the referee's error message alone, with no Spark and no hints, in the product.
+Decisions (user, 2026-10-31): plan accepted; option **B** (no CAD-Coder: licence lineage is non-commercial, and its style
+and missing thinking were risks; verifier forge-r5-plan-2026-10-31 P1); large data; Modal only for Glimmer; **Modal
+budget $90** (billing baseline 19.89 on 2026-10-31); Spark hints on Baseten cap $10; Muse Code writes the scripts
+(≈ $3-5 Meta credit); **this is the last training method**: the exam result is what we submit.
+Supersedes plan v1 (ac1bfa6). Verifier must-fixes M1-M10 are marked [Mx] where they are handled.
 
-## Data (all built in the cloud; dataset code never runs on the Mac)
-1. Download CAD-Coder `cad_data_train_high.json` (8,177) + `cad_data_train_cot.json` (1,503) straight into a Modal volume.
-2. Validity: run every code in the CadQuery 2.8 cloud box; keep rows that build exactly one valid solid within 60 s.
-   Exam guard on every row (refuse exam look-alikes; abort if > 5% refused). Report kept / dropped per file. Cap $3.
-3. Own-words rows: base Glimmer + rule card answers ≈ 1,000 NEW factory jobs (new seed, 0 overlap with dev/exam ids),
-   k = 1, more workers per GPU (first a 64-worker throughput pilot on 50 jobs; continue only if ≤ $0.006 per answer).
-   The referee (0.2%) keeps the correct ones, with Glimmer's reasoning kept in `reasoning_content`. Cap $10.
-2b. Spark hints (user idea + yes, 2026-10-31): for each factory job whose Glimmer answer FAILED in step 3, send Spark Open
-   (Baseten) the job text + Glimmer's attempt + the referee's failed checks; Spark returns a SHORT HINT only (≤ 60 words,
-   no code; reject replies with code fences or `cq.`). Glimmer retries once with the hint appended to the user message.
-   If the referee passes it, keep that answer, but train it WITHOUT the hint (prompt = the plain job prompt + card), so
-   Glimmer learns to solve it alone. Spark never appears in the product. Log hint, retry verdict, $ per hint.
-   Cap: Baseten $10 (≈ 300 hints × ≈ $0.03), Glimmer retries inside the step-3 Modal cap + $5.
-4. Mix: all valid CoT rows + factory own-words rows (with reasoning) + valid high rows (code only). Same system prompt
-   for every row = short prompt + rule card. Logged: rows per source, tokens, and the rendered first example of each source.
+## Data (all code runs in the cloud box; nothing AI-written runs on the Mac)
+1. **New job sets** [M8]: make_jobs with new seeds and id prefixes, written here before any run:
+   train `R5T` seed 20261031, 200 per family = 2,000 jobs; dev `R5D` seed 20261131, 10 per family = 100 jobs.
+   Dedup against jobs.jsonl, jobs_dev.jsonl, the exam (experiments/first-test) and each other: same text, same rounded
+   parameter tuple, or same measured volume + bbox (1e-6) → dropped and counted.
+2. **Pilot** [M6]: base Glimmer + card (arm A, A100-80GB, deploy/modal_glimmer.py) on the first 200 R5T jobs, k = 1,
+   64 workers (≥ 3 waves). Steady-state $/answer = $2.50/h × (wall − cold start) ÷ answers. Continue only if
+   ≤ $0.013 (the A + card rate today is $0.0138 at 8 workers). If higher: reduce the job count to fit the cap; never raise it.
+3. **First try** on all 2,000 R5T jobs (the pilot's 200 count). The referee (0.2%) marks PASS / FAIL. The runner stores
+   the full thinking text (`reasoning`) [M2]. Cap $26 including the pilot.
+4. **Self-fix** (no Spark) on every FAIL: Glimmer gets the job + its own wrong code + the referee's failed-check text,
+   and tries once more. PASS → a **self-fix row**. Cap $6.
+5. **Spark hint** on what still fails: Spark Open (Baseten) sees the job, Glimmer's attempt and the failed checks, and
+   returns ONE hint, ≤ 60 words, no code (replies with a code fence, `cq.` or `import` are rejected). Glimmer retries
+   with the hint. PASS → kept, but [M7] dropped if its reasoning mentions the hint ("hint", "tutor", or ≥ 8 words copied
+   from the hint), and trained WITHOUT the hint. Caps: Baseten $10, Glimmer retries $3.
 
-## Training
-LoRA r 16, alpha 32, lr 1e-4, 2 epochs, max 8,192 tokens, loss on thinking + code; H200. Log loss per step, the first
-loss tokens per source (to check that the thinking turn is kept), and Modal billing before/after. Cap $30.
+## Training rows (two kinds, all with thinking) [M1, M3, M4]
+- **First-try rows**: prompt = FT system prompt + RULE_CARD (sha256 586b5960…e80b) + job text; target = Glimmer's
+  thinking + code. From step-3 PASSes and step-5 PASSes (hint removed).
+- **Self-fix rows**: prompt = the same + "Your code:\n…\nThe referee says:\n<failed checks>"; target = thinking + fixed
+  code. From step-4 PASSes and step-5 PASSes (hint removed).
+- Every row must have non-empty thinking (≥ 200 chars); rows without are dropped and counted (no code-only rows: the
+  R1 failure). At most 2 rows per job. No dev/exam id or text, no Wonder output, no hint text (asserted).
+- The loader accepts sources `glimmer-first`, `glimmer-selffix`, `glimmer-hinted` with R5T ids only (provenance check
+  replaces the "Spark PASS in calls.jsonl" rule) [M3]. Shuffle with seed 20261031. Log rows, tokens and the first
+  loss tokens per source; the first loss tokens must open the thinking turn for every source.
+- Expected size (hypothesis): ≈ 1,350 first-try + ≈ 250-400 self-fix/hinted ≈ 1,600-1,750 rows, about 10× R3.
 
-## Dev check (pre-registered; the gate before the exam)
-New 100 factory dev jobs (fresh seed, never seen), k = 1, arms A + card and FT + card, same runner/referee/16,000 tokens.
-- FT+card − A+card ≥ +6 points → GO to the exam.
-- < +6 → STOP, report honestly; the exam is still run once on the best arm (user rule: no method 5). Cap $8.
-- Also report: share of FT answers with a non-empty thinking turn (must be ≥ 90%, else flag "thinking suppressed").
+## Training [M5]
+LoRA r 16, alpha 32, lr 1e-4, 2 epochs, max 8,192 tokens, H200, loss on thinking + code. Cap $18. Before starting,
+estimate the cost from tokens × the measured R3 throughput; if the estimate is over 75% of the cap ($13.50), subsample
+first-try rows (seed 20261031) until it fits, keeping all self-fix rows. Save the adapter every half epoch; if the cap
+stops training, the last saved adapter is used for dev and the stop is disclosed (amends the R3 rule for this run).
 
-## Final exam (frozen rules: experiments/final/PLAN.md step 6, unchanged). Cap $4.
+## Dev check (pre-registered; on the 100 R5D jobs, k = 1, same runner, referee, 16,000 tokens) [M9]
+Arms: A + card, R3 + card, FT + card. Product mode for each arm: one self-fix retry with the referee text only.
+- **GO to the exam** if FT + card − max(A + card, R3 + card) ≥ +6 points on first try.
+- Otherwise the exam runs once with the **best arm** (= highest first-try pass rate on R5D; ties → cheaper tokens per
+  correct), and the report says that R5 training did not beat it.
+- Thinking check: share of FT answers with reasoning ≥ 200 chars must be ≥ 90%; below that = "thinking suppressed",
+  STOP and report.
+- Also report the hard-family failure rate (F3, F4, F8) for each arm: the user's "2 of 5" target.
+Cap $9.
 
-## Money
-Modal caps: 3 + 10 + 5 (hint retries) + 30 + 8 + 4 = $60 worst case (≈ $80 of the $90 Modal budget). Baseten
-(Spark hints): cap $10, outside the Modal budget (user yes, 2026-10-31). Muse Code (writes the scripts, user
-rule) is billed by Meta, not Modal: estimate ≈ $3-5, to be confirmed by the user.
+## Final exam [M10]
+Frozen rules of experiments/final/PLAN.md step 6, amended BEFORE any exam run: the FT arm = short prompt + RULE_CARD
+(sha256 above); the report says B-max had the 5.7k manual and no card. Report first try and product mode (one self-fix).
+Cap $5. Run once.
 
-## Risks (stated up front)
-- Style shift: CAD-Coder texts are normalised sketch-and-extrude steps, not mm parts with coordinates.
-- Code-only rows may suppress thinking (R1 lesson): mitigated by the CoT + own-words rows and the thinking check.
-- Licence lineage: CAD-Coder is Apache-2.0 but built from Text2CAD (CC-BY-NC-SA): disclose in the README.
+## Money [N2]
+Modal: 26 + 6 + 3 + 18 + 9 + 5 = $67 worst case → 19.89 + 67 ≈ $87 of the $90 Modal budget. Baseten (Spark hints) $10.
+Muse Code ≈ $3-5 Meta credit. Every paid step: verifier check + user yes first.
+
+## Risks
+- Glimmer's own thinking is not always good thinking. The referee filter keeps only rows whose code passed.
+- Self-fix rows teach fixing from referee text; the product must show the same referee text (same function).
+- Only ~10 families: the trained model may be narrow. The exam's 30 jobs are hand-made and different, so it tests transfer.
