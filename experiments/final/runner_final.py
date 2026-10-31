@@ -103,19 +103,165 @@ def a_body(messages, model=A_MODEL):
     return runner.build_body(model, messages)
 
 
-def reasoning_chars_of(data):
-    """Length of message.reasoning_content (round 3 serving check)."""
+def reasoning_text_of(data, content=""):
+    """Full thinking text of a served reply (R5: stored, not just sized).
+
+    Checks ALL of message.reasoning_content, message.reasoning, then the
+    content before the first code fence; takes the first non-empty one.
+    Non-string values are coerced to str. Returns "" when none holds text.
+    """
     try:
-        choice = (data.get("choices") or [{}])[0] or {}
+        choice = ((data or {}).get("choices") or [{}])[0] or {}
     except (AttributeError, IndexError, TypeError):
-        return 0
+        choice = {}
     if not isinstance(choice, dict):
-        return 0
+        choice = {}
     msg = choice.get("message") or {}
     if not isinstance(msg, dict):
-        return 0
-    val = msg.get("reasoning_content")
-    return len(val) if isinstance(val, str) else 0
+        msg = {}
+    for key in ("reasoning_content", "reasoning"):
+        val = msg.get(key)
+        if isinstance(val, str) and val.strip():
+            return val
+        if val is not None and not isinstance(val, str) \
+                and str(val).strip():
+            return str(val)
+    text = content or msg.get("content") or ""
+    if isinstance(text, str) and "```" in text:
+        head = text.split("```", 1)[0]
+        if head.strip():
+            return head
+    return ""
+
+
+def reasoning_chars_of(data, content=""):
+    """Length of the stored thinking text (round 3 serving check).
+
+    Keeps the old one-arg call shape: reasoning_chars_of(data) still
+    returns len(message.reasoning_content or reasoning or ""); pass the
+    reply content as well to include the before-the-fence fallback.
+    """
+    return len(reasoning_text_of(data, content))
+
+
+HINT_SUFFIX_PREFIX = "\n\nHint from a tutor: "
+
+SELFFIX_TRIGGER_REFEREE = "referee"
+SELFFIX_TRIGGER_SIGNALS = "signals"
+VALID_SELFFIX_TRIGGERS = (SELFFIX_TRIGGER_REFEREE, SELFFIX_TRIGGER_SIGNALS)
+
+
+def ft_messages_with_hint(job_text, hint):
+    """Arm FT messages with a tutor hint appended to the user message."""
+    messages = ft_messages(job_text)
+    if hint:
+        messages[-1] = dict(messages[-1],
+                            content=messages[-1]["content"]
+                            + HINT_SUFFIX_PREFIX + hint)
+    return messages
+
+
+def selffix_feedback(record):
+    """Reference-free feedback for a failed record (training + product).
+
+    Only the answer's OWN signals: the last 15 lines of the error trace
+    when it crashed, the number of separate solids, and the answer's own
+    measured volume + bbox. Never expected values, reference measurements
+    or failed-check names: fails/failed_checks/expected/reference keys
+    are never read.
+    """
+    parts = []
+    run_error = (record or {}).get("run_error") or ""
+    if str(run_error).strip():
+        tail = str(run_error).strip().splitlines()[-15:]
+        parts.append("The code crashed. Last output:\n" + "\n".join(tail))
+    meas = (record or {}).get("measurements") or {}
+    if isinstance(meas, dict) and meas:
+        try:
+            solids = meas.get("solids")
+        except AttributeError:
+            solids = None
+        line = "The code ran."
+        if solids is not None:
+            line += " It made %s separate solid(s)." % (solids,)
+        if meas.get("volume") is not None:
+            line += " Measured volume: %s." % (meas.get("volume"),)
+        if meas.get("bbox") is not None:
+            line += " Measured bbox: %s." % (meas.get("bbox"),)
+        parts.append(line)
+    if not parts:
+        parts.append("The code ran but the shape was wrong. "
+                     "Check the sizes and positions and fix the code.")
+    return "\n".join(parts)
+
+
+def build_selffix_user_text(job_text, code, feedback):
+    """The self-fix retry user message (job + wrong code + feedback)."""
+    return ("%s\n\nYour code:\n```python\n%s\n```\nWhat happened:\n%s\n"
+            "Fix the code." % (job_text, code or "", feedback or ""))
+
+
+def ft_messages_with_selffix(job_text, code, feedback):
+    """Arm FT messages for a self-fix retry (same body, card, grader)."""
+    messages = ft_messages(job_text)
+    messages[-1] = dict(
+        messages[-1],
+        content=build_selffix_user_text(job_text, code, feedback))
+    return messages
+
+
+def should_retry_selffix(record, trigger=SELFFIX_TRIGGER_REFEREE):
+    """True when a failed record earns a self-fix retry under `trigger`.
+
+    `referee` (training data): every full-referee FAIL. `signals`
+    (product mode, dev/exam): only crash (run_error), invalid shape
+    (no measurements) or solids != 1 -- all reference-free signals.
+    """
+    if trigger not in VALID_SELFFIX_TRIGGERS:
+        raise ValueError("unknown selffix trigger %r" % (trigger,))
+    verdict = (record or {}).get("verdict", (record or {}).get("outcome"))
+    if trigger == SELFFIX_TRIGGER_REFEREE:
+        return verdict == "FAIL"
+    if verdict not in ("FAIL", "INVALID"):
+        return False
+    if ((record or {}).get("run_error") or "").strip():
+        return True
+    meas = (record or {}).get("measurements")
+    if not isinstance(meas, dict) or not meas:
+        return True
+    try:
+        return int(meas.get("solids", 1)) != 1
+    except (TypeError, ValueError):
+        return True
+
+
+def load_hints_file(path):
+    """hints.jsonl -> {job id: hint text} (rejected hints excluded)."""
+    out = {}
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            rec = json.loads(line)
+            if not isinstance(rec, dict) or rec.get("rejected"):
+                continue
+            if rec.get("id") and rec.get("hint"):
+                out[rec["id"]] = rec["hint"]
+    return out
+
+
+def load_selffix_records(path):
+    """Read a calls.jsonl of failed records for --selffix retries."""
+    with open(path, encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+def selffix_of_id(record):
+    """The first try's record id a self-fix retry points at."""
+    rec = record or {}
+    if rec.get("id"):
+        return rec["id"]
+    return "%s:%s" % (rec.get("job"), rec.get("rep", rec.get("sample", 0)))
 
 
 def _usage_pair(usage):
@@ -259,7 +405,7 @@ def out_of_money(cap_dollars, gpu_start, reserve=RESERVE, now=None):
 
 
 def _invalid_ft(job, rep, model, start, end, seconds, run_error, exam,
-                arm=FT_ARM, reasoning_chars=0):
+                arm=FT_ARM, reasoning_chars=0, reasoning=""):
     """An INVALID FT record (cut off, empty reply, or a failed call)."""
     return {
         "job": job["id"],
@@ -282,6 +428,7 @@ def _invalid_ft(job, rep, model, start, end, seconds, run_error, exam,
         "reasoning_len": 0,
         "reasoning_length": 0,
         "reasoning_chars": reasoning_chars,
+        "reasoning": reasoning,
         "code": "",
         "extracted_code": "",
         "verdict": "INVALID",
@@ -297,7 +444,7 @@ def _invalid_ft(job, rep, model, start, end, seconds, run_error, exam,
 
 def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
                exec_fn, grade_fn, call_timeout=CALL_TIMEOUT, rep=0,
-               arm=FT_ARM):
+               arm=FT_ARM, hint=None, selffix=None):
     """Run one (job, rep) pair once: POST the FT prompt, extract the code,
     run it in the cloud box, grade the BREP in the cloud grader.
 
@@ -305,8 +452,21 @@ def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
     answer that writes no BREP is FAIL, the grader's 0.2% verdict is the
     outcome (tight at 1e-6 is recorded alongside). Arm A runs the same
     call with the base Glimmer model (round 3 control arm).
+
+    `hint`: tutor hint text appended to the user message (retry-with-hint;
+    the record keeps it so the trainer can STRIP it). `selffix`: a
+    (wrong_code, feedback, selffix_of) triple for a self-fix retry (the
+    record keeps `selffix_of`). Same body, card and grader otherwise.
     """
-    body = ft_body(ft_messages(job["text"]), model=model)
+    if selffix is not None:
+        wrong_code, feedback, _of = selffix
+        messages = ft_messages_with_selffix(job["text"], wrong_code,
+                                            feedback)
+    elif hint:
+        messages = ft_messages_with_hint(job["text"], hint)
+    else:
+        messages = ft_messages(job["text"])
+    body = ft_body(messages, model=model)
     start = runner.utcnow_iso()
     t0 = time.monotonic()
     try:
@@ -322,21 +482,24 @@ def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
                            arm=arm)
     content, finish_reason, usage, reasoning_len = \
         runner.parse_response(data)
-    reasoning_chars = reasoning_chars_of(data)
+    reasoning = reasoning_text_of(data, content)
+    reasoning_chars = len(reasoning)
     if finish_reason == "length" or not (content or "").strip():
         seconds = time.monotonic() - t0
         end = runner.utcnow_iso()
         err = "cut off by the token limit" if finish_reason == "length" \
             else "empty reply"
         return _invalid_ft(job, rep, model, start, end, seconds, err, exam,
-                           arm=arm, reasoning_chars=reasoning_chars)
+                           arm=arm, reasoning_chars=reasoning_chars,
+                           reasoning=reasoning)
     code = runner.extract_code(content)
     if not (code or "").strip():
         seconds = time.monotonic() - t0
         end = runner.utcnow_iso()
         return _invalid_ft(job, rep, model, start, end, seconds,
                            "empty reply", exam,
-                           arm=arm, reasoning_chars=reasoning_chars)
+                           arm=arm, reasoning_chars=reasoning_chars,
+                           reasoning=reasoning)
     brep, run_error, _sc = run_box_code(exec_fn, code)
     if brep is None:
         outcome, tight, fails, fails_tight, measurements = \
@@ -363,7 +526,7 @@ def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
     if run_error and len(run_error) > runner.RUN_ERROR_TAIL:
         run_error = run_error[-runner.RUN_ERROR_TAIL:]
     prompt_n, completion_n = _usage_pair(usage)
-    return {
+    rec = {
         "job": job["id"],
         "rep": rep,
         "sample": rep,
@@ -386,6 +549,7 @@ def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
         "reasoning_len": reasoning_len,
         "reasoning_length": reasoning_len,
         "reasoning_chars": reasoning_chars,
+        "reasoning": reasoning,
         "code": code,
         "extracted_code": code,
         "verdict": outcome,
@@ -397,6 +561,13 @@ def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
         "measurements": measurements,
         "run_error": run_error,
     }
+    if hint:
+        rec["hint"] = hint
+    if selffix is not None:
+        rec["selffix_of"] = selffix[2]
+        rec["selffix_feedback"] = selffix[1]
+        rec["selffix_wrong_code"] = selffix[0]
+    return rec
 
 
 # ------------------------------------------------------- one BX answer (cloud)
@@ -887,17 +1058,30 @@ def run_pairs(pairs, call_one, out_dir, arm, exam, budget, gpu_start,
 
 def run_ft_suite(jobs, out_dir, endpoint, model, key, exam, post_fn,
                  sleep_fn, exec_fn, grade_fn, server_info_fn=None,
-                 k=3, workers=8, budget=5.0, gpu_start=None, arm=FT_ARM):
+                 k=3, workers=8, budget=5.0, gpu_start=None, arm=FT_ARM,
+                 hints=None, selffix_jobs=None):
     """Arm FT (or the base control arm A) over jobs x k reps. Returns
-    (records, summary)."""
+    (records, summary).
+
+    `hints`: {job id: hint text} for hint retries (record keeps `hint`).
+    `selffix_jobs`: {job id: (wrong_code, feedback, selffix_of)} for
+    self-fix retries (record keeps `selffix_of`). Only jobs present in
+    the respective map use that mode; when both maps hold an id, selffix
+    wins.
+    """
     secrets = [key] if key else []
     server_info = (server_info_fn or
                    (lambda: fetch_server_info(endpoint, key)))()
     pairs = [(job, rep) for job in jobs for rep in range(k)]
+    hints = hints or {}
+    selffix_jobs = selffix_jobs or {}
 
     def _call(job, rep):
-        rec = do_ft_call(job, model, endpoint, secrets, exam, post_fn,
-                         sleep_fn, exec_fn, grade_fn, rep=rep, arm=arm)
+        rec = do_ft_call(
+            job, model, endpoint, secrets, exam, post_fn,
+            sleep_fn, exec_fn, grade_fn, rep=rep, arm=arm,
+            hint=hints.get(job["id"]),
+            selffix=selffix_jobs.get(job["id"]))
         return rec, []
 
     return run_pairs(pairs, _call, out_dir, arm, exam, budget,
@@ -1049,12 +1233,30 @@ def main(argv=None):
                              "pairs to run (needs --arms BX)")
     parser.add_argument("--k", type=int, default=3)
     parser.add_argument("--workers", type=int, default=None,
-                        help="workers (default 8; 12 for --fill-missing)")
+                        help="workers (default 8; 12 for --fill-missing; "
+                             "max 16: deploy max_inputs=16, one container)")
     parser.add_argument("--budget", type=float, default=5.0)
     parser.add_argument("--gpu-start", type=float, default=None)
+    parser.add_argument("--hints", default=None, metavar="FILE",
+                        help="hints.jsonl for hint retries (appends "
+                             "'Hint from a tutor: <hint>'; record keeps "
+                             "hint so the trainer strips it)")
+    parser.add_argument("--selffix", default=None, metavar="FILE",
+                        help="calls.jsonl of FAILED records for self-fix "
+                             "retries (job + wrong code + reference-free "
+                             "feedback; record keeps selffix_of)")
+    parser.add_argument("--selffix-trigger",
+                        choices=list(VALID_SELFFIX_TRIGGERS),
+                        default=SELFFIX_TRIGGER_REFEREE,
+                        help="referee (training data): retry every "
+                             "full-referee FAIL; signals (product mode, "
+                             "dev/exam): retry only on crash, invalid "
+                             "shape or solids != 1")
     args = parser.parse_args(argv)
     if args.workers is not None and args.workers < 1:
         parser.error("--workers must be >= 1")
+    if args.workers is not None and args.workers > 16:
+        parser.error("--workers must be <= 16 (deploy max_inputs=16)")
     if args.k is not None and args.k < 1:
         parser.error("--k must be >= 1")
     arms = tuple(p.strip() for p in str(args.arms).split(",") if p.strip())
@@ -1150,6 +1352,30 @@ def main(argv=None):
     else:
         endpoint = forge_url.rstrip("/") + "/v1/chat/completions"
         run_key, run_model, run_arm = forge_key, FT_MODEL, FT_ARM
+    hints = load_hints_file(args.hints) if args.hints else {}
+    selffix_jobs = {}
+    if args.selffix:
+        by_id = {j["id"]: j for j in jobs}
+        for failed in load_selffix_records(args.selffix):
+            if not should_retry_selffix(failed, args.selffix_trigger):
+                continue
+            jid = failed.get("job", failed.get("id"))
+            if jid not in by_id:
+                continue
+            selffix_jobs[jid] = (
+                failed.get("code") or failed.get("extracted_code") or "",
+                selffix_feedback(failed), selffix_of_id(failed))
+        jobs = [by_id[jid] for jid in selffix_jobs]
+        if args.hints:
+            hints = {jid: h for jid, h in hints.items()
+                     if jid in selffix_jobs}
+        if not jobs:
+            parser.error("--selffix: no records passed the %s trigger"
+                         % args.selffix_trigger)
+    elif args.hints:
+        jobs = [j for j in jobs if j["id"] in hints]
+        if not jobs:
+            parser.error("--hints: no jobs in %s" % args.hints)
     post_fn = _real_post_fn(lambda _e: (endpoint, run_key))
     with cloud_cq.modal.enable_output():
         with cloud_cq._app.run():
@@ -1160,7 +1386,8 @@ def main(argv=None):
                 grade_fn=lambda exam_arg, jid, brep: cloud_cq.grade.remote(
                     exam_arg, jid, brep),
                 k=args.k, workers=args.workers, budget=args.budget,
-                gpu_start=args.gpu_start, arm=run_arm)
+                gpu_start=args.gpu_start, arm=run_arm,
+                hints=hints, selffix_jobs=selffix_jobs)
     print("%s %s: %d answers, pass rate at 0.2%%: %s" % (
         run_arm, exam, summary.get("n", 0), summary.get("pass_rate")))
     if exam == "factory":

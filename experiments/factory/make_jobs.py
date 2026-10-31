@@ -18,8 +18,10 @@ appear in the text (a family passes only at 20/20). Prints a
 
 import ast
 import difflib
+import hashlib
 import json
 import os
+import random
 import re
 import sys
 
@@ -322,12 +324,239 @@ def print_table(rows):
     return ok
 
 
+R5_SHUFFLE_SEED = 20261031
+CLOUD_CHECK_COST_PER_JOB = 0.005  # $ budget accounting per cloud check
+
+FORBIDDEN_SEED = generator.SEED
+
+
+def param_tuple_of_text(text):
+    """Rounded parameter tuple of a job text (1-decimal numbers)."""
+    return tuple(round(float(m), 1) for m in NUM_RE.findall(text or ""))
+
+
+def load_text_and_param_sets(paths):
+    """(texts, param_tuples) from existing jobs files (id/text only)."""
+    texts, params = set(), set()
+    for path in paths or ():
+        if not path or not os.path.isfile(path):
+            continue
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    job = json.loads(line)
+                except ValueError:
+                    continue
+                text = job.get("text", "")
+                if text:
+                    texts.add(text)
+                    params.add(param_tuple_of_text(text))
+    return texts, params
+
+
+def existing_factory_paths(out_dir=None):
+    """Default dedup corpus: jobs.jsonl + jobs_dev.jsonl next to make_jobs."""
+    base = out_dir or HERE
+    return [os.path.join(base, JOBS_NAME),
+            os.path.join(base, DEV_JOBS_NAME)]
+
+
+def generate_prefixed(seed, per_family, prefix):
+    """Generate jobs with a new seed and id prefix `P-F<f>-<i>`.
+
+    Refuses a seed equal to generator.SEED (exit 2 via ValueError here;
+    main turns it into exit 2). Uses the same 10 families and generator
+    code, only the seed and ids differ.
+    """
+    if int(seed) == int(generator.SEED):
+        raise ValueError(
+            "refusing seed %s: equal to generator.SEED (%s)"
+            % (seed, generator.SEED))
+    rng = random.Random(int(seed))
+    jobs = []
+    for family in range(1, generator.N_FAMILIES + 1):
+        fam = generator.FAMILIES[family]
+        for n in range(1, int(per_family) + 1):
+            params = fam["gen"](rng)
+            jobs.append({
+                "id": "%s-F%d-%d" % (prefix, family, n),
+                "family": family,
+                "text": fam["text"](params),
+                "reference": fam["src"](params),
+            })
+    return jobs
+
+
+def dedup_jobs(jobs, seen_texts, seen_params):
+    """Drop jobs whose text or rounded parameter tuple is already seen.
+
+    Returns (kept, n_dropped). Seen sets grow with kept jobs, so
+    within-set duplicates are dropped too.
+    """
+    kept, dropped = [], 0
+    for job in jobs:
+        text = job.get("text", "")
+        tup = param_tuple_of_text(text)
+        if text in seen_texts or tup in seen_params:
+            dropped += 1
+            continue
+        seen_texts.add(text)
+        seen_params.add(tup)
+        kept.append(job)
+    return kept, dropped
+
+
+def sha256_of_file(path):
+    """Hex sha256 of a file's bytes."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def cloud_check_jobs(jobs, budget, exec_fn=None, measure_fn=None):
+    """Reference self-check + volume/bbox measure in the cloud box.
+
+    Each job's reference runs via exec_fn (default: cloud_cq box) and its
+    BREP is measured via measure_fn (default: cloud_cq measure_brep).
+    Returns (results, spent) where results maps id -> {"volume", "bbox",
+    "solids"} or {"error"}. Stops starting NEW checks once spent +
+    CLOUD_CHECK_COST_PER_JOB passes the budget (in-flight checks still
+    count). Volume+bbox duplicates are found by the caller from results.
+    """
+    if exec_fn is None or measure_fn is None:
+        sys.path.insert(0, os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "final"))
+        try:
+            import cloud_cq as _cq
+        finally:
+            try:
+                sys.path.remove(os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    "..", "final"))
+            except ValueError:
+                pass
+        if exec_fn is None:
+            exec_fn = _cq.run_answer_in_box
+        if measure_fn is None:
+            remote = getattr(_cq.measure_brep, "remote",
+                             _cq.measure_brep)
+            measure_fn = remote
+    results, spent, stopped = {}, 0.0, False
+    for job in jobs:
+        if spent + CLOUD_CHECK_COST_PER_JOB > float(budget):
+            stopped = True
+            break
+        try:
+            boxed = exec_fn(job["reference"])
+        except Exception as e:  # noqa: BLE001 -- harness error is FAIL
+            results[job["id"]] = {"error": "harness: %r" % (e,)}
+            continue
+        finally:
+            spent += CLOUD_CHECK_COST_PER_JOB
+        brep = (boxed or {}).get("brep_bytes")
+        if brep is None:
+            results[job["id"]] = {
+                "error": (boxed or {}).get("run_error")
+                or "the answer wrote no BREP"}
+            continue
+        try:
+            meas = measure_fn(bytes(brep))
+        except Exception as e:  # noqa: BLE001 -- grader down
+            results[job["id"]] = {"error": "measure: %r" % (e,)}
+            continue
+        try:
+            results[job["id"]] = {
+                "volume": float(meas["volume"]),
+                "bbox": [float(v) for v in meas["bbox"]],
+                "solids": int(meas.get("solids", 1)),
+            }
+        except (KeyError, TypeError, ValueError):
+            results[job["id"]] = {"error": "bad measure %r" % (meas,)}
+    return results, spent, stopped
+
+
+def volume_bbox_duplicates(jobs, measures, tol=1e-6):
+    """Ids whose measured (volume, bbox) duplicates an earlier job's."""
+    seen, dupes = [], set()
+    for job in jobs:
+        meas = measures.get(job["id"])
+        if not isinstance(meas, dict) or "volume" not in meas:
+            continue
+        key = (meas["volume"], tuple(meas["bbox"]))
+        for prev in seen:
+            if abs(key[0] - prev[0]) <= tol and all(
+                    abs(a - b) <= tol for a, b in zip(key[1], prev[1])):
+                dupes.add(job["id"])
+                break
+        else:
+            seen.append(key)
+    return sorted(dupes)
+
+
 def main(argv=None):
     import argparse as _ap
 
     parser = _ap.ArgumentParser(description="Write factory jobs + split.")
     parser.add_argument("--out-dir", default=HERE)
+    parser.add_argument("--seed", type=int, default=None,
+                        help="new job-set seed (refused when == SEED)")
+    parser.add_argument("--per-family", type=int, default=None)
+    parser.add_argument("--prefix", default=None)
+    parser.add_argument("--out", default=None,
+                        help="output jobs file for --seed mode")
+    parser.add_argument("--dedup-against", action="append", default=[],
+                        help="extra jobs file to dedup against "
+                             "(repeatable; covers R5T vs R5D)")
+    parser.add_argument("--cloud-check", action="store_true",
+                        help="run the reference self-check + volume/bbox "
+                             "measure in the cloud box")
+    parser.add_argument("--budget", type=float, default=1.0,
+                        help="cloud-check budget in dollars (hard stop)")
     args = parser.parse_args(argv)
+    if args.seed is not None:
+        if args.per_family is None or not args.prefix or not args.out:
+            parser.error("--seed needs --per-family, --prefix and --out")
+        try:
+            jobs = generate_prefixed(args.seed, args.per_family,
+                                     args.prefix)
+        except ValueError as e:
+            parser.error(str(e))
+        n_before = len(jobs)
+        seen_texts, seen_params = load_text_and_param_sets(
+            existing_factory_paths(args.out_dir) + list(
+                args.dedup_against or ()))
+        for exam_text in exam_texts():
+            seen_texts.add(exam_text)
+            seen_params.add(param_tuple_of_text(exam_text))
+        jobs, n_dedup = dedup_jobs(jobs, seen_texts, seen_params)
+        print("dedup dropped %d of %d (text or rounded params)"
+              % (n_dedup, n_before))
+        if args.cloud_check:
+            measures, spent, stopped = cloud_check_jobs(
+                jobs, args.budget)
+            dupes = volume_bbox_duplicates(jobs, measures)
+            n_ok = sum(1 for j in jobs
+                       if isinstance(measures.get(j["id"]), dict)
+                       and "volume" in measures.get(j["id"]))
+            print("cloud-check %d/%d refs ok, spent $%.3f%s"
+                  % (n_ok, len(jobs), spent,
+                     " (budget stopped)" if stopped else ""))
+            if dupes:
+                print("cloud-check volume+bbox dupes dropped %d: %s"
+                      % (len(dupes), ", ".join(dupes)))
+                jobs = [j for j in jobs if j["id"] not in set(dupes)]
+        with open(args.out, "w", encoding="utf-8") as f:
+            for job in jobs:
+                f.write(json.dumps(job) + "\n")
+        print("wrote %d jobs to %s" % (len(jobs), args.out))
+        print("sha256 %s %s" % (sha256_of_file(args.out),
+                                os.path.basename(args.out)))
+        return 0
     jobs = generator.generate_all()
     dev_ids = generator.choose_dev_ids(jobs)
     dev_set = set(dev_ids)

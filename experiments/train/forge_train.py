@@ -740,6 +740,201 @@ def kept_ids(records):
     return [rec.get("id") for rec in records]
 
 
+# ------------------------------------------------------- R5 mix (Glimmer's own)
+# R5 trains on Glimmer's own guided solutions (PLAN experiments/r5/PLAN.md
+# v2): first tries, self-fixes and hint-retries with the hint stripped.
+# Provenance replaces the Spark-PASS rule: sources glimmer-first /
+# glimmer-selffix / glimmer-hinted with R5T ids only.
+
+R5_MIX_SOURCES = ("glimmer-first", "glimmer-selffix", "glimmer-hinted")
+R5_ID_PREFIX = "R5T-"
+R5_SHUFFLE_SEED = 20261031
+R5_MAX_TOKENS = 8192
+R5_EPOCHS = 2
+R5_LR = 1e-4
+R5_LORA_R = 16
+R5_LORA_ALPHA = 32
+R5_MIN_REASONING_CHARS = 200
+
+# The rule card is baked into the training image as a file (not an env
+# var); its sha256 is checked inside the container before training.
+RULE_CARD_SHA256 = (
+    "586b59607b0123dc5a64734d8a854ad1b3ca4eb83a1c223aacb175d7a6dbe80b")
+RULE_CARD_BAKED_PATH = "/training/rule_card.md"
+
+# Measured R3 throughput (results/train-r3/train.json): 1,939,926 step
+# tokens over 1176.8 s wall => ~1,650 tok/s wall-clock. Cost estimates
+# use this (wall-based: conservative) times H200_RATE.
+R3_EFFECTIVE_TOKENS_PER_S = 1650.0
+
+
+def sha256_of_file(path):
+    """Hex sha256 of a file's bytes."""
+    import hashlib as _hashlib
+
+    digest = _hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def check_rule_card(path, expected_sha=RULE_CARD_SHA256):
+    """Read the baked rule card, verifying its sha256 (R5 E1).
+
+    Returns the card text. Raises ValueError when the hash mismatches
+    (refuses to train against the wrong card).
+    """
+    text = open(path, encoding="utf-8").read()
+    digest = sha256_of_file(path)
+    if digest != expected_sha:
+        raise ValueError(
+            "rule card %r sha256 %s != expected %s; refusing"
+            % (path, digest, expected_sha))
+    return text
+
+
+def prepare_r5_card_env(card_path=RULE_CARD_BAKED_PATH):
+    """Point FORGE_RULE_CARD at the baked path (inside the container)."""
+    os.environ["FORGE_RULE_CARD"] = card_path
+    return card_path
+
+
+def assert_card_in_prompt(prompt, card_text):
+    """Abort when the rule card text is missing from a rendered prompt."""
+    if card_text.strip() not in (prompt or ""):
+        raise ValueError(
+            "rule card text missing from the first rendered prompt; "
+            "refusing to train without the card in the prompt")
+    return True
+
+
+def load_mix_records(path):
+    """Read R5 train_records.jsonl rows (JSONL or JSON array).
+
+    Provenance (replaces the Spark-PASS rule): every row needs a source
+    in R5_MIX_SOURCES and an R5T id. Rows with reasoning under 200 chars
+    are dropped and counted (no code-only rows, the R1 failure). Returns
+    (kept, report {n, kept, dropped_short, by_source}).
+    """
+    with open(path, encoding="utf-8") as f:
+        raw = f.read()
+    stripped = raw.strip()
+    if not stripped:
+        return [], {"n": 0, "kept": 0, "dropped_short": 0, "by_source": {}}
+    if stripped.startswith("["):
+        records = json.loads(stripped)
+    else:
+        records = [json.loads(line) for line in stripped.splitlines()
+                   if line.strip()]
+    kept, dropped_short, by_source = [], 0, {}
+    for i, rec in enumerate(records):
+        if (not isinstance(rec, dict)
+                or rec.get("source") not in R5_MIX_SOURCES):
+            raise ValueError(
+                "mix record %d needs source in %s (got %r)"
+                % (i, list(R5_MIX_SOURCES), (rec or {}).get("source")
+                   if isinstance(rec, dict) else rec))
+        if (not isinstance(rec.get("id"), str)
+                or not rec["id"].startswith(R5_ID_PREFIX)):
+            raise ValueError(
+                "mix record %d needs an R5T id (got %r)"
+                % (i, (rec or {}).get("id")))
+        if (not isinstance(rec.get("text"), str) or not rec["text"].strip()
+                or not isinstance(rec.get("code"), str)
+                or not rec["code"].strip()):
+            raise ValueError(
+                "mix record %d needs non-empty text and code" % i)
+        reasoning = rec.get("reasoning")
+        if not isinstance(reasoning, str) \
+                or len(reasoning) < R5_MIN_REASONING_CHARS:
+            dropped_short += 1
+            continue
+        kept.append(rec)
+        by_source[rec["source"]] = by_source.get(rec["source"], 0) + 1
+    return kept, {"n": len(records), "kept": len(kept),
+                  "dropped_short": dropped_short, "by_source": by_source}
+
+
+def shuffle_mix(records, seed=R5_SHUFFLE_SEED):
+    """Deterministic shuffle of mix rows (seed 20261031)."""
+    import random as _random
+
+    out = list(records)
+    _random.Random(seed).shuffle(out)
+    return out
+
+
+def first_loss_tokens_per_source(tokenizer, records, n_tokens=40):
+    """First loss tokens per source (each must open the thinking turn).
+
+    Uses check_format on the first record of each source; the caller
+    logs these (train.json holds first_loss_tokens per source).
+    """
+    out = {}
+    for source in R5_MIX_SOURCES:
+        sub = [r for r in records if r.get("source") == source]
+        if not sub:
+            continue
+        fmt = check_format(tokenizer, sub[0])
+        out[source] = {"loss_tokens": fmt["loss_tokens"],
+                       "n_loss_tokens": fmt["n_loss_tokens"],
+                       "verdict": fmt["verdict"],
+                       "checks": dict(fmt["checks"])}
+    return out
+
+
+def estimate_mix_cost(records, epochs=R5_EPOCHS,
+                      throughput=R3_EFFECTIVE_TOKENS_PER_S,
+                      rate_per_hour=H200_RATE):
+    """Cost estimate from whitespace tokens x R3 wall throughput.
+
+    Returns {"tokens", "seconds", "dollars"}. Whitespace tokens stand in
+    for real tokens (logged alongside, so the real run can correct them).
+    """
+    total = sum(len((r.get("text", "") + " " + r.get("reasoning", "")
+                     + " " + r.get("code", "")).split())
+                for r in records)
+    seconds = total * epochs / throughput
+    return {"tokens": total, "seconds": round(seconds, 1),
+            "dollars": round(seconds * rate_per_hour / 3600.0, 4)}
+
+
+def refuse_over_cap(estimate_dollars, cap_dollars):
+    """Refuse to start when the estimate is over the cap (CapExceeded)."""
+    if float(estimate_dollars) > float(cap_dollars):
+        raise CapExceeded(
+            "cost estimate $%.2f is over the $%.2f cap; refusing to start"
+            % (estimate_dollars, cap_dollars))
+    return False
+
+
+def half_epoch_checkpoints(n_examples, epochs, grad_accum):
+    """Optimizer-step indices that save the adapter every half epoch.
+
+    With `epochs` passes over `n_examples` (grad_accum micro-steps per
+    optimizer step), a half epoch is n_examples / grad_accum / 2
+    optimizer steps. Returns the sorted 1-based step numbers (the final
+    step is always included: the last save is the trained adapter).
+    """
+    sched = plan_optimizer_steps(n_examples, epochs, grad_accum)
+    total = sched["optimizer_steps"]
+    if total <= 0:
+        return []
+    try:
+        per_half = max(1, int(math.ceil(
+            (float(n_examples) / float(grad_accum)) / 2.0)))
+    except (TypeError, ValueError, ZeroDivisionError):
+        per_half = total
+    steps = set()
+    k = per_half
+    while k < total:
+        steps.add(k)
+        k += per_half
+    steps.add(total)
+    return sorted(steps)
+
+
 def _sort_key(value):
     """Sort helper: mixed None/str ids sort without TypeError."""
     return (value is None, str(value))
@@ -1093,6 +1288,8 @@ if modal is not None:
         timeout_s=None,
         deadline_margin_s=DEADLINE_MARGIN_S,
         ft_messages_0=None,
+        checkpoint_every=CHECKPOINT_EVERY_STEPS,
+        require_rule_card=False,
     ):
         """LoRA-tune Glimmer on [{"text", "code", "reasoning"?}] records;
         short prompt only, on H200.
@@ -1156,6 +1353,15 @@ if modal is not None:
                     or not ex["code"].strip()):
                 raise ValueError(
                     "record %d needs non-empty text and code" % i)
+        if require_rule_card:
+            # R5 E1: the card is baked into the image as a file (not an
+            # env var); check its sha256 inside the container, point
+            # FORGE_RULE_CARD at the baked path, and assert the card
+            # text in the first rendered prompt (else abort).
+            card_text = check_rule_card(RULE_CARD_BAKED_PATH)
+            out["rule_card_sha256"] = RULE_CARD_SHA256
+            prepare_r5_card_env(RULE_CARD_BAKED_PATH)
+            out["rule_card_path"] = RULE_CARD_BAKED_PATH
         tok = transformers.AutoTokenizer.from_pretrained(MODEL)
         # Format check first: render the first example (thinking turn +
         # code turn when it has reasoning) and print PASS/FAIL before
@@ -1178,6 +1384,9 @@ if modal is not None:
                     "FORMAT_CHECK FAIL %s; aborting before the first "
                     "optimizer step (no adapter saved)"
                     % json.dumps(_fmt["checks"], sort_keys=True))
+            if require_rule_card:
+                assert_card_in_prompt(_fmt["prompt"], card_text)
+                out["rule_card_in_prompt"] = True
         model = transformers.AutoModelForMultimodalLM.from_pretrained(
             MODEL, torch_dtype=torch.bfloat16, device_map="cuda"
         )
@@ -1224,6 +1433,37 @@ if modal is not None:
                          if lab != -100][:40]
             out["first_example"] = {"prompt": prompt0, "full": full0}
             out["first_loss_tokens"] = loss_toks
+        if kept and require_rule_card:
+            # R5: first loss tokens PER SOURCE (each must open the
+            # thinking turn) + rows dropped for length per source.
+            per_source, dropped_by_source = {}, {}
+            for ex in examples:
+                src = ex.get("source")
+                if src not in R5_MIX_SOURCES:
+                    continue
+                prompt_e, full_e = _remote_render(
+                    tok, ex["text"], ex["code"], _record_reasoning(ex))
+                if len(tok(full_e,
+                           add_special_tokens=False)["input_ids"]) \
+                        > max_tokens:
+                    dropped_by_source[src] = \
+                        dropped_by_source.get(src, 0) + 1
+            for src in R5_MIX_SOURCES:
+                sub = [e for e in kept if e.get("source") == src]
+                if not sub:
+                    continue
+                ids_s, labels_s, _, _ = encode(sub[0])
+                per_source[src] = {
+                    "loss_tokens": [
+                        tok.decode([i])
+                        for i, lab in zip(ids_s, labels_s)
+                        if lab != -100][:40],
+                    "n_kept": len(sub),
+                    "dropped_for_length": dropped_by_source.get(src, 0),
+                }
+            out["first_loss_tokens_per_source"] = ensure_plain_json(
+                per_source)
+            out["dropped_for_length_per_source"] = dropped_by_source
 
         # Same schedule as plan_optimizer_steps (inlined: the remote
         # container cannot rely on the local module's helpers).
@@ -1315,7 +1555,7 @@ if modal is not None:
                         )
                         mem_stop = True
                         break
-                if opt_steps % CHECKPOINT_EVERY_STEPS == 0:
+                if opt_steps % max(1, int(checkpoint_every or 0)) == 0:
                     save_adapter()
                 if time.time() - t0 > deadline_s:
                     deadline_stop = True
@@ -1687,9 +1927,76 @@ def run_full(data, out_name, cap_dollars, spent_dollars=0.0, max_steps=None,
                      list(prompts), spent_dollars)
 
 
+R5_GRAD_ACCUM = 8
+R5_CARD_REPO_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "final",
+    "RULE_CARD.md")
+
+
+def run_full_r5(data, out_name, cap_dollars, spent_dollars=0.0,
+                max_steps=None, prompts=(), grad_accum=R5_GRAD_ACCUM):
+    """Full R5 pipeline on a build_mix.py train_records.jsonl file.
+
+    Same LoRA (r 16, alpha 32, lr 1e-4, 2 epochs), max_tokens 8192, H200.
+    Loader provenance: glimmer-first/-selffix/-hinted with R5T ids only.
+    Every row's prompt is runner_final's FT system prompt WITH the rule
+    card (built with runner_final's own function); the card text must
+    appear in the first rendered prompt or the run aborts. Shuffle seed
+    20261031. Adapter saved every half epoch. A cost estimate (tokens x
+    measured R3 throughput) is printed and refuses to start over the cap.
+    """
+    records, mix_report = load_mix_records(data)
+    print("MIX %s" % json.dumps(mix_report))
+    kept = shuffle_mix(records)
+    estimate = estimate_mix_cost(kept)
+    print("COST_ESTIMATE %s (R3 wall throughput %.0f tok/s, H200 $%.2f/h)"
+          % (json.dumps(estimate), R3_EFFECTIVE_TOKENS_PER_S, H200_RATE))
+    refuse_over_cap(estimate["dollars"], cap_dollars)
+    split = split_cap(cap_dollars, spent_dollars)
+    split["cap_dollars"] = float(cap_dollars)
+    if modal is None:
+        raise RuntimeError("modal is not installed; cannot run remotely")
+    res_dir = results_dir(out_name)
+    kept_guarded = guard_or_abort(kept, res_dir)
+    # The FT messages (for the in-train format check) are built with
+    # runner_final's own function WITH the card: point FORGE_RULE_CARD
+    # at the repo card (same bytes as the baked card: sha checked here
+    # too) while building them. Built from the guarded records, so the
+    # checked record is one that actually trains.
+    card_text = check_rule_card(R5_CARD_REPO_PATH)
+    old_card = os.environ.get("FORGE_RULE_CARD")
+    os.environ["FORGE_RULE_CARD"] = R5_CARD_REPO_PATH
+    try:
+        ft0 = first_ft_messages(kept_guarded)
+        prompt0 = ft0 and FakeThinkingTokenizer().apply_chat_template(
+            ft0, tokenize=False, add_generation_prompt=True)
+    finally:
+        if old_card is None:
+            os.environ.pop("FORGE_RULE_CARD", None)
+        else:
+            os.environ["FORGE_RULE_CARD"] = old_card
+    assert_card_in_prompt(prompt0 or "", card_text)
+    data_arg = stage_data(kept_guarded, out_name)
+    per_half = max(1, int(math.ceil(
+        (float(len(kept_guarded)) / float(grad_accum)) / 2.0))) \
+        if kept_guarded else CHECKPOINT_EVERY_STEPS
+    print("R5_CHECKPOINTS every %d optimizer steps: %s" % (
+        per_half, half_epoch_checkpoints(len(kept_guarded), R5_EPOCHS,
+                                         grad_accum)))
+    kwargs = {"epochs": R5_EPOCHS, "lr": R5_LR, "r": R5_LORA_R,
+              "alpha": R5_LORA_ALPHA, "max_tokens": R5_MAX_TOKENS,
+              "grad_accum": grad_accum,
+              "ft_messages_0": ft0, "require_rule_card": True,
+              "checkpoint_every": per_half}
+    if max_steps is not None:
+        kwargs["max_steps"] = max_steps
+    return _pipeline(data_arg, out_name, split, res_dir, kwargs,
+                     list(prompts), spent_dollars)
+
+
 def main(argv=None):
     """Local entrypoints: `smoke`, `full --data <jsonl> --out <name>`,
-    and `format-check`.
+    `full-r5` (the R5 mix), and `format-check`.
 
     Every entrypoint takes --cap-dollars and derives each function's
     timeout from the money left, refusing to start a step that does not fit.
@@ -1712,6 +2019,20 @@ def main(argv=None):
                       help="cap OPTIMIZER steps")
     full.add_argument("--prompt", action="append", default=[],
                       help="job text for the one-prompt format check")
+    r5 = sub.add_parser("full-r5", help="train/merge/serve on an R5 mix "
+                                       "file (Glimmer's own solutions)")
+    r5.add_argument("--data", required=True,
+                    help="build_mix.py train_records.jsonl")
+    r5.add_argument("--out", required=True)
+    r5.add_argument("--cap-dollars", type=float, required=True,
+                    help="refuses to start when the token x R3-throughput "
+                         "estimate is over this")
+    r5.add_argument("--spent-dollars", type=float, default=0.0,
+                    help="earlier spend in this run (shares the cap)")
+    r5.add_argument("--max-steps", type=int, default=None,
+                    help="cap OPTIMIZER steps")
+    r5.add_argument("--prompt", action="append", default=[],
+                    help="job text for the one-prompt format check")
     fc = sub.add_parser("format-check",
                         help="render one record; print the full text, "
                              "the first 40 loss tokens, and PASS/FAIL")
@@ -1729,6 +2050,10 @@ def main(argv=None):
         elif args.cmd == "format-check":
             return run_format_check(fake=args.fake, data=args.data,
                                     tokenizer_path=args.tokenizer)
+        elif args.cmd == "full-r5":
+            run_full_r5(args.data, args.out, args.cap_dollars,
+                        spent_dollars=args.spent_dollars,
+                        max_steps=args.max_steps, prompts=args.prompt)
         else:
             run_full(args.data, args.out, args.cap_dollars,
                      spent_dollars=args.spent_dollars,
