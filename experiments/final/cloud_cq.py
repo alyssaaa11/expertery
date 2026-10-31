@@ -120,16 +120,21 @@ def build_image():
     )
 
 
-def build_sandbox(image=None):
+def build_sandbox(image=None, lifetime_s=None):
     """Create one fresh sandbox for one answer (terminated after use).
 
     Modal requires the app, so the box is created under the forge-cq
-    app handle, not ad hoc."""
+    app handle, not ad hoc. lifetime_s (Claude small fix 2026-10-31,
+    verifier B3b) overrides the 90 s box lifetime for a long reused batch
+    box; the per-answer exec timeout is unchanged."""
     if modal is None:
         raise RuntimeError("modal is not installed; cannot create a sandbox")
     app = lookup_exec_app()
+    kwargs = sandbox_kwargs()
+    if lifetime_s:
+        kwargs["timeout"] = int(lifetime_s)
     return modal.Sandbox.create(
-        app=app, image=image or build_image(), **sandbox_kwargs())
+        app=app, image=image or build_image(), **kwargs)
 
 
 NO_BREP_PREFIX = "the answer wrote no BREP"

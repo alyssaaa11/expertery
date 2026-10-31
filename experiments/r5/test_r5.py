@@ -751,3 +751,36 @@ def test_dev_jobs_text_assert_fires_from_r5d_file(tmp_path):
     assert build_mix.main(["--first", str(first), "--jobs", str(r5t),
                            "--dev-ids", str(dev_ids),
                            "--out", out]) == 0
+
+
+def test_claude_fix_b3b_batch_box_lifetime(monkeypatch):
+    import sys, os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "final"))
+    import cloud_cq
+    seen = {}
+
+    class FakeSandbox:
+        @staticmethod
+        def create(**kw):
+            seen.update(kw)
+            return "box"
+
+    class FakeModal:
+        Sandbox = FakeSandbox
+
+    monkeypatch.setattr(cloud_cq, "modal", FakeModal)
+    monkeypatch.setattr(cloud_cq, "lookup_exec_app", lambda: "app")
+    cloud_cq.build_sandbox(image="img", lifetime_s=10800)
+    assert seen["timeout"] == 10800
+    cloud_cq.build_sandbox(image="img")
+    assert seen["timeout"] == cloud_cq.sandbox_kwargs()["timeout"]
+
+
+def test_claude_fix_b6b_card_stripped_matches_runner(tmp_path, monkeypatch):
+    import sys, os
+    here = os.path.dirname(__file__)
+    sys.path.insert(0, os.path.join(here, "..", "train"))
+    import forge_train
+    card = os.path.join(here, "..", "final", "RULE_CARD.md")
+    text = forge_train.check_rule_card(card)
+    assert text == open(card, encoding="utf-8").read().strip()

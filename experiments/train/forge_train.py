@@ -807,7 +807,8 @@ def check_rule_card(path, expected_sha=RULE_CARD_SHA256):
         raise ValueError(
             "rule card %r sha256 %s != expected %s; refusing"
             % (path, digest, expected_sha))
-    return text
+    # Claude small fix (2026-10-31, verifier B6b): strip like runner_final.ft_messages
+    return text.strip()
 
 
 def prepare_r5_card_env(card_path=RULE_CARD_BAKED_PATH):

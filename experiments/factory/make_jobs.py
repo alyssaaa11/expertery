@@ -523,7 +523,8 @@ def cloud_check_jobs(jobs, budget, exec_fn=None, measure_fn=None,
             raise RuntimeError(
                 "modal is not installed; cannot run the cloud check")
     state = {"box": None}
-    make_box = sandbox_factory or (lambda: _cq.build_sandbox())
+    # Claude small fix (2026-10-31, verifier B3b): the reused batch box lives up to 3 h, not 90 s
+    make_box = sandbox_factory or (lambda: _cq.build_sandbox(lifetime_s=3 * 3600))
     if real_exec:
         # B3: ONE box for the whole batch, reused via sandbox=.
         state["box"] = make_box()
