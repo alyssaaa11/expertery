@@ -45,7 +45,7 @@ Supersedes plan v1 (ac1bfa6). Verifier must-fixes M1-M10 are marked [Mx] where t
 - verified (results/r5-pilot-2026-10-31/pilot-A/summary.json, session.log): pilot A + card v1 on 200 R5T jobs (20 per
   family), 16 workers, A100-80GB: **149/200 = 74.5%** PASS at 0.2% (74% tight), 0 INVALID, **47 crashes**; reasoning
   stored for 200/200 (len == reasoning_len); prompt ≈ 834 tokens (card in). Steady-state $/answer = $2.50/h × (2008 −
-  285 s) ÷ 200 = **$0.006** ≤ $0.013 → pre-registered N = min(2000, floor(24 ÷ 0.006)) = **2,000**. Modal 20.43 → 22.36
+  285 s) ÷ 200 = $0.006 by my count; **verifier: $0.0070** (cold start double-subtracted); either way ≤ $0.013 → N = **2,000**. Modal 20.43 → 22.36
   (incl. cold start).
 - Per family: F1 17/20, F2 20/20, F3 10/20 (10 crashes), F4 6/20 (14), F5 18/20, F6 15/20, F7 20/20, F8 11/20, F9 16/20, F10 16/20.
 - Crash causes (last error line): 28 `Workplane has no attribute 'solid'`, 7 `no attribute 'wrapped'` (a Workplane passed
