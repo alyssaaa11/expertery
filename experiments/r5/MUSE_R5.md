@@ -19,7 +19,9 @@ first_loss_tokens), ~/.claude/skills/baseten-muse-spark/SKILL.md.
    code, a new seed, ids `P-F<f>-<i>`. Refuse a seed equal to SEED (20261029). Dedup: drop any job whose text equals
    (or whose rounded parameter tuple equals) a job in jobs.jsonl, jobs_dev.jsonl or the exam (experiments/first-test/
    jobs.py); print the count. Writes jobs + references in the same format as jobs.jsonl. Two sets will be made:
-   `R5T` (seed 20261031, 200 per family = 2,000) and `R5D` (seed 20261131, 10 per family = 100).
+   `R5T` (seed 20261031, 200 per family = 2,000) and `R5D` (seed 20261131, 10 per family = 100). Dedup also R5T vs R5D. The
+   volume + bbox dedup and the reference self-check run in the cloud box (a `--cloud-check` mode calling cloud_cq
+   measure_brep, with `--budget`); print counts and each file's sha256.
 2. **Runner stores Glimmer's thinking**: today arm A/FT records only `reasoning_len` (length), and `reasoning_chars` is 0.
    Find where the served vLLM puts the reasoning text (`message.reasoning_content`, `message.reasoning`, or the
    content before the code block; check ALL of them, take the first non-empty) and store it as `reasoning` (full text) in every calls.jsonl record; set
