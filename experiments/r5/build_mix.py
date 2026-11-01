@@ -130,7 +130,7 @@ def pass_records(calls):
 
 
 def build_rows(first_calls, selffix_calls, hint_calls, jobs_by_id,
-               drop_card_mentions=False):
+               drop_card_mentions=False, keep_hint=False):
     """Build mix rows; returns (rows, counts) with drop counters.
 
     With drop_card_mentions=True (option B) rows whose reasoning NAMES
@@ -184,6 +184,15 @@ def build_rows(first_calls, selffix_calls, hint_calls, jobs_by_id,
             continue
         hint = rec.get("hint") or ""
         reasoning = rec.get("reasoning") or ""
+        if keep_hint and hint:
+            # Claude small fix 2026-11-01 (user decision "keep hint in
+            # lesson"): a TUTORING row, prompt = job + the same hint
+            # suffix the retry saw, so reasoning that cites the hint
+            # matches its prompt (like self-fix rows keep their feedback).
+            _add(rec["job"],
+                 job["text"] + runner_final.HINT_SUFFIX_PREFIX + hint,
+                 rec.get("code") or "", reasoning, "glimmer-hinted")
+            continue
         if hint and reasoning_cites_hint(reasoning, hint):
             counts["dropped_hint_cite"] += 1
             continue
@@ -214,12 +223,17 @@ def card_drop_shares(counts):
     return per_source, (total_dropped / denom) if denom else 0.0
 
 
-def assert_mix(rows, dev_ids=(), exam_texts=(), dev_texts=()):
-    """Fire on hint text, dev/exam ids or texts, or Wonder output."""
+def assert_mix(rows, dev_ids=(), exam_texts=(), dev_texts=(),
+               keep_hint=False):
+    """Fire on hint text, dev/exam ids or texts, or Wonder output.
+
+    keep_hint (Claude small fix 2026-11-01): hint text is allowed only in
+    glimmer-hinted tutoring rows."""
     dev_id_set = set(dev_ids or ())
     banned_texts = set(exam_texts or ()) | set(dev_texts or ())
     for row in rows:
-        if HINT_MARKER in (row.get("text") or ""):
+        if HINT_MARKER in (row.get("text") or "") and not (
+                keep_hint and row.get("source") == "glimmer-hinted"):
             raise ValueError(
                 "mix row %r contains hint text" % (row.get("id"),))
         if row.get("id") in dev_id_set:
@@ -271,6 +285,10 @@ def main(argv=None):
                              "R5D texts)")
     parser.add_argument("--exam-texts", default=None,
                         help="exam texts JSON list (asserted absent)")
+    parser.add_argument("--keep-hint", action="store_true",
+                        help="tutoring rows: hinted PASSes keep job + "
+                             "hint as their prompt (Claude small fix "
+                             "2026-11-01, user decision)")
     parser.add_argument("--drop-card-mentions", action="store_true",
                         help="option B: drop rows whose reasoning NAMES "
                              "the card (rows quoting true rules kept); "
@@ -290,7 +308,8 @@ def main(argv=None):
     hint_calls = load_calls(args.hinted) if args.hinted else []
     rows, counts = build_rows(first_calls, selffix_calls, hint_calls,
                               jobs_by_id,
-                              drop_card_mentions=args.drop_card_mentions)
+                              drop_card_mentions=args.drop_card_mentions,
+                              keep_hint=args.keep_hint)
     if args.drop_card_mentions:
         per_source, overall = card_drop_shares(counts)
         print("CARD_MENTION_DROP overall=%.3f %s" % (
@@ -319,7 +338,8 @@ def main(argv=None):
     else:
         dev_texts = [jobs_by_id[i]["text"] for i in dev_ids
                      if i in jobs_by_id]
-    assert_mix(rows, dev_ids, exam_texts, dev_texts)
+    assert_mix(rows, dev_ids, exam_texts, dev_texts,
+               keep_hint=args.keep_hint)
     with open(args.out, "w", encoding="utf-8") as f:
         for row in rows:
             f.write(json.dumps(row) + "\n")
