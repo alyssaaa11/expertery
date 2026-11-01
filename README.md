@@ -77,7 +77,8 @@ proof of when each part was built.
   jobs-file spec and a `WORKERS` env (default 8) for the R5 runs. `runner_final.load_factory_jobs_file` keeps each job's
   reference for grading only (verifier B7). `experiments/final/RULE_CARD.md` v2 (two lines added after the R5 pilot's
   crashes, user decision B; v1 kept as RULE_CARD_V1.md) and its sha256 constant in `forge_train.py`. `experiments/viewer/make_viewer.py` default_render_fn
-  (drives one cloud sandbox from the Mac instead of calling the Modal Function directly).
+  (drives one cloud sandbox from the Mac instead of calling the Modal Function directly). `run_base_session.sh` RUNNER_EXTRA env
+  (extra runner args for the R5 self-fix step).
 - **Review:** a separate Claude verifier agent reviewed every step before money was spent.
 - **Published by Alyssa** (all commits are hers; most carry a "Co-Authored-By: Claude" line).
 

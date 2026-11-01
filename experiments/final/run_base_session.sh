@@ -10,7 +10,8 @@
 # Usage: run_base_session.sh <absolute-out-dir> [cap-$] [--pilot <spec>] [--run <spec> ...]
 # Each spec is "<jobs>:<subdir>:<arms>:<k>" (e.g. "main:main-A:A:3").
 # jobs "dev" means the factory dev file (experiments/factory/jobs_dev.jsonl); an absolute path ending in .jsonl
-# means that factory jobs file (R5); WORKERS (env, default 8, max 16) sets the runner workers;
+# means that factory jobs file (R5); WORKERS (env, default 8, max 16) sets the runner workers; RUNNER_EXTRA (env)
+# adds runner args, e.g. "--selffix <file> --selffix-trigger referee" (Claude small fix 2026-11-01);
 # anything else means --jobs <jobs> on the exam. Default pilot is the dev
 # check (PLAN step 5 gate) and the default run is the final exam (step 6).
 #
@@ -88,7 +89,7 @@ run() {
   # cap and enforces the reserve itself, so time and reserve are no
   # longer subtracted twice.
   "$PY" -I "$COMMON/budget_left.py" "$CAP" "$GPU_START" >/dev/null 2>&1 || { echo "budget left for this runner call: CAP REACHED"; echo "CAP REACHED, not starting runner"; return 1; }
-  GLIMMER_URL="$URL" GLIMMER_KEY="$K" $PY -I ~/projects/forge/experiments/final/runner_final.py --workers "${WORKERS:-8}" --budget "$CAP" --gpu-start "$GPU_START" "$@" & RPID=$!
+  GLIMMER_URL="$URL" GLIMMER_KEY="$K" $PY -I ~/projects/forge/experiments/final/runner_final.py --workers "${WORKERS:-8}" --budget "$CAP" --gpu-start "$GPU_START" "$@" ${=RUNNER_EXTRA:-} & RPID=$!
   wait $RPID
   rc=$?
   RPID=""
