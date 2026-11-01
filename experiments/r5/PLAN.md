@@ -38,7 +38,9 @@ Supersedes plan v1 (ac1bfa6). Verifier must-fixes M1-M10 are marked [Mx] where t
 5. **Spark hint** on what still fails: Spark Open (Baseten) sees the job, Glimmer's attempt and the failed checks, and
    returns ONE hint, ≤ 60 words, no code (replies with a code fence, `cq.` or `import` are rejected). Glimmer retries
    with the hint. PASS → kept, but [M7] dropped if its reasoning mentions the hint ("hint", "tutor", or ≥ 8 words copied
-   from the hint), and trained WITHOUT the hint. At most **230 hints** (the shortest-failing jobs first by family
+   from the hint), and trained WITHOUT the hint. **(Replaced 2026-11-01, user decision "keep hint in lesson": all 52 hinted
+   PASS rows cited the hint, so M7 dropped 52/52; they are trained instead as TUTORING rows, prompt = job +
+   "Hint from a tutor: <hint>", build_mix --keep-hint; 46 rows after the card filter, mix sha fbd62681.)** At most **230 hints** (the shortest-failing jobs first by family
    balance). Caps: Baseten $10, Glimmer retries $3 [W3].
 
 ## Pilot result and card v2 (2026-10-31)
@@ -133,3 +135,11 @@ Muse Code ≈ $3-5 Meta credit. Every paid step: verifier check + user yes first
 - Self-fix rows teach fixing from reference-free feedback; the product uses the same selffix_feedback function. In the
   TRAINING data the retry was triggered by a full-referee FAIL (reference-assisted trigger); disclosed [E3].
 - Only ~10 families: the trained model may be narrow. The exam's 30 jobs are hand-made and different, so it tests transfer.
+
+## Final model pre-registration (r5f, 2026-11-01, verifier forge-r5f-train-pre T1/T2; before training)
+- r5f = full-r5 --no-card on results/r5f-train-2026-11-01/train_records.jsonl (1,742 rows = r5's 1,696 + 46 tutoring rows).
+- Dev 2 = r5f FT, NO card, on the same 100 R5D jobs (third look at R5D; disclosed). Arm: FT no card only.
+- **r5f goes to the exam only if ALL hold:** pass ≥ 94/100, crashes ≤ 2 (r5's), answers whose reasoning matches
+  `\bhint|tutor` ≤ 2/100 (r5 baseline 1/100; serving never has a hint), thinking share ≥ 90%. **Else r5 goes.**
+- Expectation (hypothesis): 46 rows = 2.6% of the data, so dev 2 is likely within noise of 94; Spark's measured role is
+  the step-5 rescue (52/54 hinted jobs solved), reported separately.

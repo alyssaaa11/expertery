@@ -1,0 +1,4 @@
+Command (2026-11-01 ~18:15): grep '"glimmer-hinted"' results/r5f-train-2026-11-01/train_records.jsonl | head -1 > one_tutor.jsonl;
+.venv/bin/python experiments/train/forge_train.py format-check --data one_tutor.jsonl
+Output: FORMAT_CHECK PASS thinking_first=True answer_after_thinking=True prompt_matches_ft=True
+Row R5T-F1-2: user message = job text + "\nHint from a tutor: Hint: Your wire slot is too tall in Z — it runs from -1 to 4.2 instead of 0 to 3.2, ..."; system = FT prompt, no card.
