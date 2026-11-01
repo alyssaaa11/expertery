@@ -74,6 +74,9 @@ Supersedes plan v1 (ac1bfa6). Verifier must-fixes M1-M10 are marked [Mx] where t
     FT answers with reasoning ≥ 200 chars must be ≥ 90%, else STOP ("thinking suppressed").
   - Card-name filter: drop rows whose reasoning NAMES the card; rows that quote true rules are kept (verifier S3);
     stop if > 20% dropped.
+  - Dev reading tool (written before the runs): `.venv/bin/python experiments/r5/compare_dev.py --ft <dev-FT dir>
+    --a <dev-A dir> --acard <dev-Acard dir>`; INVALID counts as not PASS; caps FT $3.50, A $2.50, A + card $3.00
+    (verifier forge-r5-dev-pre); watch prompt tokens FT/A ≈ 150-380, A + card ≈ 860-1,080.
   The exam runs once with FT (no card) and A + card; this amendment is written into experiments/final/PLAN.md step 6
   before the exam [P3]. Cap $5 (≈ $3.3).
 - Rest run (started 19:23 after the user's "straight to B", before a verifier check of its command; the command is

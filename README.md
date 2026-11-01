@@ -79,7 +79,8 @@ proof of when each part was built.
   crashes, user decision B; v1 kept as RULE_CARD_V1.md) and its sha256 constant in `forge_train.py`. `experiments/viewer/make_viewer.py` default_render_fn
   (drives one cloud sandbox from the Mac instead of calling the Modal Function directly). `run_base_session.sh` RUNNER_EXTRA env
   (extra runner args for the R5 self-fix step). The same `.jsonl` spec, WORKERS and RUNNER_EXTRA in
-  `run_final_session.sh` (R5 dev step).
+  `run_final_session.sh` (R5 dev step). `experiments/r5/compare_dev.py` (dev reading: reuses compare.py's paired
+  bootstrap; reads results only).
 - **Review:** a separate Claude verifier agent reviewed every step before money was spent.
 - **Published by Alyssa** (all commits are hers; most carry a "Co-Authored-By: Claude" line).
 
