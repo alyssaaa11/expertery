@@ -46,3 +46,11 @@ What remains to measure, once, on the same frozen 30 CadQuery jobs and with the 
 | Trained R3 (Spark thinking + code) | 48.3% | 85% | 14.8k | results/dev-r3-2026-10-30 |
 Details and diagnosis: [[training-experiments-2026-10-30]]. Dev set noise ≈ ±8 points (SE).
 
+
+## 4. R5 (Nov 1): base Glimmer with and without the rule card, 100 held-out factory jobs (R5D), first try
+| Arm | Pass | Crashes | Completion tokens per correct part | Evidence |
+|---|---|---|---|---|
+| Base Glimmer, short prompt | 62/100 | 12 | 7,637 | [[r5-own-answers-training-2026-11-01]] |
+| Base Glimmer + rule card v2 (~420 tokens) | **96/100** | 0 | 3,580 | [[r5-own-answers-training-2026-11-01]] |
+| R5-trained Glimmer, no card | pending | | | |
+Factory training jobs, first try with card v2: 1,882 / 2,000 = 94.1% (pilot 188/200 + rest 1,694/1,800).

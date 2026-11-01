@@ -7,6 +7,10 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
 
 ## findings
+- [r5-own-answers-training-2026-11-01](wiki/findings/r5-own-answers-training-2026-11-01.md): R5: card v2 (74.5% → 94%), 2,000 own answers, self-fix, training without the card (loss 0.63 → 0.32), held-out baselines 62% / 96%
+- [spark-vs-glimmer-2026-10-31](wiki/findings/spark-vs-glimmer-2026-10-31.md): who is who (816B MoE vs 30B dense, AA index 25 vs 6) and why copying Spark failed
+- [fireworks-workshop-lessons-2026-10-31](wiki/findings/fireworks-workshop-lessons-2026-10-31.md): free Glimmer SFT on Fireworks, thousands of examples for generative tasks, effort sweep, routing
+- [huggingface-cadquery-data-2026-10-31](wiki/findings/huggingface-cadquery-data-2026-10-31.md): CAD-Coder and other HF CadQuery sets; rejected (licence lineage, style, no thinking)
 - [training-experiments-2026-10-30](wiki/findings/training-experiments-2026-10-30.md): the two trainings (R1 38%, R3 48%) vs untrained 52%, why (manual gap, off-policy style, small dev set), the recommended self-distillation recipe
 - [scoreboard](wiki/findings/scoreboard.md): every measured Forge number on one page (accuracy, tokens, seconds)
 - [how-training-changes-weights-2026-10-30](wiki/findings/how-training-changes-weights-2026-10-30.md): plain guide + diagram: one training step, LoRA patch (105M of 29.6B), merge, the knobs you drive and warning signs
@@ -26,6 +30,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [final-pick-research-2026-10-28](wiki/findings/final-pick-research-2026-10-28.md): why Forge was picked: claude.ai 90 + GPT-6 92 merged, prior art, risk paper 2607.08938
 
 ## decisions
+- [r5-decisions-2026-10-31](wiki/decisions/r5-decisions-2026-10-31.md): every user decision of the R5 round, in order (option B, card v2, plan B, Spark must guide)
 - [morning-brief-2026-10-30](wiki/decisions/morning-brief-2026-10-30.md): read first Oct 30: overnight work, direction review 6/10, 3 yes/no questions
 - [submission-draft-2026-10-30](wiki/decisions/submission-draft-2026-10-30.md): submission story, verified numbers, blanks, 3-min demo outline, must-dos (public repo)
 - final plan: `experiments/final/PLAN.md` + `MUSE_SPEC.md` (prepared, not run; verifier READY after edits); diagram forge-wiki/wiki/assets/diagrams/forge-training-exam-plan.png

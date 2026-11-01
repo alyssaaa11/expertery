@@ -2,7 +2,7 @@
 
 **Summary**: Reusable lessons from building Forge, each with how it was learned and how to check it again.
 
-**Last updated**: 2026-10-30 (night)
+**Last updated**: 2026-11-01 16:45
 
 ---
 
@@ -178,3 +178,31 @@
   31 fails were invented CadQuery keywords, a different problem (API knowledge) from geometry. Check: tally
   `run_error` last lines per dev run.
 
+- **A two-line cheat sheet can beat a training run** (Oct 31). How learned: grouping the R5 pilot's crash last lines
+  showed 36 of 47 were one Workplane/Solid mix-up; adding 2 checked lines raised base Glimmer 74.5% → 94% on the same
+  200 jobs and 62% → 96% on 100 unseen jobs. Check: tally `run_error` last lines before training; fix the top cause
+  in the prompt first, then measure what training must still beat.
+- **Measure the card on UNSEEN jobs before trusting it** (Nov 1). How learned: the 94% pilot was in-sample (card
+  written from those crashes); the held-out R5D gave 96%, so it held, but only the held-out number counts. Check: every
+  prompt change gets a held-out run before it is called a result.
+- **Let the student learn from its own checked answers, not the teacher's** (Oct 31). How learned: R1/R3 (Spark's
+  code/thinking, ~160 rows) gave 38%/48% < 52%; R5 used Glimmer's own 1,680 PASS answers and the loss fell 0.63 → 0.32
+  (R3 stayed ≈ 0.67). Check: training loss on own-words data should fall clearly; a flat ≈ 0.7 means off-policy targets.
+- **A reasoning filter can delete most of the data by accident** (Oct 31). How learned: the verifier ran the "≥ 8 words
+  copied from the card" rule on pilot v2: it would drop 170/188 rows, because quoting true rules is the point. Changed
+  to "names the card" (12%). Check: dry-run every filter and print the drop share per source; stop above 20%.
+- **Self-fix answers name the card much more** (Nov 1). How learned: build_mix dropped 57% of self-fix PASSes vs 11% of
+  first tries for naming the card. Check: per-source drop shares in CARD_MENTION_DROP.
+- **Long retries hit the token cap and the money cap** (Nov 1). How learned: 47/118 self-fix answers were cut at 16,000
+  tokens and the run cost $3.14 against a $3 cap. Check: for retries, set max_tokens and the cap from the first try's
+  length distribution; watch finish_reason=length.
+- **Modal's billing summary resets each month** (Nov 1). How learned: `modal billing summary` showed 0.00 on Nov 1;
+  October's total came from `--for 'last month'` (37.47). Check: budget = sum of both months.
+- **Prompt-token range proves whether the card is on** (Nov 1). How learned: verifier counted R5D prompts with Glimmer's
+  tokenizer: no card 156-373, card 862-1,079; my first guess (450-600) would have stopped correct runs. Check: compare
+  the first records' prompt_tokens with the measured range of each arm.
+- **Announce every run before starting it** (Nov 1). How learned: starting the dev baselines early to save an hour
+  scared the user ("wait what?"). Check: one plain Slack line and an OK before any run, even approved ones.
+- **A stand-in verifier/superintel works when the agent is down** (Oct 31). How learned: `hivey msg send verifier/master`
+  failed (no swarm); a subagent told to follow ~/agents/verifier/CLAUDE.md wrote reports in the same folder and caught
+  ~15 bugs before any money was spent. Check: `hivey swarm list`; if absent, run the stand-in and say so to the user.

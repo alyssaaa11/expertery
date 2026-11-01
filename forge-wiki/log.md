@@ -93,3 +93,9 @@
 ## [2026-10-30 22:40] save | before the user cleared the chat
 - status NOW: rule-card check running (R3+card, then A+card), reading pre-registered, next steps, working rules.
 - Claude small fix bb5e080 (FORGE_RULE_CARD) disclosed in README.
+
+## [2026-11-01 16:45] update | R5 round (Oct 31 – Nov 1)
+- new: findings/r5-own-answers-training-2026-11-01, decisions/r5-decisions-2026-10-31; indexed the 10-31 findings pages.
+- status NOW rewritten: trained model ready, baselines 62/96 on R5D, next = FT test (user OK), Spark hints, final training.
+- lessons +10 (card beats training, held-out check, own answers, filter dry-run, token caps, billing month, prompt ranges, announce runs, stand-in agents).
+- scoreboard §4 (R5 held-out baselines).

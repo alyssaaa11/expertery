@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-11-01 00:30 (after the R5 first-try run)
+**Last updated**: 2026-11-01 16:45 (R5 training done, dev baselines in)
 
 ---
 
@@ -69,33 +69,21 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **NOW (2026-11-01 00:30): R5 option B, first-try data DONE; next = self-fix + Spark hints (need user yes), then
-  training WITHOUT the card.** Plan: experiments/r5/PLAN.md ("Plan change: option B"); verifier reports
-  ~/agents/verifier/reports/forge-r5-*.md (the verifier agent was not running; a Claude stand-in followed its rules).
-  - decision (user, 2026-10-31): large data, Modal only, **Modal budget $90**, Baseten hints cap $10, last training
-    method; option B (no CAD-Coder: non-commercial licence lineage); Spark only as hint-giver (no code); rule card v2
-    (option B for the card); then plan B: generate WITH card v2, train WITHOUT the card (context distillation).
-  - verified job sets (results/r5-jobsets-2026-10-31, r5-checkrefs-2026-10-31): R5D 100 (sha 5919bb3f…2172) + R5T 2,000
-    (c836dbe1…458e), 0 dropped, refs 100/100 + 2000/2000 PASS; $0.49.
-  - verified pilots on the same 200 R5T jobs (20/family): card v1 149/200 = 74.5%, 47 crashes (36 = Workplane/Solid
-    mix-up, 8 makeCylinder `start=`); card v2 (sha 9d0929b2…29c7, +2 lines, signatures checked) **188/200 = 94%, 3
-    crashes** (in-sample: the lines were written from these crashes).
-  - verified rest run (results/r5-first-2026-10-31/rest-A/summary.json): **1694/1800 = 94.1%** (tight 93.4%), 35
-    crashes, reasoning stored 1800/1800; weakest F4 148/180, F1 159/180, F8 162/180, F10 163/180. Correct first-try
-    answers with thinking: 1,694 + 188 = **1,882**. Cost ≈ $13.6.
-  - Code: Muse R5 build (e473fda) + fixes R5b (bb14436) + viewer (23629ee) + R5c no-card (d7bb06c); Claude small fixes
-    disclosed in README (B3b, B6b, B7, session script, viewer render). pytest 392.
-  - Answer viewer: results/r5-pilot-2026-10-31/viewer/index.html (user asked to see how Glimmer answers).
-  - Money: Modal billing 37.54 (budget $90). Muse (Meta credit) for R5 ≈ $5.2 + R5c ≈ $0.9 (estimates from token counts).
-  - Lesson (how learned: R5T-F1-15 FAIL in the viewer, reference vs answer): the card's "make the cutter 1 mm longer"
-    rule also extends cuts that stop INSIDE the part (slot cut 1 mm into the core, 0.3% mismatch). Not changed yet.
-  - Lesson (how learned: comparing ids F1-15 text vs reference): generator rounding can make the text width (4.7)
-    differ from the coordinates (−2.4..2.4 = 4.8); the reference follows the coordinates. Minor, noted.
-  - Open: the hard deadline is Nov 4 9:00 PM ET = Nov 5 03:00 Spain (user). Impact gap: no installer/app yet ("Forge box"
-    demo idea). Pitch: private, referee-checked CAD; training = knowledge into the weights (cheaper, no card).
-  - Working rules (user): Slack via `hivey msg send human`; verifier before every paid step; user yes before every paid
-    step; Muse writes big code, Claude only small disclosed fixes; never Claude inside the product; no Wonder data in
-    training; keep git history; never use `tr` in the shell (aliased to Trash).
+- **NOW (2026-11-01 16:45): R5 trained model READY; its dev test waits for the user's OK. Then Spark hints → final
+  training → test → exam.** Details: [[r5-own-answers-training-2026-11-01]]; decisions: [[r5-decisions-2026-10-31]].
+  - verified: base Glimmer on 100 held-out R5D jobs: **62/100 without the card, 96/100 with card v2** (prompts checked).
+  - verified: training done (1,680 own-answer lessons, 420 steps, loss 0.63 → 0.32, merged /vol/r5/merged, ≈ $9.5).
+  - Next (each needs a plain-words announcement + user OK): (1) FT dev test, no card (≈ $3, cap $3.50; command in
+    verifier report forge-r5-dev-pre-2026-11-01; read with experiments/r5/compare_dev.py). (2) decision (user 11-01):
+    Spark must guide → Spark hints on the ≈ 76 still-unsolved R5T jobs (Baseten ≤ $10) + Glimmer retries → (3) final
+    training incl. those lessons (≈ $10) → test → (4) exam once (amended step 6) → demo/app ("Forge box").
+  - Bars for FT: beats plain needs ≥ 72/100; "as good as the card" ≈ 93+. Superintel predicted FT ≈ 90 (85-94).
+  - Money: Modal $37.47 (Oct) + $15.33 (Nov) = **$52.80 of $90**. Muse (Meta credit) R5 total ≈ $6.
+  - Open: "trained + card" arm not approved; card "1 mm longer" rule over-extends cuts that stop inside a part (seen in
+    R5T-F1-15); generator text-width rounding (4.7 vs 4.8) noted; Impact gap: no installer/app yet.
+  - Working rules (user): Slack via `hivey msg send human`; announce each run and wait for OK; verifier (or stand-in)
+    before every paid step; Muse writes big code, Claude only small disclosed fixes; never Claude inside the product;
+    no Wonder data; keep git history; never use `tr` in the shell.
 - (older) Rule-card check 2026-10-30: R3 + card 51/60 = 85%, A + card 41/60 = 68.3%; manual-gap diagnosis holds
   ([[training-experiments-2026-10-30]], [[spark-vs-glimmer-2026-10-31]], [[fireworks-workshop-lessons-2026-10-31]],
   [[huggingface-cadquery-data-2026-10-31]]).
