@@ -99,3 +99,7 @@
 - status NOW rewritten: trained model ready, baselines 62/96 on R5D, next = FT test (user OK), Spark hints, final training.
 - lessons +10 (card beats training, held-out check, own answers, filter dry-run, token caps, billing month, prompt ranges, announce runs, stand-in agents).
 - scoreboard §4 (R5 held-out baselines).
+
+## 2026-11-01 18:30
+- r5 dev 94/100 (no card); Spark hints 54/76 usable, retries solved 52/54; r5f mix 1,742 (46 tutoring); r5f training started.
+- new: findings/r5-final-spark-guided-2026-11-01; status NOW rewritten.

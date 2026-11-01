@@ -8,6 +8,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 
 ## findings
 - [r5-own-answers-training-2026-11-01](wiki/findings/r5-own-answers-training-2026-11-01.md): R5: card v2 (74.5% → 94%), 2,000 own answers, self-fix, training without the card (loss 0.63 → 0.32), held-out baselines 62% / 96%
+- [[r5-final-spark-guided-2026-11-01]] — r5 dev 94/100, Spark hints 52/54, tutoring lessons, r5f
 - [spark-vs-glimmer-2026-10-31](wiki/findings/spark-vs-glimmer-2026-10-31.md): who is who (816B MoE vs 30B dense, AA index 25 vs 6) and why copying Spark failed
 - [fireworks-workshop-lessons-2026-10-31](wiki/findings/fireworks-workshop-lessons-2026-10-31.md): free Glimmer SFT on Fireworks, thousands of examples for generative tasks, effort sweep, routing
 - [huggingface-cadquery-data-2026-10-31](wiki/findings/huggingface-cadquery-data-2026-10-31.md): CAD-Coder and other HF CadQuery sets; rejected (licence lineage, style, no thinking)

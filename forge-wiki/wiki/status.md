@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-11-01 16:45 (R5 training done, dev baselines in)
+**Last updated**: 2026-11-01 18:30 (r5 dev 94/100, Spark hints 52/54, final training r5f running)
 
 ---
 
@@ -69,18 +69,23 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **NOW (2026-11-01 16:45): R5 trained model READY; its dev test waits for the user's OK. Then Spark hints → final
-  training → test → exam.** Details: [[r5-own-answers-training-2026-11-01]]; decisions: [[r5-decisions-2026-10-31]].
-  - verified: base Glimmer on 100 held-out R5D jobs: **62/100 without the card, 96/100 with card v2** (prompts checked).
-  - verified: training done (1,680 own-answer lessons, 420 steps, loss 0.63 → 0.32, merged /vol/r5/merged, ≈ $9.5).
-  - Next (each needs a plain-words announcement + user OK): (1) FT dev test, no card (≈ $3, cap $3.50; command in
-    verifier report forge-r5-dev-pre-2026-11-01; read with experiments/r5/compare_dev.py). (2) decision (user 11-01):
-    Spark must guide → Spark hints on the ≈ 76 still-unsolved R5T jobs (Baseten ≤ $10) + Glimmer retries → (3) final
-    training incl. those lessons (≈ $10) → test → (4) exam once (amended step 6) → demo/app ("Forge box").
-  - Bars for FT: beats plain needs ≥ 72/100; "as good as the card" ≈ 93+. Superintel predicted FT ≈ 90 (85-94).
-  - Money: Modal $37.47 (Oct) + $15.33 (Nov) = **$52.80 of $90**. Muse (Meta credit) R5 total ≈ $6.
-  - Open: "trained + card" arm not approved; card "1 mm longer" rule over-extends cuts that stop inside a part (seen in
-    R5T-F1-15); generator text-width rounding (4.7 vs 4.8) noted; Impact gap: no installer/app yet.
+- **NOW (2026-11-01 18:30): FINAL training r5f RUNNING (Modal, est $9.71, ~2 h 10 min, ends ≈ 20:40); next = dev 2
+  test of r5f (no card, cap $3.50), then the pre-registered pick r5 vs r5f, then the exam once.**
+  Details: [[r5-own-answers-training-2026-11-01]], [[r5-final-spark-guided-2026-11-01]]; decisions: [[r5-decisions-2026-10-31]].
+  - verified (49b69d8, compare_dev.py): **trained Glimmer r5, NO card: 94/100** on R5D vs plain 62 vs plain + card v2 96.
+    FT−A +32 [22, 42]; FT−(A+card) −2 [−8, 3]; crashes 2 (A 12); thinking 100%. Pre-registered reading: beats plain,
+    as good as the card, NOT cheaper (3.6k completion tokens per correct, same as A+card). ≈ $1 Modal, 20 min.
+  - verified (0ee0ebf, b18632a): Spark hints on the 76 unsolved R5T jobs: 54 usable (22 cut at 16k tokens: F4 11,
+    F8 9, F3 2), Baseten $2.67 (+$0.38 for a first try at 1,000 tokens that gave 74/76 empty). Glimmer + card v3 (retry
+    only) + hint, k=3: **52/54 jobs solved** (135/162).
+  - decision (user 11-01): card v3 for the hinted retries only (v2 untouched for A+card/exam); "keep hint in lesson":
+    the hinted answers cite the hint ~6×, so they train as TUTORING rows (prompt = job + hint), build_mix --keep-hint.
+  - verified: final mix 1,742 = r5's 1,696 (byte-identical prefix, sha 7565edae) + 46 tutoring rows; sha fbd62681;
+    verifier forge-r5f-train-pre PASS WITH ISSUES → T1-T3 done (030a3cc).
+  - Pre-registered (PLAN, 030a3cc): r5f goes to the exam only if ≥ 94/100, crashes ≤ 2, hint/tutor mentions ≤ 2/100,
+    thinking ≥ 90%; else r5. Expect noise (46 rows = 2.6%).
+  - Money: Modal ≈ $52.80 + ≈ $3 today (dev 1 + retries) + r5f ≈ $9.7 → ≈ $66 of $90; Baseten hints $3.05.
+  - Open: Impact gap (no installer/app yet); "not cheaper" claim must not be made.
   - Working rules (user): Slack via `hivey msg send human`; announce each run and wait for OK; verifier (or stand-in)
     before every paid step; Muse writes big code, Claude only small disclosed fixes; never Claude inside the product;
     no Wonder data; keep git history; never use `tr` in the shell.
