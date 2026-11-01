@@ -23,6 +23,7 @@ import argparse
 import json
 import os
 import random
+import re
 import sys
 import uuid
 
@@ -36,11 +37,12 @@ import teacher  # noqa: E402 (client, key handling, budget guard)
 HINT_ORDER_SEED = 20261031
 MAX_HINT_WORDS = 60
 DEFAULT_MAX_HINTS = 230
-HINT_MAX_TOKENS = 1000
+HINT_MAX_TOKENS = 16000  # Claude small fix 2026-11-01 (verifier S1): Spark reasons first; 1000 gave empty hints
 HINT_TEMPERATURE = 0.7
 
 HINT_SYSTEM = "You are a CAD tutor."
-FORBIDDEN_SUBSTRINGS = ("```", "cq.", "import")
+FORBIDDEN_SUBSTRINGS = ("```", "cq.")
+IMPORT_RE = re.compile(r"\bimport\s+\w")  # Claude small fix 2026-11-01 (verifier S3): word match, not "important"
 
 
 def build_hint_prompt(job_text, code, failed_checks):
@@ -73,6 +75,8 @@ def is_hint_rejected(hint):
     """True when a hint breaks the no-code / 60-word rules."""
     text = hint or ""
     if any(sub in text for sub in FORBIDDEN_SUBSTRINGS):
+        return True
+    if IMPORT_RE.search(text):
         return True
     return hint_word_count(text) > MAX_HINT_WORDS
 
@@ -128,7 +132,13 @@ def do_hint_call(record, post_fn):
     except (AttributeError, IndexError, TypeError):
         content = ""
     usage = data.get("usage") if isinstance(data, dict) else {}
-    return content or "", usage if isinstance(usage, dict) else {}
+    usage = dict(usage) if isinstance(usage, dict) else {}
+    try:  # Claude small fix 2026-11-01 (verifier S1): keep finish_reason
+        usage["_finish_reason"] = (data.get("choices") or [{}])[0].get(
+            "finish_reason")
+    except (AttributeError, IndexError, TypeError):
+        pass
+    return content or "", usage
 
 
 def run_hints(records, post_fn, budget, max_hints=DEFAULT_MAX_HINTS):
@@ -154,6 +164,8 @@ def run_hints(records, post_fn, budget, max_hints=DEFAULT_MAX_HINTS):
             "hint_words": hint_word_count(hint),
             "rejected": bool(rejected),
             "usd": round(usd, 6),
+            "finish_reason": usage.get("_finish_reason"),
+            "completion_tokens": usage.get("completion_tokens"),
         })
     summary = {
         "n": len(rows),
