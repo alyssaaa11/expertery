@@ -1,0 +1,25 @@
+key generated (never printed)
+secret updated
+deploy start 14:20:39
+
+View Deployment: 
+https://modal.com/apps/my-workspace/main/deployed/forge-glimmer
+ready 14:23:54 (try 3)
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-NQnM01p6EDfOFuvfFk407X
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-NQnM01p6EDfOFuvfFk407X
+A factory: 100 answers, pass rate at 0.2%: 0.62
+DEV GATE (PLAN step 5): dev 62.0% at 0.2% -> STOP
+runner exit 0 14:51:51
+done 14:51:51
+app stopped 14:51:52
