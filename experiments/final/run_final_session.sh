@@ -100,7 +100,7 @@ run() {
   # cap and enforces the reserve itself, so time and reserve are no
   # longer subtracted twice.
   "$PY" -I "$COMMON/budget_left.py" "$CAP" "$GPU_START" >/dev/null 2>&1 || { echo "budget left for this runner call: CAP REACHED"; echo "CAP REACHED, not starting runner"; return 1; }
-  FORGE_URL="$URL" FORGE_KEY="$K" $PY -I ~/projects/forge/experiments/final/runner_final.py --workers 8 --budget "$CAP" --gpu-start "$GPU_START" "$@" & RPID=$!
+  FORGE_URL="$URL" FORGE_KEY="$K" $PY -I ~/projects/forge/experiments/final/runner_final.py --workers "${WORKERS:-8}" --budget "$CAP" --gpu-start "$GPU_START" "$@" ${=RUNNER_EXTRA:-} & RPID=$!
   wait $RPID
   rc=$?
   RPID=""
@@ -114,6 +114,9 @@ runspec() {  # "<jobs>:<subdir>:<arms>:<k>" -> runner args
   local arms=${rest%%:*}; local k=${rest##*:}
   if [ "$jobs" = "dev" ]; then
     run --jobs-file "$DEV_JOBS" --out "$OUT/$sub" --arms "$arms" --k "$k"
+  elif [ "${jobs%.jsonl}" != "$jobs" ]; then
+    # Claude small fix (2026-11-01, R5): a .jsonl spec is a factory jobs file (absolute path)
+    run --jobs-file "$jobs" --out "$OUT/$sub" --arms "$arms" --k "$k"
   else
     run --jobs "$jobs" --out "$OUT/$sub" --arms "$arms" --k "$k"
   fi
