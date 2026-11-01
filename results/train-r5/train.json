@@ -1,0 +1,3956 @@
+{
+ "transformers": "5.15.0",
+ "torch": "2.13.0+cu130",
+ "timeout_s": 12722,
+ "deadline_s": 12482,
+ "r5_subsample": {
+  "dropped": 0,
+  "ids": [],
+  "estimate": {
+   "tokens": 6077072,
+   "seconds": 7366.1,
+   "dollars": 9.2895
+  }
+ },
+ "lora_pattern": ".*language_model.*\\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)",
+ "trainable_params": 104792064,
+ "examples": 1680,
+ "dropped": 16,
+ "first_example": {
+  "prompt": "<|begin_of_text|><|start|>system<|message|>You write CadQuery Python code. Units are millimetres. Assign the final solid to a variable named result. Reply with exactly one Python code block and nothing else.\n\nReasoning strength: high.\n\n# Valid recipients: \"self\", \"user\".<|eot|><|start|>user<|message|>Units: millimetres. Z is up. A funnel on the Z axis, centred at X = 0, Y = 0. Outer cone frustum: bottom diameter 30.4 at Z = 0, top diameter 56.8 at Z = 42.4. Inner cone recess from the top: top diameter 49.8 at Z = 43.4, bottom diameter 19.8 at Z = 7.8, leaving a floor 7.8 thick. A cylindrical spout outside: diameter 16, Z from -18.6 to 4. A bore of diameter 8.2 runs through the spout up into the recess (Z from -19.6 to 8.8). A top rim ring: inner diameter 49.8, outer diameter 64, 4.1 tall, sitting on the top face (Z = 42.4).<|eot|><|start|>assistant",
+  "full": "<|begin_of_text|><|start|>system<|message|>You write CadQuery Python code. Units are millimetres. Assign the final solid to a variable named result. Reply with exactly one Python code block and nothing else.\n\nReasoning strength: high.\n\n# Valid recipients: \"self\", \"user\".<|eot|><|start|>user<|message|>Units: millimetres. Z is up. A funnel on the Z axis, centred at X = 0, Y = 0. Outer cone frustum: bottom diameter 30.4 at Z = 0, top diameter 56.8 at Z = 42.4. Inner cone recess from the top: top diameter 49.8 at Z = 43.4, bottom diameter 19.8 at Z = 7.8, leaving a floor 7.8 thick. A cylindrical spout outside: diameter 16, Z from -18.6 to 4. A bore of diameter 8.2 runs through the spout up into the recess (Z from -19.6 to 8.8). A top rim ring: inner diameter 49.8, outer diameter 64, 4.1 tall, sitting on the top face (Z = 42.4).<|eot|><|start|>assistant to=self<|message|>Units: millimetres. Z is up. A funnel on the Z axis, centred at X = 0, Y = 0. Outer cone frustum: bottom diameter 30.4 at Z = 0, top diameter 56.8 at Z = 42.4. Inner cone recess from the top: top diameter 49.8 at Z = 43.4, bottom diameter 19.8 at Z = 7.8, leaving a floor 7.8 thick. A cylindrical spout outside: diameter 16, Z from -18.6 to 4. A bore of diameter 8.2 runs through the spout up into the recess (Z from -19.6 to 8.8). A top rim ring: inner diameter 49.8, outer diameter 64, 4.1 tall, sitting on the top face (Z = 42.4).\n\nWe need to construct funnel.\n\nOuter cone frustum: bottom diameter 30.4 at Z=0, top diameter 56.8 at Z=42.4.\n\nSo r_bottom = 15.2 at z=0, r_top=28.4 at z=42.4.\n\nUsing makeCone(r_bottom, r_top, height, Vector(x,y,z), Vector(0,0,1)). The point is start of range? For makeCone, args: r_bottom, r_top, height, start vector, direction vector. It says point is START of range. So start at Z=0? If direction is up (0,0,1), then bottom at start. So r_bottom=15.2, r_top=28.4, height=42.4, start at (0,0,0). That gives bottom at 0, top at 42.4. Good.\n\nInner cone recess from top: top diameter 49.8 at Z=43.4, bottom diameter 19.8 at Z=7.8, leaving a floor 7.8 thick.\n\nWait inner cone recess from top: top diameter 49.8 at Z=43.4, bottom diameter 19.8 at Z=7.8. That is a cone pointing downwards? Top larger? Actually top diameter 49.8 > bottom 19.8, so it's a funnel inward. Starting at Z=43.4 top opening, going down to Z=7.8 bottom. Height = 43.4 - 7.8 = 35.6.\n\nBut outer top is at 42.4. So inner top at 43.4 is 1 mm above outer top? Hmm recess from top: top diameter 49.8 at Z=43.4. That is 1 mm above outer top 42.4. Possibly inner cone is cut from top, so start inside? Might be a bit offset. Let's interpret: inner cone recess is cut out from the top face, so the opening is at Z=42.4? But spec says top diameter 49.8 at Z=43.4. Could be they want the cone's top at 43.4 (1 mm above). Hmm maybe the recess starts 1 mm above? Could be a small lip? Let's assume the cone is placed with its top at Z=43.4, bottom at Z=7.8. So it's a cone with r_top = 24.9 (at start), r_bottom = 9.9 (at end). Direction downwards? If we use makeCone with start at top (43.4) and direction down (0,0,-1). Then r_bottom parameter is radius at start? Actually makeCone(r_bottom, r_top, height, start, direction). The naming is confusing. It says r_bottom, r_top, height. Typically bottom is start? Maybe the API is r_bottom at start, r_top at end along direction. The documentation says makeCone(r_bottom, r_top, height, position, axis). So first radius at start, second at end.\n\nIf we want top larger (24.9) at start Z=43.4, and bottom smaller (9.9) at end Z=7.8, direction is downwards (0,0,-1). Height = 35.6. Then start radius = 24.9, end radius = 9.9. So call makeCone(24.9, 9.9, 35.6, Vector(0,0,43.4), Vector(0,0,-1)).\n\nBut we need to cut this from the outer solid. The inner cone recess leaves a floor 7.8 thick. Outer bottom is at Z=0, inner bottom at Z=7.8, so floor thickness =7.8. Good.\n\nSo we will create outer cone solid, then subtract inner cone solid (as cutter). But inner cone solid should be larger than needed to cut through? It starts at 43.4, which is above top of outer (42.4). So the cutter will intersect. That's fine.\n\nCylindrical spout outside: diameter 16, Z from -18.6 to 4. So a cylinder radius 8, from Z=-18.6 to 4. Axis along Z? Probably centered at X=0,Y=0. So start at Z=-18.6, height = 4 - (-18.6) =22.6. Direction up. So makeCylinder(radius=8, height=22.6, Vector(0,0,-18.6), Vector(0,0,1)). That's spout outside.\n\nBut spout is outside the funnel? The funnel bottom is at Z=0, diameter 30.4. Spout is attached below? Z from -18.6 to 4. So it overlaps with funnel from Z=0 to 4. That means spout is attached to bottom. That's fine. We need to fuse spout with funnel.\n\nA bore of diameter 8.2 runs through the spout up into the recess (Z from -19.6 to 8.8). So a cylinder radius 4.1, start at Z=-19.6, height = 8.8 - (-19.6) =28.4. Direction up. This bore should be cut from the combined solid (funnel+spout). It goes up into recess.\n\nTop rim ring: inner diameter 49.8, outer diameter 64, 4.1 tall, sitting on top face (Z=42.4). So it's a hollow cylinder (annular) sitting on top. Inner radius = 24.9, outer radius = 32. Height =4.1. Bottom at Z=42.4, top at 46.5. So we can create a cylinder outer radius 32 height 4.1 at start Z=42.4, and subtract inner cylinder radius 24.9 height 4.1 (or slightly longer). Simpler: make a solid ring by making outer cylinder and cutting inner cylinder.\n\nSince all solids need to be fused before cut? Rule says fuse every part before you cut. So we should create all positive solids, fuse them, then cut with negative solids (inner cone, bore). Also rim ring is positive.\n\nBut bore also goes through spout, which is part of positive. That's fine.\n\nAlternative: create outer cone, spout, rim. Fuse them. Then cut inner cone and bore.\n\nMake sure we use Solids make... Then fuse.\n\nSteps:\n\nimport cadquery as cq\n\nouter = cq.Solid.makeCone(15.2, 28.4, 42.4, cq.Vector(0,0,0), cq.Vector(0,0,1))\n\nspout = cq.Solid.makeCylinder(8, 22.6, cq.Vector(0,0,-18.6), cq.Vector(0,0,1))\n\nrim_outer = cq.Solid.makeCylinder(32, 4.1, cq.Vector(0,0,42.4), cq.Vector(0,0,1))\nrim_inner = cq.Solid.makeCylinder(24.9, 4.1, cq.Vector(0,0,42.4), cq.Vector(0,0,1))\nrim = rim_outer.cut(rim_inner) # but rim is solid. Could also make via difference.\n\nBut rule says fuse every part before you cut. Hmm rim itself is a cut? The rule says fuse every part before you cut. Probably they want one fuse of all positive parts then cut. But rim inner cut is part of creating rim. Might be okay to pre-create rim as a solid via difference then fuse. Might be okay.\n\nAlternative create rim as a torus? Simpler to create workplane extrude. But using solids: make outer cylinder, then cut inner. That's a cut operation. The rule \"fuse every part before you cut\" maybe means we should fuse all solids that are to be kept together before subtracting. It doesn't forbid creating a ring by cutting. However the rule says Two kinds of objects, never mix them. A Solid joins with a.fuse(b) and cuts with a.cut(b) (b must be a Solid). That's allowed.\n\nMaybe safer to build rim as a solid via making a cylinder and subtract inner cylinder, that's okay.\n\nNow inner cone cutter: inner_cone = cq.Solid.makeCone(24.9, 9.9, 35.6, cq.Vector(0,0,43.4), cq.Vector(0,0,-1))\n\nBore cutter: bore = cq.Solid.makeCylinder(4.1, 28.4, cq.Vector(0,0,-19.6), cq.Vector(0,0,1)) Wait height 28.4? -19.6 to 8.8 = 28.4 yes.\n\nNow fuse positive parts: positive = outer.fuse(spout).fuse(rim_outer?) Wait rim is after cut. Let's define rim as solid = rim_outer.cut(rim_inner). Then positive = outer.fuse(spout).fuse(rim)\n\nThen result = positive.cut(inner_cone).cut(bore)\n\nBut inner_cone starts at 43.4 above top, so cutting will remove material from top and leave a lip? The top rim sits at 42.4 to 46.5. The inner cone top at 43.4 with radius 24.9. So the inner cone will cut into rim? Rim inner radius is 24.9, so the cone top radius matches rim inner radius at Z 43.4, which is 1 mm above rim bottom (42.4). So the cone will cut a conical hole into the rim's inner volume? Actually rim inner hole is empty. Cone will intersect rim. Might be okay? Perhaps the inner cone should only cut the funnel, not the rim. But specification says inner cone recess from the top: top diameter 49.8 at Z=43.4. That suggests the recess goes through the rim? The rim inner diameter is 49.8, so rim inner hole is 49.8 diameter. The cone top is same diameter. So the cone is flush with rim inner edge. So cutting cone through rim might remove rim material where it overlaps? The cone starts at Z=43.4 which is 1 mm above rim bottom. Rim height 4.1 up to 46.5. Cone goes downwards. So from Z=43.4 to 46.5? Wait cone goes downwards from 43.4, so it won't go up. So intersection with rim is only a small overlap at the bottom 1 mm of rim? Actually rim extends from 42.4 to 46.5 upward. Cone extends downward from 43.4. So overlap region is Z 43.4 to 46.5? No cone is only downwards, so Z <=43.4. So overlap with rim is Z 42.4 to 43.4 (the bottom 1 mm of rim). The cone radius at Z=43.4 is 24.9, at Z=42.4 (1 mm down) radius is slightly smaller: linear interpolation: radius decreases from 24.9 at 43.4 to 9.9 at 7.8 over 35.6 mm. So delta radius per mm = (24.9-9.9)/35.6 = 15/35.6 \u22480.421. So at 1 mm down, radius \u224824.9 -0.421 =24.479. Rim inner radius is 24.9 constant. So cone will cut into rim material slightly? The rim's inner void is radius 24.9, so cone radius 24.479 <24.9, so cone is inside the rim hole, so it won't cut rim material. Actually the rim material is between radius 24.9 and 32. Cone radius is <24.9, so it's inside the hole. So no intersection with rim material. Good.\n\nNow the bore: bore radius 4.1, goes up to 8.8. That's inside inner cone bottom radius 9.9 at Z=7.8. At Z=8.8, cone radius =? Interpolate from 9.9 at 7.8 to 24.9 at 43.4. At Z=8.8, delta =1.0 mm up. So radius \u22489.9 +0.421 =10.321. So bore radius 4.1 is inside cone. Good.\n\nNow we also need to ensure the inner cone cut is performed after fusing spout. Spout is below. Inner cone bottom at Z=7.8, spout goes up to Z=4. So no overlap.\n\nPotential issue: The outer cone bottom at Z=0, diameter 30.4. Spout diameter 16, so spout is narrower. The spout sits centered. Fusion will create a shape with overlapping region from Z=0 to 4. That's fine.\n\nNow one more nuance: The outer cone frustum is from Z=0 to 42.4. The inner cone recess bottom at Z=7.8, leaving floor 7.8 thick. That's okay.\n\nBut the spec says inner cone recess from the top: top diameter 49.8 at Z=43.4, bottom diameter 19.8 at Z=7.8, leaving a floor 7.8 thick. Floor thick 7.8, outer bottom at 0, so inner bottom at 7.8 matches.\n\nNow bore runs through spout up into recess (Z from -19.6 to 8.8). That goes up to 8.8 which is 1 mm above inner bottom (7.8). Good.\n\nNow code.\n\nPotential pitfalls: makeCone expects radius bottom, radius top, height, start vector, direction vector. We used that.\n\nMakeCylinder(radius, height, start, direction). radius 8.\n\nMake sure using positional args only: cq.Solid.makeCylinder(radius, height, cq.Vector(...), cq.Vector(...))\n\nSame for makeCone.\n\nNow fuse order: result = outer.fuse(spout).fuse(rim).cut(inner_cone).cut(bore)\n\nBut rim is already cut. Might be okay.\n\nAlternatively build rim as solid via Workplane? Might be easier but rule says use makeBox etc. Cylinder is okay.\n\nCheck dimensions: rim inner diameter 49.8 => radius 24.9 correct. Outer diameter 64 => radius 32 correct. Height 4.1.\n\nNow ensure final solid assigned to result.\n\nEdge cases: makeCone with direction downwards Vector(0,0,-1). That's allowed.\n\nNow final code.\n\nPotential issue: Fusion of outer cone and spout: outer cone at Z=0-42.4, spout from -18.6 to 4. Overlap 0-4. Fusion works.\n\nPotential issue: The inner cone cutter extends from Z=43.4 down to 7.8. That's fine.\n\nNow the bore cutter from -19.6 to 8.8. That's longer than spout? Spout from -18.6 to 4. So bore extends 1 mm below spout bottom. Good for through hole.\n\nNow final result.\n\nMake sure imports: import cadquery as cq\n\nOne code block.\n\nReturn result.\n\nPotential nuance: The top rim ring sits on top face (Z=42.4). If we fuse rim with outer, the outer top is at 42.4, rim bottom at 42.4, fine.\n\nNow final answer.\n\nLet's produce code.\n\nMaybe also add a small extra to ensure inner cone cutter is slightly larger to ensure clean cut? No.\n\nCheck numbers: outer bottom diameter 30.4 => radius 15.2. top diameter 56.8 => radius 28.4. Height 42.4.\n\nInner top diameter 49.8 => radius 24.9 at Z=43.4. bottom diameter 19.8 => radius 9.9 at Z=7.8. Height =35.6.\n\nSpout diameter 16 => radius 8. Z -18.6 to 4 => height 22.6.\n\nBore diameter 8.2 => radius 4.1. Z -19.6 to 8.8 => height 28.4.\n\nRim inner diameter 49.8 => radius 24.9. outer diameter 64 => radius 32. height 4.1. bottom Z=42.4.\n\nAll good.\n\nPotential issue: The outer cone frustum top diameter 56.8 > rim outer diameter 64? Actually 56.8 <64, so rim extends beyond outer top. That's fine.\n\nNow produce final output.\n\nOne more check: makeCone direction vector length? It probably normalizes? Might be okay.\n\nSome CadQuery versions require direction as Vector, yes.\n\nReturn exactly one Python code block.\n\nLet's output.<|eom|><|start|>assistant to=user<|message|>```python\nimport cadquery as cq\n\n# Outer funnel frustum\nouter = cq.Solid.makeCone(\n    15.2, 28.4, 42.4,\n    cq.Vector(0, 0, 0),\n    cq.Vector(0, 0, 1)\n)\n\n# Cylindrical spout outside\nspout = cq.Solid.makeCylinder(\n    8.0, 22.6,\n    cq.Vector(0, 0, -18.6),\n    cq.Vector(0, 0, 1)\n)\n\n# Top rim ring\nrim_outer = cq.Solid.makeCylinder(\n    32.0, 4.1,\n    cq.Vector(0, 0, 42.4),\n    cq.Vector(0, 0, 1)\n)\nrim_inner = cq.Solid.makeCylinder(\n    24.9, 4.1,\n    cq.Vector(0, 0, 42.4),\n    cq.Vector(0, 0, 1)\n)\nrim = rim_outer.cut(rim_inner)\n\n# Fuse positive parts\npositive = outer.fuse(spout).fuse(rim)\n\n# Inner cone recess\ninner_cone = cq.Solid.makeCone(\n    24.9, 9.9, 35.6,\n    cq.Vector(0, 0, 43.4),\n    cq.Vector(0, 0, -1)\n)\n\n# Bore through spout into recess\nbore = cq.Solid.makeCylinder(\n    4.1, 28.4,\n    cq.Vector(0, 0, -19.6),\n    cq.Vector(0, 0, 1)\n)\n\nresult = positive.cut(inner_cone).cut(bore)\n```<|eot|>"
+ },
+ "first_loss_tokens": [
+  " to",
+  "=self",
+  "<|message|>",
+  "Units",
+  ":",
+  " mill",
+  "imetres",
+  ".",
+  " Z",
+  " is",
+  " up",
+  ".",
+  " A",
+  " funnel",
+  " on",
+  " the",
+  " Z",
+  " axis",
+  ",",
+  " centred",
+  " at",
+  " X",
+  " =",
+  " ",
+  "0",
+  ",",
+  " Y",
+  " =",
+  " ",
+  "0",
+  ".",
+  " Outer",
+  " cone",
+  " frust",
+  "um",
+  ":",
+  " bottom",
+  " diameter",
+  " ",
+  "30"
+ ],
+ "first_loss_tokens_per_source": {
+  "glimmer-first": {
+   "loss_tokens": [
+    " to",
+    "=self",
+    "<|message|>",
+    "Units",
+    ":",
+    " mill",
+    "imetres",
+    ".",
+    " Z",
+    " is",
+    " up",
+    ".",
+    " A",
+    " funnel",
+    " on",
+    " the",
+    " Z",
+    " axis",
+    ",",
+    " centred",
+    " at",
+    " X",
+    " =",
+    " ",
+    "0",
+    ",",
+    " Y",
+    " =",
+    " ",
+    "0",
+    ".",
+    " Outer",
+    " cone",
+    " frust",
+    "um",
+    ":",
+    " bottom",
+    " diameter",
+    " ",
+    "30"
+   ],
+   "n_kept": 1668,
+   "dropped_for_length": 10
+  },
+  "glimmer-selffix": {
+   "loss_tokens": [
+    " to",
+    "=self",
+    "<|message|>",
+    "Units",
+    ":",
+    " mill",
+    "imetres",
+    ".",
+    " Z",
+    " is",
+    " up",
+    ".",
+    " A",
+    " T",
+    "-slot",
+    " rail",
+    ":",
+    " a",
+    " bar",
+    " X",
+    " from",
+    " ",
+    "0",
+    " to",
+    " ",
+    "116",
+    ".",
+    "2",
+    ",",
+    " Y",
+    " from",
+    " ",
+    "0",
+    " to",
+    " ",
+    "45",
+    ".",
+    "5",
+    ",",
+    " Z"
+   ],
+   "n_kept": 12,
+   "dropped_for_length": 6
+  }
+ },
+ "dropped_for_length_per_source": {
+  "glimmer-first": 10,
+  "glimmer-selffix": 6
+ },
+ "schedule": {
+  "micro_steps": 3360,
+  "optimizer_steps": 420,
+  "groups": [
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8
+  ]
+ },
+ "steps": [
+  {
+   "step": 1,
+   "micro_steps": 8,
+   "tokens": 23625,
+   "loss": 0.633,
+   "lr": 4.761904761904762e-06,
+   "seconds": 2.09
+  },
+  {
+   "step": 2,
+   "micro_steps": 8,
+   "tokens": 30007,
+   "loss": 0.605,
+   "lr": 9.523809523809525e-06,
+   "seconds": 1.46
+  },
+  {
+   "step": 3,
+   "micro_steps": 8,
+   "tokens": 27183,
+   "loss": 0.6362,
+   "lr": 1.4285714285714287e-05,
+   "seconds": 1.69
+  },
+  {
+   "step": 4,
+   "micro_steps": 8,
+   "tokens": 28264,
+   "loss": 0.5932,
+   "lr": 1.904761904761905e-05,
+   "seconds": 1.62
+  },
+  {
+   "step": 5,
+   "micro_steps": 8,
+   "tokens": 27007,
+   "loss": 0.5822,
+   "lr": 2.380952380952381e-05,
+   "seconds": 2.21
+  },
+  {
+   "step": 6,
+   "micro_steps": 8,
+   "tokens": 28511,
+   "loss": 0.5438,
+   "lr": 2.8571428571428574e-05,
+   "seconds": 2.1
+  },
+  {
+   "step": 7,
+   "micro_steps": 8,
+   "tokens": 22188,
+   "loss": 0.5515,
+   "lr": 3.3333333333333335e-05,
+   "seconds": 1.84
+  },
+  {
+   "step": 8,
+   "micro_steps": 8,
+   "tokens": 27707,
+   "loss": 0.5294,
+   "lr": 3.80952380952381e-05,
+   "seconds": 2.14
+  },
+  {
+   "step": 9,
+   "micro_steps": 8,
+   "tokens": 29463,
+   "loss": 0.474,
+   "lr": 4.285714285714286e-05,
+   "seconds": 1.35
+  },
+  {
+   "step": 10,
+   "micro_steps": 8,
+   "tokens": 34989,
+   "loss": 0.4662,
+   "lr": 4.761904761904762e-05,
+   "seconds": 3.96
+  },
+  {
+   "step": 11,
+   "micro_steps": 8,
+   "tokens": 30432,
+   "loss": 0.5255,
+   "lr": 5.2380952380952384e-05,
+   "seconds": 2.38
+  },
+  {
+   "step": 12,
+   "micro_steps": 8,
+   "tokens": 24207,
+   "loss": 0.5302,
+   "lr": 5.714285714285715e-05,
+   "seconds": 1.79
+  },
+  {
+   "step": 13,
+   "micro_steps": 8,
+   "tokens": 22943,
+   "loss": 0.4563,
+   "lr": 6.19047619047619e-05,
+   "seconds": 1.41
+  },
+  {
+   "step": 14,
+   "micro_steps": 8,
+   "tokens": 31090,
+   "loss": 0.4455,
+   "lr": 6.666666666666667e-05,
+   "seconds": 4.06
+  },
+  {
+   "step": 15,
+   "micro_steps": 8,
+   "tokens": 28247,
+   "loss": 0.4334,
+   "lr": 7.142857142857143e-05,
+   "seconds": 2.37
+  },
+  {
+   "step": 16,
+   "micro_steps": 8,
+   "tokens": 29954,
+   "loss": 0.4292,
+   "lr": 7.61904761904762e-05,
+   "seconds": 3.08
+  },
+  {
+   "step": 17,
+   "micro_steps": 8,
+   "tokens": 25492,
+   "loss": 0.401,
+   "lr": 8.095238095238096e-05,
+   "seconds": 1.91
+  },
+  {
+   "step": 18,
+   "micro_steps": 8,
+   "tokens": 28390,
+   "loss": 0.4309,
+   "lr": 8.571428571428573e-05,
+   "seconds": 2.19
+  },
+  {
+   "step": 19,
+   "micro_steps": 8,
+   "tokens": 29094,
+   "loss": 0.4422,
+   "lr": 9.047619047619048e-05,
+   "seconds": 1.66
+  },
+  {
+   "step": 20,
+   "micro_steps": 8,
+   "tokens": 25471,
+   "loss": 0.4165,
+   "lr": 9.523809523809524e-05,
+   "seconds": 1.58
+  },
+  {
+   "step": 21,
+   "micro_steps": 8,
+   "tokens": 30633,
+   "loss": 0.4247,
+   "lr": 0.00010000000000000002,
+   "seconds": 1.93
+  },
+  {
+   "step": 22,
+   "micro_steps": 8,
+   "tokens": 31271,
+   "loss": 0.404,
+   "lr": 0.0001,
+   "seconds": 2.02
+  },
+  {
+   "step": 23,
+   "micro_steps": 8,
+   "tokens": 29393,
+   "loss": 0.4164,
+   "lr": 9.999845014267928e-05,
+   "seconds": 2.93
+  },
+  {
+   "step": 24,
+   "micro_steps": 8,
+   "tokens": 27655,
+   "loss": 0.3986,
+   "lr": 9.999380066679942e-05,
+   "seconds": 2.5
+  },
+  {
+   "step": 25,
+   "micro_steps": 8,
+   "tokens": 27565,
+   "loss": 0.4046,
+   "lr": 9.998605186060137e-05,
+   "seconds": 2.31
+  },
+  {
+   "step": 26,
+   "micro_steps": 8,
+   "tokens": 35196,
+   "loss": 0.3953,
+   "lr": 9.997520420446694e-05,
+   "seconds": 4.12
+  },
+  {
+   "step": 27,
+   "micro_steps": 8,
+   "tokens": 27861,
+   "loss": 0.3476,
+   "lr": 9.996125837088884e-05,
+   "seconds": 1.65
+  },
+  {
+   "step": 28,
+   "micro_steps": 8,
+   "tokens": 36962,
+   "loss": 0.4004,
+   "lr": 9.99442152244292e-05,
+   "seconds": 2.07
+  },
+  {
+   "step": 29,
+   "micro_steps": 8,
+   "tokens": 22622,
+   "loss": 0.3665,
+   "lr": 9.992407582166581e-05,
+   "seconds": 1.39
+  },
+  {
+   "step": 30,
+   "micro_steps": 8,
+   "tokens": 29696,
+   "loss": 0.3836,
+   "lr": 9.990084141112673e-05,
+   "seconds": 2.6
+  },
+  {
+   "step": 31,
+   "micro_steps": 8,
+   "tokens": 26086,
+   "loss": 0.427,
+   "lr": 9.987451343321279e-05,
+   "seconds": 1.76
+  },
+  {
+   "step": 32,
+   "micro_steps": 8,
+   "tokens": 31239,
+   "loss": 0.399,
+   "lr": 9.984509352010838e-05,
+   "seconds": 1.47
+  },
+  {
+   "step": 33,
+   "micro_steps": 8,
+   "tokens": 26043,
+   "loss": 0.3571,
+   "lr": 9.981258349568018e-05,
+   "seconds": 2.02
+  },
+  {
+   "step": 34,
+   "micro_steps": 8,
+   "tokens": 26619,
+   "loss": 0.3728,
+   "lr": 9.977698537536419e-05,
+   "seconds": 1.83
+  },
+  {
+   "step": 35,
+   "micro_steps": 8,
+   "tokens": 25780,
+   "loss": 0.3347,
+   "lr": 9.973830136604067e-05,
+   "seconds": 2.1
+  },
+  {
+   "step": 36,
+   "micro_steps": 8,
+   "tokens": 30471,
+   "loss": 0.3605,
+   "lr": 9.969653386589748e-05,
+   "seconds": 2.35
+  },
+  {
+   "step": 37,
+   "micro_steps": 8,
+   "tokens": 28637,
+   "loss": 0.3817,
+   "lr": 9.965168546428121e-05,
+   "seconds": 3.16
+  },
+  {
+   "step": 38,
+   "micro_steps": 8,
+   "tokens": 28967,
+   "loss": 0.3506,
+   "lr": 9.96037589415368e-05,
+   "seconds": 1.3
+  },
+  {
+   "step": 39,
+   "micro_steps": 8,
+   "tokens": 27009,
+   "loss": 0.331,
+   "lr": 9.955275726883517e-05,
+   "seconds": 1.52
+  },
+  {
+   "step": 40,
+   "micro_steps": 8,
+   "tokens": 24905,
+   "loss": 0.3884,
+   "lr": 9.949868360798893e-05,
+   "seconds": 1.58
+  },
+  {
+   "step": 41,
+   "micro_steps": 8,
+   "tokens": 25331,
+   "loss": 0.3764,
+   "lr": 9.944154131125642e-05,
+   "seconds": 1.53
+  },
+  {
+   "step": 42,
+   "micro_steps": 8,
+   "tokens": 27255,
+   "loss": 0.3557,
+   "lr": 9.938133392113398e-05,
+   "seconds": 2.49
+  },
+  {
+   "step": 43,
+   "micro_steps": 8,
+   "tokens": 24990,
+   "loss": 0.3804,
+   "lr": 9.931806517013612e-05,
+   "seconds": 2.03
+  },
+  {
+   "step": 44,
+   "micro_steps": 8,
+   "tokens": 26920,
+   "loss": 0.3271,
+   "lr": 9.925173898056435e-05,
+   "seconds": 2.54
+  },
+  {
+   "step": 45,
+   "micro_steps": 8,
+   "tokens": 28428,
+   "loss": 0.3947,
+   "lr": 9.918235946426388e-05,
+   "seconds": 2.3
+  },
+  {
+   "step": 46,
+   "micro_steps": 8,
+   "tokens": 23891,
+   "loss": 0.3341,
+   "lr": 9.910993092236878e-05,
+   "seconds": 2.24
+  },
+  {
+   "step": 47,
+   "micro_steps": 8,
+   "tokens": 34862,
+   "loss": 0.3621,
+   "lr": 9.903445784503524e-05,
+   "seconds": 2.21
+  },
+  {
+   "step": 48,
+   "micro_steps": 8,
+   "tokens": 27725,
+   "loss": 0.3744,
+   "lr": 9.895594491116336e-05,
+   "seconds": 1.62
+  },
+  {
+   "step": 49,
+   "micro_steps": 8,
+   "tokens": 27291,
+   "loss": 0.4071,
+   "lr": 9.887439698810693e-05,
+   "seconds": 2.06
+  },
+  {
+   "step": 50,
+   "micro_steps": 8,
+   "tokens": 24548,
+   "loss": 0.3652,
+   "lr": 9.878981913137179e-05,
+   "seconds": 1.74
+  },
+  {
+   "step": 51,
+   "micro_steps": 8,
+   "tokens": 29156,
+   "loss": 0.3616,
+   "lr": 9.870221658430234e-05,
+   "seconds": 2.21
+  },
+  {
+   "step": 52,
+   "micro_steps": 8,
+   "tokens": 25504,
+   "loss": 0.3281,
+   "lr": 9.861159477775653e-05,
+   "seconds": 2.49
+  },
+  {
+   "step": 53,
+   "micro_steps": 8,
+   "tokens": 28496,
+   "loss": 0.3232,
+   "lr": 9.85179593297692e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 54,
+   "micro_steps": 8,
+   "tokens": 28733,
+   "loss": 0.3606,
+   "lr": 9.84213160452037e-05,
+   "seconds": 1.97
+  },
+  {
+   "step": 55,
+   "micro_steps": 8,
+   "tokens": 26789,
+   "loss": 0.335,
+   "lr": 9.832167091539214e-05,
+   "seconds": 2.18
+  },
+  {
+   "step": 56,
+   "micro_steps": 8,
+   "tokens": 27288,
+   "loss": 0.375,
+   "lr": 9.821903011776385e-05,
+   "seconds": 2.14
+  },
+  {
+   "step": 57,
+   "micro_steps": 8,
+   "tokens": 32111,
+   "loss": 0.3965,
+   "lr": 9.811340001546251e-05,
+   "seconds": 1.99
+  },
+  {
+   "step": 58,
+   "micro_steps": 8,
+   "tokens": 32564,
+   "loss": 0.3332,
+   "lr": 9.800478715695163e-05,
+   "seconds": 2.09
+  },
+  {
+   "step": 59,
+   "micro_steps": 8,
+   "tokens": 29893,
+   "loss": 0.3456,
+   "lr": 9.789319827560854e-05,
+   "seconds": 1.79
+  },
+  {
+   "step": 60,
+   "micro_steps": 8,
+   "tokens": 31329,
+   "loss": 0.3881,
+   "lr": 9.777864028930705e-05,
+   "seconds": 1.12
+  },
+  {
+   "step": 61,
+   "micro_steps": 8,
+   "tokens": 34090,
+   "loss": 0.3664,
+   "lr": 9.766112029998846e-05,
+   "seconds": 2.82
+  },
+  {
+   "step": 62,
+   "micro_steps": 8,
+   "tokens": 29474,
+   "loss": 0.3595,
+   "lr": 9.754064559322146e-05,
+   "seconds": 1.79
+  },
+  {
+   "step": 63,
+   "micro_steps": 8,
+   "tokens": 28565,
+   "loss": 0.3972,
+   "lr": 9.741722363775028e-05,
+   "seconds": 2.59
+  },
+  {
+   "step": 64,
+   "micro_steps": 8,
+   "tokens": 27053,
+   "loss": 0.3475,
+   "lr": 9.729086208503174e-05,
+   "seconds": 2.05
+  },
+  {
+   "step": 65,
+   "micro_steps": 8,
+   "tokens": 30599,
+   "loss": 0.3752,
+   "lr": 9.716156876876097e-05,
+   "seconds": 2.21
+  },
+  {
+   "step": 66,
+   "micro_steps": 8,
+   "tokens": 30278,
+   "loss": 0.3461,
+   "lr": 9.702935170438569e-05,
+   "seconds": 1.83
+  },
+  {
+   "step": 67,
+   "micro_steps": 8,
+   "tokens": 30339,
+   "loss": 0.3772,
+   "lr": 9.689421908860927e-05,
+   "seconds": 1.56
+  },
+  {
+   "step": 68,
+   "micro_steps": 8,
+   "tokens": 30296,
+   "loss": 0.3768,
+   "lr": 9.67561792988827e-05,
+   "seconds": 3.41
+  },
+  {
+   "step": 69,
+   "micro_steps": 8,
+   "tokens": 28207,
+   "loss": 0.3737,
+   "lr": 9.661524089288509e-05,
+   "seconds": 1.93
+  },
+  {
+   "step": 70,
+   "micro_steps": 8,
+   "tokens": 26178,
+   "loss": 0.3272,
+   "lr": 9.64714126079933e-05,
+   "seconds": 1.67
+  },
+  {
+   "step": 71,
+   "micro_steps": 8,
+   "tokens": 27478,
+   "loss": 0.3422,
+   "lr": 9.632470336074009e-05,
+   "seconds": 1.48
+  },
+  {
+   "step": 72,
+   "micro_steps": 8,
+   "tokens": 26310,
+   "loss": 0.3496,
+   "lr": 9.617512224626153e-05,
+   "seconds": 1.7
+  },
+  {
+   "step": 73,
+   "micro_steps": 8,
+   "tokens": 27575,
+   "loss": 0.3734,
+   "lr": 9.602267853773301e-05,
+   "seconds": 1.38
+  },
+  {
+   "step": 74,
+   "micro_steps": 8,
+   "tokens": 24703,
+   "loss": 0.3438,
+   "lr": 9.586738168579446e-05,
+   "seconds": 1.61
+  },
+  {
+   "step": 75,
+   "micro_steps": 8,
+   "tokens": 27562,
+   "loss": 0.3336,
+   "lr": 9.570924131796436e-05,
+   "seconds": 1.85
+  },
+  {
+   "step": 76,
+   "micro_steps": 8,
+   "tokens": 28001,
+   "loss": 0.3551,
+   "lr": 9.554826723804303e-05,
+   "seconds": 3.35
+  },
+  {
+   "step": 77,
+   "micro_steps": 8,
+   "tokens": 26713,
+   "loss": 0.3725,
+   "lr": 9.538446942550469e-05,
+   "seconds": 1.96
+  },
+  {
+   "step": 78,
+   "micro_steps": 8,
+   "tokens": 27637,
+   "loss": 0.3859,
+   "lr": 9.521785803487889e-05,
+   "seconds": 2.11
+  },
+  {
+   "step": 79,
+   "micro_steps": 8,
+   "tokens": 24931,
+   "loss": 0.3378,
+   "lr": 9.504844339512095e-05,
+   "seconds": 2.19
+  },
+  {
+   "step": 80,
+   "micro_steps": 8,
+   "tokens": 27013,
+   "loss": 0.3399,
+   "lr": 9.48762360089717e-05,
+   "seconds": 2.13
+  },
+  {
+   "step": 81,
+   "micro_steps": 8,
+   "tokens": 27582,
+   "loss": 0.3404,
+   "lr": 9.470124655230627e-05,
+   "seconds": 2.51
+  },
+  {
+   "step": 82,
+   "micro_steps": 8,
+   "tokens": 29354,
+   "loss": 0.3421,
+   "lr": 9.452348587347224e-05,
+   "seconds": 2.11
+  },
+  {
+   "step": 83,
+   "micro_steps": 8,
+   "tokens": 26531,
+   "loss": 0.3677,
+   "lr": 9.434296499261719e-05,
+   "seconds": 1.76
+  },
+  {
+   "step": 84,
+   "micro_steps": 8,
+   "tokens": 27539,
+   "loss": 0.3589,
+   "lr": 9.415969510100549e-05,
+   "seconds": 1.74
+  },
+  {
+   "step": 85,
+   "micro_steps": 8,
+   "tokens": 29332,
+   "loss": 0.3508,
+   "lr": 9.397368756032445e-05,
+   "seconds": 3.92
+  },
+  {
+   "step": 86,
+   "micro_steps": 8,
+   "tokens": 25426,
+   "loss": 0.3383,
+   "lr": 9.378495390198004e-05,
+   "seconds": 1.63
+  },
+  {
+   "step": 87,
+   "micro_steps": 8,
+   "tokens": 28124,
+   "loss": 0.3715,
+   "lr": 9.359350582638192e-05,
+   "seconds": 1.79
+  },
+  {
+   "step": 88,
+   "micro_steps": 8,
+   "tokens": 25593,
+   "loss": 0.3283,
+   "lr": 9.339935520221816e-05,
+   "seconds": 2.2
+  },
+  {
+   "step": 89,
+   "micro_steps": 8,
+   "tokens": 26623,
+   "loss": 0.3631,
+   "lr": 9.32025140657194e-05,
+   "seconds": 1.92
+  },
+  {
+   "step": 90,
+   "micro_steps": 8,
+   "tokens": 28516,
+   "loss": 0.3461,
+   "lr": 9.300299461991269e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 91,
+   "micro_steps": 8,
+   "tokens": 25523,
+   "loss": 0.3599,
+   "lr": 9.280080923386501e-05,
+   "seconds": 1.82
+  },
+  {
+   "step": 92,
+   "micro_steps": 8,
+   "tokens": 28814,
+   "loss": 0.3565,
+   "lr": 9.259597044191636e-05,
+   "seconds": 1.47
+  },
+  {
+   "step": 93,
+   "micro_steps": 8,
+   "tokens": 29979,
+   "loss": 0.3514,
+   "lr": 9.23884909429028e-05,
+   "seconds": 2.07
+  },
+  {
+   "step": 94,
+   "micro_steps": 8,
+   "tokens": 23880,
+   "loss": 0.3206,
+   "lr": 9.217838359936914e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 95,
+   "micro_steps": 8,
+   "tokens": 28456,
+   "loss": 0.3662,
+   "lr": 9.196566143677157e-05,
+   "seconds": 1.9
+  },
+  {
+   "step": 96,
+   "micro_steps": 8,
+   "tokens": 34161,
+   "loss": 0.3558,
+   "lr": 9.175033764267012e-05,
+   "seconds": 2.44
+  },
+  {
+   "step": 97,
+   "micro_steps": 8,
+   "tokens": 32044,
+   "loss": 0.3694,
+   "lr": 9.153242556591116e-05,
+   "seconds": 2.08
+  },
+  {
+   "step": 98,
+   "micro_steps": 8,
+   "tokens": 26953,
+   "loss": 0.3681,
+   "lr": 9.131193871579975e-05,
+   "seconds": 1.39
+  },
+  {
+   "step": 99,
+   "micro_steps": 8,
+   "tokens": 29425,
+   "loss": 0.3626,
+   "lr": 9.108889076126226e-05,
+   "seconds": 1.86
+  },
+  {
+   "step": 100,
+   "micro_steps": 8,
+   "tokens": 27356,
+   "loss": 0.3417,
+   "lr": 9.086329552999891e-05,
+   "seconds": 1.0
+  },
+  {
+   "step": 101,
+   "micro_steps": 8,
+   "tokens": 32808,
+   "loss": 0.3776,
+   "lr": 9.063516700762651e-05,
+   "seconds": 2.27
+  },
+  {
+   "step": 102,
+   "micro_steps": 8,
+   "tokens": 26728,
+   "loss": 0.3634,
+   "lr": 9.040451933681148e-05,
+   "seconds": 1.46
+  },
+  {
+   "step": 103,
+   "micro_steps": 8,
+   "tokens": 22277,
+   "loss": 0.2985,
+   "lr": 9.017136681639307e-05,
+   "seconds": 1.56
+  },
+  {
+   "step": 104,
+   "micro_steps": 8,
+   "tokens": 27107,
+   "loss": 0.3631,
+   "lr": 8.993572390049689e-05,
+   "seconds": 2.1
+  },
+  {
+   "step": 105,
+   "micro_steps": 8,
+   "tokens": 22364,
+   "loss": 0.3287,
+   "lr": 8.969760519763892e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 106,
+   "micro_steps": 8,
+   "tokens": 27448,
+   "loss": 0.3482,
+   "lr": 8.945702546981969e-05,
+   "seconds": 1.7
+  },
+  {
+   "step": 107,
+   "micro_steps": 8,
+   "tokens": 25217,
+   "loss": 0.3518,
+   "lr": 8.921399963160933e-05,
+   "seconds": 1.34
+  },
+  {
+   "step": 108,
+   "micro_steps": 8,
+   "tokens": 31526,
+   "loss": 0.3611,
+   "lr": 8.896854274922281e-05,
+   "seconds": 2.39
+  },
+  {
+   "step": 109,
+   "micro_steps": 8,
+   "tokens": 29324,
+   "loss": 0.3272,
+   "lr": 8.872067003958598e-05,
+   "seconds": 2.38
+  },
+  {
+   "step": 110,
+   "micro_steps": 8,
+   "tokens": 25111,
+   "loss": 0.3223,
+   "lr": 8.847039686939217e-05,
+   "seconds": 1.96
+  },
+  {
+   "step": 111,
+   "micro_steps": 8,
+   "tokens": 33831,
+   "loss": 0.3363,
+   "lr": 8.821773875414961e-05,
+   "seconds": 1.52
+  },
+  {
+   "step": 112,
+   "micro_steps": 8,
+   "tokens": 27243,
+   "loss": 0.3523,
+   "lr": 8.796271135721944e-05,
+   "seconds": 2.06
+  },
+  {
+   "step": 113,
+   "micro_steps": 8,
+   "tokens": 24678,
+   "loss": 0.3435,
+   "lr": 8.770533048884482e-05,
+   "seconds": 1.43
+  },
+  {
+   "step": 114,
+   "micro_steps": 8,
+   "tokens": 30905,
+   "loss": 0.3941,
+   "lr": 8.744561210517065e-05,
+   "seconds": 1.97
+  },
+  {
+   "step": 115,
+   "micro_steps": 8,
+   "tokens": 24453,
+   "loss": 0.3668,
+   "lr": 8.718357230725449e-05,
+   "seconds": 1.45
+  },
+  {
+   "step": 116,
+   "micro_steps": 8,
+   "tokens": 29294,
+   "loss": 0.3408,
+   "lr": 8.691922734006828e-05,
+   "seconds": 1.84
+  },
+  {
+   "step": 117,
+   "micro_steps": 8,
+   "tokens": 35050,
+   "loss": 0.3421,
+   "lr": 8.665259359149132e-05,
+   "seconds": 2.44
+  },
+  {
+   "step": 118,
+   "micro_steps": 8,
+   "tokens": 22739,
+   "loss": 0.3253,
+   "lr": 8.638368759129432e-05,
+   "seconds": 1.72
+  },
+  {
+   "step": 119,
+   "micro_steps": 8,
+   "tokens": 33349,
+   "loss": 0.3888,
+   "lr": 8.611252601011457e-05,
+   "seconds": 2.19
+  },
+  {
+   "step": 120,
+   "micro_steps": 8,
+   "tokens": 30509,
+   "loss": 0.3817,
+   "lr": 8.583912565842257e-05,
+   "seconds": 2.71
+  },
+  {
+   "step": 121,
+   "micro_steps": 8,
+   "tokens": 33074,
+   "loss": 0.3435,
+   "lr": 8.556350348547977e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 122,
+   "micro_steps": 8,
+   "tokens": 32044,
+   "loss": 0.3486,
+   "lr": 8.528567657828784e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 123,
+   "micro_steps": 8,
+   "tokens": 24931,
+   "loss": 0.3564,
+   "lr": 8.500566216052948e-05,
+   "seconds": 1.57
+  },
+  {
+   "step": 124,
+   "micro_steps": 8,
+   "tokens": 25610,
+   "loss": 0.3499,
+   "lr": 8.472347759150043e-05,
+   "seconds": 2.5
+  },
+  {
+   "step": 125,
+   "micro_steps": 8,
+   "tokens": 27670,
+   "loss": 0.3518,
+   "lr": 8.443914036503357e-05,
+   "seconds": 2.84
+  },
+  {
+   "step": 126,
+   "micro_steps": 8,
+   "tokens": 25450,
+   "loss": 0.3876,
+   "lr": 8.415266810841411e-05,
+   "seconds": 1.87
+  },
+  {
+   "step": 127,
+   "micro_steps": 8,
+   "tokens": 26306,
+   "loss": 0.3803,
+   "lr": 8.386407858128706e-05,
+   "seconds": 1.91
+  },
+  {
+   "step": 128,
+   "micro_steps": 8,
+   "tokens": 28438,
+   "loss": 0.32,
+   "lr": 8.357338967455606e-05,
+   "seconds": 1.77
+  },
+  {
+   "step": 129,
+   "micro_steps": 8,
+   "tokens": 26184,
+   "loss": 0.3484,
+   "lr": 8.32806194092743e-05,
+   "seconds": 2.31
+  },
+  {
+   "step": 130,
+   "micro_steps": 8,
+   "tokens": 30105,
+   "loss": 0.3698,
+   "lr": 8.298578593552737e-05,
+   "seconds": 2.53
+  },
+  {
+   "step": 131,
+   "micro_steps": 8,
+   "tokens": 27546,
+   "loss": 0.3164,
+   "lr": 8.268890753130793e-05,
+   "seconds": 1.37
+  },
+  {
+   "step": 132,
+   "micro_steps": 8,
+   "tokens": 22793,
+   "loss": 0.3449,
+   "lr": 8.239000260138276e-05,
+   "seconds": 1.61
+  },
+  {
+   "step": 133,
+   "micro_steps": 8,
+   "tokens": 29787,
+   "loss": 0.362,
+   "lr": 8.208908967615159e-05,
+   "seconds": 1.76
+  },
+  {
+   "step": 134,
+   "micro_steps": 8,
+   "tokens": 31610,
+   "loss": 0.3804,
+   "lr": 8.178618741049842e-05,
+   "seconds": 2.54
+  },
+  {
+   "step": 135,
+   "micro_steps": 8,
+   "tokens": 26225,
+   "loss": 0.3543,
+   "lr": 8.148131458263498e-05,
+   "seconds": 1.79
+  },
+  {
+   "step": 136,
+   "micro_steps": 8,
+   "tokens": 25061,
+   "loss": 0.3392,
+   "lr": 8.117449009293668e-05,
+   "seconds": 1.11
+  },
+  {
+   "step": 137,
+   "micro_steps": 8,
+   "tokens": 26571,
+   "loss": 0.3653,
+   "lr": 8.086573296277076e-05,
+   "seconds": 2.18
+  },
+  {
+   "step": 138,
+   "micro_steps": 8,
+   "tokens": 28398,
+   "loss": 0.386,
+   "lr": 8.055506233331718e-05,
+   "seconds": 2.0
+  },
+  {
+   "step": 139,
+   "micro_steps": 8,
+   "tokens": 22145,
+   "loss": 0.3387,
+   "lr": 8.024249746438188e-05,
+   "seconds": 1.47
+  },
+  {
+   "step": 140,
+   "micro_steps": 8,
+   "tokens": 31140,
+   "loss": 0.3491,
+   "lr": 7.992805773320291e-05,
+   "seconds": 2.26
+  },
+  {
+   "step": 141,
+   "micro_steps": 8,
+   "tokens": 25347,
+   "loss": 0.3671,
+   "lr": 7.961176263324901e-05,
+   "seconds": 1.47
+  },
+  {
+   "step": 142,
+   "micro_steps": 8,
+   "tokens": 25791,
+   "loss": 0.3637,
+   "lr": 7.929363177301124e-05,
+   "seconds": 1.56
+  },
+  {
+   "step": 143,
+   "micro_steps": 8,
+   "tokens": 25345,
+   "loss": 0.3314,
+   "lr": 7.897368487478733e-05,
+   "seconds": 1.7
+  },
+  {
+   "step": 144,
+   "micro_steps": 8,
+   "tokens": 28734,
+   "loss": 0.3667,
+   "lr": 7.865194177345893e-05,
+   "seconds": 2.51
+  },
+  {
+   "step": 145,
+   "micro_steps": 8,
+   "tokens": 25912,
+   "loss": 0.351,
+   "lr": 7.832842241526212e-05,
+   "seconds": 1.52
+  },
+  {
+   "step": 146,
+   "micro_steps": 8,
+   "tokens": 34554,
+   "loss": 0.3951,
+   "lr": 7.800314685655073e-05,
+   "seconds": 2.05
+  },
+  {
+   "step": 147,
+   "micro_steps": 8,
+   "tokens": 29614,
+   "loss": 0.3544,
+   "lr": 7.767613526255296e-05,
+   "seconds": 1.58
+  },
+  {
+   "step": 148,
+   "micro_steps": 8,
+   "tokens": 28616,
+   "loss": 0.3403,
+   "lr": 7.734740790612136e-05,
+   "seconds": 2.13
+  },
+  {
+   "step": 149,
+   "micro_steps": 8,
+   "tokens": 30745,
+   "loss": 0.3748,
+   "lr": 7.70169851664759e-05,
+   "seconds": 1.7
+  },
+  {
+   "step": 150,
+   "micro_steps": 8,
+   "tokens": 30991,
+   "loss": 0.35,
+   "lr": 7.668488752794068e-05,
+   "seconds": 1.26
+  },
+  {
+   "step": 151,
+   "micro_steps": 8,
+   "tokens": 28529,
+   "loss": 0.3729,
+   "lr": 7.635113557867395e-05,
+   "seconds": 2.06
+  },
+  {
+   "step": 152,
+   "micro_steps": 8,
+   "tokens": 27314,
+   "loss": 0.3689,
+   "lr": 7.601575000939177e-05,
+   "seconds": 2.19
+  },
+  {
+   "step": 153,
+   "micro_steps": 8,
+   "tokens": 29215,
+   "loss": 0.3489,
+   "lr": 7.567875161208534e-05,
+   "seconds": 1.44
+  },
+  {
+   "step": 154,
+   "micro_steps": 8,
+   "tokens": 26338,
+   "loss": 0.3307,
+   "lr": 7.534016127873201e-05,
+   "seconds": 1.4
+  },
+  {
+   "step": 155,
+   "micro_steps": 8,
+   "tokens": 28988,
+   "loss": 0.3324,
+   "lr": 7.500000000000001e-05,
+   "seconds": 2.16
+  },
+  {
+   "step": 156,
+   "micro_steps": 8,
+   "tokens": 28011,
+   "loss": 0.3614,
+   "lr": 7.465828886394729e-05,
+   "seconds": 2.68
+  },
+  {
+   "step": 157,
+   "micro_steps": 8,
+   "tokens": 29970,
+   "loss": 0.3392,
+   "lr": 7.431504905471408e-05,
+   "seconds": 2.3
+  },
+  {
+   "step": 158,
+   "micro_steps": 8,
+   "tokens": 26355,
+   "loss": 0.3409,
+   "lr": 7.397030185120961e-05,
+   "seconds": 1.51
+  },
+  {
+   "step": 159,
+   "micro_steps": 8,
+   "tokens": 25797,
+   "loss": 0.3251,
+   "lr": 7.362406862579298e-05,
+   "seconds": 1.33
+  },
+  {
+   "step": 160,
+   "micro_steps": 8,
+   "tokens": 28006,
+   "loss": 0.3562,
+   "lr": 7.327637084294817e-05,
+   "seconds": 3.15
+  },
+  {
+   "step": 161,
+   "micro_steps": 8,
+   "tokens": 27180,
+   "loss": 0.2987,
+   "lr": 7.29272300579533e-05,
+   "seconds": 2.3
+  },
+  {
+   "step": 162,
+   "micro_steps": 8,
+   "tokens": 30860,
+   "loss": 0.3459,
+   "lr": 7.257666791554448e-05,
+   "seconds": 2.22
+  },
+  {
+   "step": 163,
+   "micro_steps": 8,
+   "tokens": 27168,
+   "loss": 0.3344,
+   "lr": 7.22247061485738e-05,
+   "seconds": 2.17
+  },
+  {
+   "step": 164,
+   "micro_steps": 8,
+   "tokens": 29642,
+   "loss": 0.379,
+   "lr": 7.187136657666208e-05,
+   "seconds": 1.68
+  },
+  {
+   "step": 165,
+   "micro_steps": 8,
+   "tokens": 30736,
+   "loss": 0.3377,
+   "lr": 7.151667110484625e-05,
+   "seconds": 2.32
+  },
+  {
+   "step": 166,
+   "micro_steps": 8,
+   "tokens": 25194,
+   "loss": 0.3446,
+   "lr": 7.116064172222125e-05,
+   "seconds": 1.83
+  },
+  {
+   "step": 167,
+   "micro_steps": 8,
+   "tokens": 28235,
+   "loss": 0.345,
+   "lr": 7.080330050057688e-05,
+   "seconds": 1.54
+  },
+  {
+   "step": 168,
+   "micro_steps": 8,
+   "tokens": 24274,
+   "loss": 0.3518,
+   "lr": 7.044466959302944e-05,
+   "seconds": 1.45
+  },
+  {
+   "step": 169,
+   "micro_steps": 8,
+   "tokens": 28324,
+   "loss": 0.3294,
+   "lr": 7.008477123264848e-05,
+   "seconds": 1.75
+  },
+  {
+   "step": 170,
+   "micro_steps": 8,
+   "tokens": 23762,
+   "loss": 0.3241,
+   "lr": 6.972362773107832e-05,
+   "seconds": 1.49
+  },
+  {
+   "step": 171,
+   "micro_steps": 8,
+   "tokens": 25829,
+   "loss": 0.3373,
+   "lr": 6.936126147715494e-05,
+   "seconds": 2.26
+  },
+  {
+   "step": 172,
+   "micro_steps": 8,
+   "tokens": 29524,
+   "loss": 0.3154,
+   "lr": 6.8997694935518e-05,
+   "seconds": 2.67
+  },
+  {
+   "step": 173,
+   "micro_steps": 8,
+   "tokens": 30320,
+   "loss": 0.3469,
+   "lr": 6.863295064521816e-05,
+   "seconds": 3.34
+  },
+  {
+   "step": 174,
+   "micro_steps": 8,
+   "tokens": 24569,
+   "loss": 0.3618,
+   "lr": 6.826705121831976e-05,
+   "seconds": 2.07
+  },
+  {
+   "step": 175,
+   "micro_steps": 8,
+   "tokens": 27533,
+   "loss": 0.3659,
+   "lr": 6.790001933849899e-05,
+   "seconds": 2.09
+  },
+  {
+   "step": 176,
+   "micro_steps": 8,
+   "tokens": 31061,
+   "loss": 0.3523,
+   "lr": 6.753187775963773e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 177,
+   "micro_steps": 8,
+   "tokens": 23993,
+   "loss": 0.3193,
+   "lr": 6.716264930441279e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 178,
+   "micro_steps": 8,
+   "tokens": 30290,
+   "loss": 0.3576,
+   "lr": 6.679235686288114e-05,
+   "seconds": 2.65
+  },
+  {
+   "step": 179,
+   "micro_steps": 8,
+   "tokens": 30717,
+   "loss": 0.3659,
+   "lr": 6.642102339106084e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 180,
+   "micro_steps": 8,
+   "tokens": 28521,
+   "loss": 0.3378,
+   "lr": 6.604867190950789e-05,
+   "seconds": 1.66
+  },
+  {
+   "step": 181,
+   "micro_steps": 8,
+   "tokens": 31464,
+   "loss": 0.3584,
+   "lr": 6.567532550188907e-05,
+   "seconds": 4.15
+  },
+  {
+   "step": 182,
+   "micro_steps": 8,
+   "tokens": 26911,
+   "loss": 0.3574,
+   "lr": 6.530100731355089e-05,
+   "seconds": 2.24
+  },
+  {
+   "step": 183,
+   "micro_steps": 8,
+   "tokens": 28670,
+   "loss": 0.3325,
+   "lr": 6.492574055008473e-05,
+   "seconds": 2.56
+  },
+  {
+   "step": 184,
+   "micro_steps": 8,
+   "tokens": 37556,
+   "loss": 0.3281,
+   "lr": 6.454954847588824e-05,
+   "seconds": 1.38
+  },
+  {
+   "step": 185,
+   "micro_steps": 8,
+   "tokens": 33701,
+   "loss": 0.3734,
+   "lr": 6.4172454412723e-05,
+   "seconds": 2.27
+  },
+  {
+   "step": 186,
+   "micro_steps": 8,
+   "tokens": 29144,
+   "loss": 0.3385,
+   "lr": 6.379448173826876e-05,
+   "seconds": 1.98
+  },
+  {
+   "step": 187,
+   "micro_steps": 8,
+   "tokens": 29935,
+   "loss": 0.347,
+   "lr": 6.341565388467425e-05,
+   "seconds": 1.47
+  },
+  {
+   "step": 188,
+   "micro_steps": 8,
+   "tokens": 29091,
+   "loss": 0.3546,
+   "lr": 6.30359943371043e-05,
+   "seconds": 1.55
+  },
+  {
+   "step": 189,
+   "micro_steps": 8,
+   "tokens": 26250,
+   "loss": 0.3567,
+   "lr": 6.26555266322841e-05,
+   "seconds": 2.05
+  },
+  {
+   "step": 190,
+   "micro_steps": 8,
+   "tokens": 27224,
+   "loss": 0.3494,
+   "lr": 6.227427435703997e-05,
+   "seconds": 1.77
+  },
+  {
+   "step": 191,
+   "micro_steps": 8,
+   "tokens": 36468,
+   "loss": 0.363,
+   "lr": 6.189226114683708e-05,
+   "seconds": 3.1
+  },
+  {
+   "step": 192,
+   "micro_steps": 8,
+   "tokens": 25005,
+   "loss": 0.305,
+   "lr": 6.150951068431424e-05,
+   "seconds": 1.9
+  },
+  {
+   "step": 193,
+   "micro_steps": 8,
+   "tokens": 27263,
+   "loss": 0.3219,
+   "lr": 6.112604669781572e-05,
+   "seconds": 1.57
+  },
+  {
+   "step": 194,
+   "micro_steps": 8,
+   "tokens": 27423,
+   "loss": 0.3608,
+   "lr": 6.07418929599202e-05,
+   "seconds": 1.89
+  },
+  {
+   "step": 195,
+   "micro_steps": 8,
+   "tokens": 24802,
+   "loss": 0.3117,
+   "lr": 6.035707328596698e-05,
+   "seconds": 2.3
+  },
+  {
+   "step": 196,
+   "micro_steps": 8,
+   "tokens": 32225,
+   "loss": 0.3482,
+   "lr": 5.997161153257963e-05,
+   "seconds": 2.46
+  },
+  {
+   "step": 197,
+   "micro_steps": 8,
+   "tokens": 25663,
+   "loss": 0.3324,
+   "lr": 5.958553159618693e-05,
+   "seconds": 2.47
+  },
+  {
+   "step": 198,
+   "micro_steps": 8,
+   "tokens": 24871,
+   "loss": 0.3491,
+   "lr": 5.9198857411541544e-05,
+   "seconds": 2.12
+  },
+  {
+   "step": 199,
+   "micro_steps": 8,
+   "tokens": 30161,
+   "loss": 0.3305,
+   "lr": 5.8811612950236096e-05,
+   "seconds": 2.12
+  },
+  {
+   "step": 200,
+   "micro_steps": 8,
+   "tokens": 24579,
+   "loss": 0.3537,
+   "lr": 5.842382221921711e-05,
+   "seconds": 1.87
+  },
+  {
+   "step": 201,
+   "micro_steps": 8,
+   "tokens": 28894,
+   "loss": 0.3683,
+   "lr": 5.803550925929673e-05,
+   "seconds": 1.34
+  },
+  {
+   "step": 202,
+   "micro_steps": 8,
+   "tokens": 22203,
+   "loss": 0.2823,
+   "lr": 5.76466981436623e-05,
+   "seconds": 2.11
+  },
+  {
+   "step": 203,
+   "micro_steps": 8,
+   "tokens": 29485,
+   "loss": 0.358,
+   "lr": 5.7257412976383983e-05,
+   "seconds": 2.78
+  },
+  {
+   "step": 204,
+   "micro_steps": 8,
+   "tokens": 23277,
+   "loss": 0.3209,
+   "lr": 5.686767789092041e-05,
+   "seconds": 1.73
+  },
+  {
+   "step": 205,
+   "micro_steps": 8,
+   "tokens": 26042,
+   "loss": 0.3677,
+   "lr": 5.647751704862263e-05,
+   "seconds": 1.61
+  },
+  {
+   "step": 206,
+   "micro_steps": 8,
+   "tokens": 29163,
+   "loss": 0.3423,
+   "lr": 5.6086954637236135e-05,
+   "seconds": 1.75
+  },
+  {
+   "step": 207,
+   "micro_steps": 8,
+   "tokens": 31609,
+   "loss": 0.3481,
+   "lr": 5.56960148694014e-05,
+   "seconds": 1.45
+  },
+  {
+   "step": 208,
+   "micro_steps": 8,
+   "tokens": 30054,
+   "loss": 0.3264,
+   "lr": 5.5304721981152906e-05,
+   "seconds": 1.49
+  },
+  {
+   "step": 209,
+   "micro_steps": 8,
+   "tokens": 31767,
+   "loss": 0.3264,
+   "lr": 5.491310023041654e-05,
+   "seconds": 2.25
+  },
+  {
+   "step": 210,
+   "micro_steps": 8,
+   "tokens": 33427,
+   "loss": 0.3797,
+   "lr": 5.452117389550579e-05,
+   "seconds": 2.66
+  },
+  {
+   "step": 211,
+   "micro_steps": 8,
+   "tokens": 23625,
+   "loss": 0.3042,
+   "lr": 5.4128967273616625e-05,
+   "seconds": 1.76
+  },
+  {
+   "step": 212,
+   "micro_steps": 8,
+   "tokens": 30007,
+   "loss": 0.3488,
+   "lr": 5.373650467932122e-05,
+   "seconds": 1.31
+  },
+  {
+   "step": 213,
+   "micro_steps": 8,
+   "tokens": 27183,
+   "loss": 0.326,
+   "lr": 5.334381044306057e-05,
+   "seconds": 1.53
+  },
+  {
+   "step": 214,
+   "micro_steps": 8,
+   "tokens": 28264,
+   "loss": 0.3526,
+   "lr": 5.2950908909636146e-05,
+   "seconds": 1.36
+  },
+  {
+   "step": 215,
+   "micro_steps": 8,
+   "tokens": 27007,
+   "loss": 0.3573,
+   "lr": 5.2557824436700676e-05,
+   "seconds": 2.08
+  },
+  {
+   "step": 216,
+   "micro_steps": 8,
+   "tokens": 28511,
+   "loss": 0.351,
+   "lr": 5.2164581393248056e-05,
+   "seconds": 1.96
+  },
+  {
+   "step": 217,
+   "micro_steps": 8,
+   "tokens": 22188,
+   "loss": 0.323,
+   "lr": 5.1771204158102705e-05,
+   "seconds": 1.87
+  },
+  {
+   "step": 218,
+   "micro_steps": 8,
+   "tokens": 27707,
+   "loss": 0.3636,
+   "lr": 5.1377717118408105e-05,
+   "seconds": 1.91
+  },
+  {
+   "step": 219,
+   "micro_steps": 8,
+   "tokens": 29463,
+   "loss": 0.3129,
+   "lr": 5.0984144668115044e-05,
+   "seconds": 1.19
+  },
+  {
+   "step": 220,
+   "micro_steps": 8,
+   "tokens": 34989,
+   "loss": 0.3266,
+   "lr": 5.059051120646924e-05,
+   "seconds": 3.87
+  },
+  {
+   "step": 221,
+   "micro_steps": 8,
+   "tokens": 30432,
+   "loss": 0.3543,
+   "lr": 5.0196841136498776e-05,
+   "seconds": 2.25
+  },
+  {
+   "step": 222,
+   "micro_steps": 8,
+   "tokens": 24207,
+   "loss": 0.358,
+   "lr": 4.980315886350125e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 223,
+   "micro_steps": 8,
+   "tokens": 22943,
+   "loss": 0.3194,
+   "lr": 4.940948879353078e-05,
+   "seconds": 1.25
+  },
+  {
+   "step": 224,
+   "micro_steps": 8,
+   "tokens": 31090,
+   "loss": 0.3268,
+   "lr": 4.901585533188498e-05,
+   "seconds": 3.99
+  },
+  {
+   "step": 225,
+   "micro_steps": 8,
+   "tokens": 28247,
+   "loss": 0.3246,
+   "lr": 4.8622282881591906e-05,
+   "seconds": 2.34
+  },
+  {
+   "step": 226,
+   "micro_steps": 8,
+   "tokens": 29954,
+   "loss": 0.3419,
+   "lr": 4.822879584189731e-05,
+   "seconds": 2.95
+  },
+  {
+   "step": 227,
+   "micro_steps": 8,
+   "tokens": 25492,
+   "loss": 0.294,
+   "lr": 4.783541860675195e-05,
+   "seconds": 1.76
+  },
+  {
+   "step": 228,
+   "micro_steps": 8,
+   "tokens": 28390,
+   "loss": 0.3455,
+   "lr": 4.744217556329935e-05,
+   "seconds": 2.05
+  },
+  {
+   "step": 229,
+   "micro_steps": 8,
+   "tokens": 29094,
+   "loss": 0.3613,
+   "lr": 4.7049091090363865e-05,
+   "seconds": 1.5
+  },
+  {
+   "step": 230,
+   "micro_steps": 8,
+   "tokens": 25471,
+   "loss": 0.3392,
+   "lr": 4.665618955693944e-05,
+   "seconds": 1.73
+  },
+  {
+   "step": 231,
+   "micro_steps": 8,
+   "tokens": 30633,
+   "loss": 0.3422,
+   "lr": 4.626349532067879e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 232,
+   "micro_steps": 8,
+   "tokens": 31271,
+   "loss": 0.3246,
+   "lr": 4.5871032726383386e-05,
+   "seconds": 1.81
+  },
+  {
+   "step": 233,
+   "micro_steps": 8,
+   "tokens": 29393,
+   "loss": 0.338,
+   "lr": 4.547882610449422e-05,
+   "seconds": 2.77
+  },
+  {
+   "step": 234,
+   "micro_steps": 8,
+   "tokens": 27655,
+   "loss": 0.3328,
+   "lr": 4.508689976958348e-05,
+   "seconds": 2.39
+  },
+  {
+   "step": 235,
+   "micro_steps": 8,
+   "tokens": 27565,
+   "loss": 0.3408,
+   "lr": 4.4695278018847105e-05,
+   "seconds": 2.16
+  },
+  {
+   "step": 236,
+   "micro_steps": 8,
+   "tokens": 35196,
+   "loss": 0.3402,
+   "lr": 4.430398513059861e-05,
+   "seconds": 3.93
+  },
+  {
+   "step": 237,
+   "micro_steps": 8,
+   "tokens": 27861,
+   "loss": 0.3009,
+   "lr": 4.3913045362763883e-05,
+   "seconds": 1.63
+  },
+  {
+   "step": 238,
+   "micro_steps": 8,
+   "tokens": 36962,
+   "loss": 0.3515,
+   "lr": 4.352248295137739e-05,
+   "seconds": 1.92
+  },
+  {
+   "step": 239,
+   "micro_steps": 8,
+   "tokens": 22622,
+   "loss": 0.3166,
+   "lr": 4.3132322109079596e-05,
+   "seconds": 1.22
+  },
+  {
+   "step": 240,
+   "micro_steps": 8,
+   "tokens": 29696,
+   "loss": 0.3426,
+   "lr": 4.2742587023616035e-05,
+   "seconds": 2.45
+  },
+  {
+   "step": 241,
+   "micro_steps": 8,
+   "tokens": 26086,
+   "loss": 0.3745,
+   "lr": 4.23533018563377e-05,
+   "seconds": 1.62
+  },
+  {
+   "step": 242,
+   "micro_steps": 8,
+   "tokens": 31239,
+   "loss": 0.3417,
+   "lr": 4.196449074070329e-05,
+   "seconds": 1.32
+  },
+  {
+   "step": 243,
+   "micro_steps": 8,
+   "tokens": 26043,
+   "loss": 0.3098,
+   "lr": 4.1576177780782896e-05,
+   "seconds": 1.87
+  },
+  {
+   "step": 244,
+   "micro_steps": 8,
+   "tokens": 26619,
+   "loss": 0.3315,
+   "lr": 4.118838704976392e-05,
+   "seconds": 1.81
+  },
+  {
+   "step": 245,
+   "micro_steps": 8,
+   "tokens": 25780,
+   "loss": 0.2989,
+   "lr": 4.080114258845846e-05,
+   "seconds": 1.83
+  },
+  {
+   "step": 246,
+   "micro_steps": 8,
+   "tokens": 30471,
+   "loss": 0.3218,
+   "lr": 4.0414468403813095e-05,
+   "seconds": 2.19
+  },
+  {
+   "step": 247,
+   "micro_steps": 8,
+   "tokens": 28637,
+   "loss": 0.3341,
+   "lr": 4.0028388467420385e-05,
+   "seconds": 3.01
+  },
+  {
+   "step": 248,
+   "micro_steps": 8,
+   "tokens": 28967,
+   "loss": 0.314,
+   "lr": 3.964292671403304e-05,
+   "seconds": 1.13
+  },
+  {
+   "step": 249,
+   "micro_steps": 8,
+   "tokens": 27009,
+   "loss": 0.2936,
+   "lr": 3.9258107040079805e-05,
+   "seconds": 1.35
+  },
+  {
+   "step": 250,
+   "micro_steps": 8,
+   "tokens": 24905,
+   "loss": 0.3519,
+   "lr": 3.887395330218429e-05,
+   "seconds": 1.57
+  },
+  {
+   "step": 251,
+   "micro_steps": 8,
+   "tokens": 25331,
+   "loss": 0.338,
+   "lr": 3.849048931568576e-05,
+   "seconds": 1.52
+  },
+  {
+   "step": 252,
+   "micro_steps": 8,
+   "tokens": 27255,
+   "loss": 0.322,
+   "lr": 3.810773885316295e-05,
+   "seconds": 2.27
+  },
+  {
+   "step": 253,
+   "micro_steps": 8,
+   "tokens": 24990,
+   "loss": 0.3421,
+   "lr": 3.772572564296005e-05,
+   "seconds": 1.87
+  },
+  {
+   "step": 254,
+   "micro_steps": 8,
+   "tokens": 26920,
+   "loss": 0.296,
+   "lr": 3.734447336771591e-05,
+   "seconds": 2.38
+  },
+  {
+   "step": 255,
+   "micro_steps": 8,
+   "tokens": 28428,
+   "loss": 0.3627,
+   "lr": 3.6964005662895704e-05,
+   "seconds": 2.14
+  },
+  {
+   "step": 256,
+   "micro_steps": 8,
+   "tokens": 23891,
+   "loss": 0.302,
+   "lr": 3.658434611532578e-05,
+   "seconds": 2.1
+  },
+  {
+   "step": 257,
+   "micro_steps": 8,
+   "tokens": 34862,
+   "loss": 0.3286,
+   "lr": 3.620551826173125e-05,
+   "seconds": 2.3
+  },
+  {
+   "step": 258,
+   "micro_steps": 8,
+   "tokens": 27725,
+   "loss": 0.3417,
+   "lr": 3.582754558727703e-05,
+   "seconds": 1.45
+  },
+  {
+   "step": 259,
+   "micro_steps": 8,
+   "tokens": 27291,
+   "loss": 0.3705,
+   "lr": 3.5450451524111775e-05,
+   "seconds": 1.65
+  },
+  {
+   "step": 260,
+   "micro_steps": 8,
+   "tokens": 24548,
+   "loss": 0.3288,
+   "lr": 3.5074259449915284e-05,
+   "seconds": 1.58
+  },
+  {
+   "step": 261,
+   "micro_steps": 8,
+   "tokens": 29156,
+   "loss": 0.3323,
+   "lr": 3.4698992686449127e-05,
+   "seconds": 2.05
+  },
+  {
+   "step": 262,
+   "micro_steps": 8,
+   "tokens": 25504,
+   "loss": 0.2961,
+   "lr": 3.4324674498110954e-05,
+   "seconds": 2.37
+  },
+  {
+   "step": 263,
+   "micro_steps": 8,
+   "tokens": 28496,
+   "loss": 0.2962,
+   "lr": 3.395132809049212e-05,
+   "seconds": 1.47
+  },
+  {
+   "step": 264,
+   "micro_steps": 8,
+   "tokens": 28733,
+   "loss": 0.328,
+   "lr": 3.357897660893918e-05,
+   "seconds": 1.71
+  },
+  {
+   "step": 265,
+   "micro_steps": 8,
+   "tokens": 26789,
+   "loss": 0.301,
+   "lr": 3.3207643137118874e-05,
+   "seconds": 2.03
+  },
+  {
+   "step": 266,
+   "micro_steps": 8,
+   "tokens": 27288,
+   "loss": 0.344,
+   "lr": 3.283735069558724e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 267,
+   "micro_steps": 8,
+   "tokens": 32111,
+   "loss": 0.3642,
+   "lr": 3.2468122240362284e-05,
+   "seconds": 1.85
+  },
+  {
+   "step": 268,
+   "micro_steps": 8,
+   "tokens": 32564,
+   "loss": 0.3086,
+   "lr": 3.209998066150102e-05,
+   "seconds": 1.95
+  },
+  {
+   "step": 269,
+   "micro_steps": 8,
+   "tokens": 29893,
+   "loss": 0.3182,
+   "lr": 3.173294878168025e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 270,
+   "micro_steps": 8,
+   "tokens": 31329,
+   "loss": 0.3604,
+   "lr": 3.136704935478185e-05,
+   "seconds": 1.32
+  },
+  {
+   "step": 271,
+   "micro_steps": 8,
+   "tokens": 34090,
+   "loss": 0.3406,
+   "lr": 3.100230506448201e-05,
+   "seconds": 2.71
+  },
+  {
+   "step": 272,
+   "micro_steps": 8,
+   "tokens": 29474,
+   "loss": 0.3294,
+   "lr": 3.063873852284508e-05,
+   "seconds": 1.63
+  },
+  {
+   "step": 273,
+   "micro_steps": 8,
+   "tokens": 28565,
+   "loss": 0.3666,
+   "lr": 3.0276372268921692e-05,
+   "seconds": 2.22
+  },
+  {
+   "step": 274,
+   "micro_steps": 8,
+   "tokens": 27053,
+   "loss": 0.3144,
+   "lr": 2.991522876735154e-05,
+   "seconds": 1.9
+  },
+  {
+   "step": 275,
+   "micro_steps": 8,
+   "tokens": 30599,
+   "loss": 0.3464,
+   "lr": 2.9555330406970566e-05,
+   "seconds": 2.07
+  },
+  {
+   "step": 276,
+   "micro_steps": 8,
+   "tokens": 30278,
+   "loss": 0.3214,
+   "lr": 2.919669949942314e-05,
+   "seconds": 1.9
+  },
+  {
+   "step": 277,
+   "micro_steps": 8,
+   "tokens": 30339,
+   "loss": 0.3453,
+   "lr": 2.8839358277778755e-05,
+   "seconds": 1.4
+  },
+  {
+   "step": 278,
+   "micro_steps": 8,
+   "tokens": 30296,
+   "loss": 0.3491,
+   "lr": 2.848332889515375e-05,
+   "seconds": 3.29
+  },
+  {
+   "step": 279,
+   "micro_steps": 8,
+   "tokens": 28207,
+   "loss": 0.3432,
+   "lr": 2.812863342333793e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 280,
+   "micro_steps": 8,
+   "tokens": 26178,
+   "loss": 0.3003,
+   "lr": 2.7775293851426232e-05,
+   "seconds": 1.3
+  },
+  {
+   "step": 281,
+   "micro_steps": 8,
+   "tokens": 27478,
+   "loss": 0.3151,
+   "lr": 2.7423332084455544e-05,
+   "seconds": 1.3
+  },
+  {
+   "step": 282,
+   "micro_steps": 8,
+   "tokens": 26310,
+   "loss": 0.3168,
+   "lr": 2.7072769942046718e-05,
+   "seconds": 1.55
+  },
+  {
+   "step": 283,
+   "micro_steps": 8,
+   "tokens": 27575,
+   "loss": 0.3438,
+   "lr": 2.6723629157051844e-05,
+   "seconds": 1.51
+  },
+  {
+   "step": 284,
+   "micro_steps": 8,
+   "tokens": 24703,
+   "loss": 0.3168,
+   "lr": 2.637593137420702e-05,
+   "seconds": 1.45
+  },
+  {
+   "step": 285,
+   "micro_steps": 8,
+   "tokens": 27562,
+   "loss": 0.3093,
+   "lr": 2.6029698148790394e-05,
+   "seconds": 1.7
+  },
+  {
+   "step": 286,
+   "micro_steps": 8,
+   "tokens": 28001,
+   "loss": 0.3299,
+   "lr": 2.5684950945285935e-05,
+   "seconds": 3.24
+  },
+  {
+   "step": 287,
+   "micro_steps": 8,
+   "tokens": 26713,
+   "loss": 0.3407,
+   "lr": 2.5341711136052728e-05,
+   "seconds": 1.67
+  },
+  {
+   "step": 288,
+   "micro_steps": 8,
+   "tokens": 27637,
+   "loss": 0.3566,
+   "lr": 2.500000000000001e-05,
+   "seconds": 2.11
+  },
+  {
+   "step": 289,
+   "micro_steps": 8,
+   "tokens": 24931,
+   "loss": 0.3096,
+   "lr": 2.4659838721268004e-05,
+   "seconds": 2.37
+  },
+  {
+   "step": 290,
+   "micro_steps": 8,
+   "tokens": 27013,
+   "loss": 0.3138,
+   "lr": 2.4321248387914674e-05,
+   "seconds": 1.99
+  },
+  {
+   "step": 291,
+   "micro_steps": 8,
+   "tokens": 27582,
+   "loss": 0.3157,
+   "lr": 2.3984249990608238e-05,
+   "seconds": 2.39
+  },
+  {
+   "step": 292,
+   "micro_steps": 8,
+   "tokens": 29354,
+   "loss": 0.3116,
+   "lr": 2.364886442132606e-05,
+   "seconds": 1.96
+  },
+  {
+   "step": 293,
+   "micro_steps": 8,
+   "tokens": 26531,
+   "loss": 0.3425,
+   "lr": 2.331511247205933e-05,
+   "seconds": 1.61
+  },
+  {
+   "step": 294,
+   "micro_steps": 8,
+   "tokens": 27539,
+   "loss": 0.3319,
+   "lr": 2.2983014833524115e-05,
+   "seconds": 1.44
+  },
+  {
+   "step": 295,
+   "micro_steps": 8,
+   "tokens": 29332,
+   "loss": 0.3282,
+   "lr": 2.2652592093878666e-05,
+   "seconds": 3.89
+  },
+  {
+   "step": 296,
+   "micro_steps": 8,
+   "tokens": 25426,
+   "loss": 0.313,
+   "lr": 2.2323864737447063e-05,
+   "seconds": 1.63
+  },
+  {
+   "step": 297,
+   "micro_steps": 8,
+   "tokens": 28124,
+   "loss": 0.3396,
+   "lr": 2.1996853143449286e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 298,
+   "micro_steps": 8,
+   "tokens": 25593,
+   "loss": 0.3029,
+   "lr": 2.16715775847379e-05,
+   "seconds": 2.07
+  },
+  {
+   "step": 299,
+   "micro_steps": 8,
+   "tokens": 26623,
+   "loss": 0.3367,
+   "lr": 2.1348058226541074e-05,
+   "seconds": 1.77
+  },
+  {
+   "step": 300,
+   "micro_steps": 8,
+   "tokens": 28516,
+   "loss": 0.3194,
+   "lr": 2.1026315125212693e-05,
+   "seconds": 1.45
+  },
+  {
+   "step": 301,
+   "micro_steps": 8,
+   "tokens": 25523,
+   "loss": 0.3312,
+   "lr": 2.070636822698877e-05,
+   "seconds": 1.82
+  },
+  {
+   "step": 302,
+   "micro_steps": 8,
+   "tokens": 28814,
+   "loss": 0.3272,
+   "lr": 2.0388237366751006e-05,
+   "seconds": 1.33
+  },
+  {
+   "step": 303,
+   "micro_steps": 8,
+   "tokens": 29979,
+   "loss": 0.326,
+   "lr": 2.00719422667971e-05,
+   "seconds": 1.95
+  },
+  {
+   "step": 304,
+   "micro_steps": 8,
+   "tokens": 23880,
+   "loss": 0.2967,
+   "lr": 1.9757502535618137e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 305,
+   "micro_steps": 8,
+   "tokens": 28456,
+   "loss": 0.3429,
+   "lr": 1.9444937666682833e-05,
+   "seconds": 1.75
+  },
+  {
+   "step": 306,
+   "micro_steps": 8,
+   "tokens": 34161,
+   "loss": 0.3299,
+   "lr": 1.9134267037229243e-05,
+   "seconds": 2.31
+  },
+  {
+   "step": 307,
+   "micro_steps": 8,
+   "tokens": 32044,
+   "loss": 0.3411,
+   "lr": 1.8825509907063327e-05,
+   "seconds": 1.95
+  },
+  {
+   "step": 308,
+   "micro_steps": 8,
+   "tokens": 26953,
+   "loss": 0.3426,
+   "lr": 1.8518685417365027e-05,
+   "seconds": 1.65
+  },
+  {
+   "step": 309,
+   "micro_steps": 8,
+   "tokens": 29425,
+   "loss": 0.3365,
+   "lr": 1.821381258950161e-05,
+   "seconds": 1.71
+  },
+  {
+   "step": 310,
+   "micro_steps": 8,
+   "tokens": 27356,
+   "loss": 0.3162,
+   "lr": 1.7910910323848433e-05,
+   "seconds": 0.92
+  },
+  {
+   "step": 311,
+   "micro_steps": 8,
+   "tokens": 32808,
+   "loss": 0.3529,
+   "lr": 1.760999739861724e-05,
+   "seconds": 2.13
+  },
+  {
+   "step": 312,
+   "micro_steps": 8,
+   "tokens": 26728,
+   "loss": 0.3334,
+   "lr": 1.731109246869208e-05,
+   "seconds": 1.28
+  },
+  {
+   "step": 313,
+   "micro_steps": 8,
+   "tokens": 22277,
+   "loss": 0.2713,
+   "lr": 1.7014214064472643e-05,
+   "seconds": 1.56
+  },
+  {
+   "step": 314,
+   "micro_steps": 8,
+   "tokens": 27107,
+   "loss": 0.336,
+   "lr": 1.6719380590725707e-05,
+   "seconds": 1.98
+  },
+  {
+   "step": 315,
+   "micro_steps": 8,
+   "tokens": 22364,
+   "loss": 0.301,
+   "lr": 1.642661032544396e-05,
+   "seconds": 1.62
+  },
+  {
+   "step": 316,
+   "micro_steps": 8,
+   "tokens": 27448,
+   "loss": 0.32,
+   "lr": 1.6135921418712956e-05,
+   "seconds": 1.55
+  },
+  {
+   "step": 317,
+   "micro_steps": 8,
+   "tokens": 25217,
+   "loss": 0.3222,
+   "lr": 1.5847331891585886e-05,
+   "seconds": 1.16
+  },
+  {
+   "step": 318,
+   "micro_steps": 8,
+   "tokens": 31526,
+   "loss": 0.3344,
+   "lr": 1.5560859634966458e-05,
+   "seconds": 2.27
+  },
+  {
+   "step": 319,
+   "micro_steps": 8,
+   "tokens": 29324,
+   "loss": 0.3007,
+   "lr": 1.5276522408499567e-05,
+   "seconds": 2.24
+  },
+  {
+   "step": 320,
+   "micro_steps": 8,
+   "tokens": 25111,
+   "loss": 0.2987,
+   "lr": 1.499433783947054e-05,
+   "seconds": 1.81
+  },
+  {
+   "step": 321,
+   "micro_steps": 8,
+   "tokens": 33831,
+   "loss": 0.3124,
+   "lr": 1.4714323421712162e-05,
+   "seconds": 1.37
+  },
+  {
+   "step": 322,
+   "micro_steps": 8,
+   "tokens": 27243,
+   "loss": 0.323,
+   "lr": 1.4436496514520254e-05,
+   "seconds": 1.93
+  },
+  {
+   "step": 323,
+   "micro_steps": 8,
+   "tokens": 24678,
+   "loss": 0.3171,
+   "lr": 1.4160874341577446e-05,
+   "seconds": 1.26
+  },
+  {
+   "step": 324,
+   "micro_steps": 8,
+   "tokens": 30905,
+   "loss": 0.3672,
+   "lr": 1.3887473989885442e-05,
+   "seconds": 1.83
+  },
+  {
+   "step": 325,
+   "micro_steps": 8,
+   "tokens": 24453,
+   "loss": 0.3349,
+   "lr": 1.3616312408705689e-05,
+   "seconds": 1.29
+  },
+  {
+   "step": 326,
+   "micro_steps": 8,
+   "tokens": 29294,
+   "loss": 0.3184,
+   "lr": 1.3347406408508695e-05,
+   "seconds": 1.69
+  },
+  {
+   "step": 327,
+   "micro_steps": 8,
+   "tokens": 35050,
+   "loss": 0.3177,
+   "lr": 1.3080772659931728e-05,
+   "seconds": 2.32
+  },
+  {
+   "step": 328,
+   "micro_steps": 8,
+   "tokens": 22739,
+   "loss": 0.2992,
+   "lr": 1.281642769274552e-05,
+   "seconds": 1.61
+  },
+  {
+   "step": 329,
+   "micro_steps": 8,
+   "tokens": 33349,
+   "loss": 0.3637,
+   "lr": 1.255438789482935e-05,
+   "seconds": 2.06
+  },
+  {
+   "step": 330,
+   "micro_steps": 8,
+   "tokens": 30509,
+   "loss": 0.3564,
+   "lr": 1.2294669511155193e-05,
+   "seconds": 2.6
+  },
+  {
+   "step": 331,
+   "micro_steps": 8,
+   "tokens": 33074,
+   "loss": 0.3214,
+   "lr": 1.2037288642780576e-05,
+   "seconds": 1.65
+  },
+  {
+   "step": 332,
+   "micro_steps": 8,
+   "tokens": 32044,
+   "loss": 0.3248,
+   "lr": 1.1782261245850417e-05,
+   "seconds": 1.51
+  },
+  {
+   "step": 333,
+   "micro_steps": 8,
+   "tokens": 24931,
+   "loss": 0.3315,
+   "lr": 1.1529603130607836e-05,
+   "seconds": 1.3
+  },
+  {
+   "step": 334,
+   "micro_steps": 8,
+   "tokens": 25610,
+   "loss": 0.3258,
+   "lr": 1.1279329960414048e-05,
+   "seconds": 2.55
+  },
+  {
+   "step": 335,
+   "micro_steps": 8,
+   "tokens": 27670,
+   "loss": 0.3249,
+   "lr": 1.1031457250777206e-05,
+   "seconds": 2.6
+  },
+  {
+   "step": 336,
+   "micro_steps": 8,
+   "tokens": 25450,
+   "loss": 0.3551,
+   "lr": 1.0786000368390687e-05,
+   "seconds": 1.69
+  },
+  {
+   "step": 337,
+   "micro_steps": 8,
+   "tokens": 26306,
+   "loss": 0.354,
+   "lr": 1.0542974530180327e-05,
+   "seconds": 1.91
+  },
+  {
+   "step": 338,
+   "micro_steps": 8,
+   "tokens": 28438,
+   "loss": 0.2977,
+   "lr": 1.0302394802361104e-05,
+   "seconds": 1.57
+  },
+  {
+   "step": 339,
+   "micro_steps": 8,
+   "tokens": 26184,
+   "loss": 0.3205,
+   "lr": 1.00642760995031e-05,
+   "seconds": 2.16
+  },
+  {
+   "step": 340,
+   "micro_steps": 8,
+   "tokens": 30105,
+   "loss": 0.3438,
+   "lr": 9.82863318360695e-06,
+   "seconds": 2.37
+  },
+  {
+   "step": 341,
+   "micro_steps": 8,
+   "tokens": 27546,
+   "loss": 0.2939,
+   "lr": 9.595480663188527e-06,
+   "seconds": 1.45
+  },
+  {
+   "step": 342,
+   "micro_steps": 8,
+   "tokens": 22793,
+   "loss": 0.316,
+   "lr": 9.3648329923735e-06,
+   "seconds": 1.47
+  },
+  {
+   "step": 343,
+   "micro_steps": 8,
+   "tokens": 29787,
+   "loss": 0.3359,
+   "lr": 9.1367044700011e-06,
+   "seconds": 1.8
+  },
+  {
+   "step": 344,
+   "micro_steps": 8,
+   "tokens": 31610,
+   "loss": 0.3551,
+   "lr": 8.911109238737747e-06,
+   "seconds": 2.41
+  },
+  {
+   "step": 345,
+   "micro_steps": 8,
+   "tokens": 26225,
+   "loss": 0.3282,
+   "lr": 8.688061284200266e-06,
+   "seconds": 1.65
+  },
+  {
+   "step": 346,
+   "micro_steps": 8,
+   "tokens": 25061,
+   "loss": 0.3117,
+   "lr": 8.46757443408886e-06,
+   "seconds": 1.03
+  },
+  {
+   "step": 347,
+   "micro_steps": 8,
+   "tokens": 26571,
+   "loss": 0.3371,
+   "lr": 8.24966235732988e-06,
+   "seconds": 2.04
+  },
+  {
+   "step": 348,
+   "micro_steps": 8,
+   "tokens": 28398,
+   "loss": 0.3608,
+   "lr": 8.03433856322845e-06,
+   "seconds": 1.66
+  },
+  {
+   "step": 349,
+   "micro_steps": 8,
+   "tokens": 22145,
+   "loss": 0.311,
+   "lr": 7.821616400630865e-06,
+   "seconds": 1.31
+  },
+  {
+   "step": 350,
+   "micro_steps": 8,
+   "tokens": 31140,
+   "loss": 0.3243,
+   "lr": 7.611509057097211e-06,
+   "seconds": 2.25
+  },
+  {
+   "step": 351,
+   "micro_steps": 8,
+   "tokens": 25347,
+   "loss": 0.3383,
+   "lr": 7.404029558083653e-06,
+   "seconds": 1.37
+  },
+  {
+   "step": 352,
+   "micro_steps": 8,
+   "tokens": 25791,
+   "loss": 0.3374,
+   "lr": 7.199190766135e-06,
+   "seconds": 1.62
+  },
+  {
+   "step": 353,
+   "micro_steps": 8,
+   "tokens": 25345,
+   "loss": 0.3078,
+   "lr": 6.997005380087302e-06,
+   "seconds": 1.73
+  },
+  {
+   "step": 354,
+   "micro_steps": 8,
+   "tokens": 28734,
+   "loss": 0.3429,
+   "lr": 6.7974859342806175e-06,
+   "seconds": 2.38
+  },
+  {
+   "step": 355,
+   "micro_steps": 8,
+   "tokens": 25912,
+   "loss": 0.3252,
+   "lr": 6.600644797781847e-06,
+   "seconds": 1.55
+  },
+  {
+   "step": 356,
+   "micro_steps": 8,
+   "tokens": 34554,
+   "loss": 0.3692,
+   "lr": 6.406494173618083e-06,
+   "seconds": 2.08
+  },
+  {
+   "step": 357,
+   "micro_steps": 8,
+   "tokens": 29614,
+   "loss": 0.329,
+   "lr": 6.215046098019966e-06,
+   "seconds": 1.59
+  },
+  {
+   "step": 358,
+   "micro_steps": 8,
+   "tokens": 28616,
+   "loss": 0.3175,
+   "lr": 6.026312439675552e-06,
+   "seconds": 2.0
+  },
+  {
+   "step": 359,
+   "micro_steps": 8,
+   "tokens": 30745,
+   "loss": 0.3483,
+   "lr": 5.84030489899452e-06,
+   "seconds": 1.94
+  },
+  {
+   "step": 360,
+   "micro_steps": 8,
+   "tokens": 30991,
+   "loss": 0.3264,
+   "lr": 5.6570350073828215e-06,
+   "seconds": 1.31
+  },
+  {
+   "step": 361,
+   "micro_steps": 8,
+   "tokens": 28529,
+   "loss": 0.3501,
+   "lr": 5.476514126527771e-06,
+   "seconds": 2.07
+  },
+  {
+   "step": 362,
+   "micro_steps": 8,
+   "tokens": 27314,
+   "loss": 0.3363,
+   "lr": 5.29875344769375e-06,
+   "seconds": 2.06
+  },
+  {
+   "step": 363,
+   "micro_steps": 8,
+   "tokens": 29215,
+   "loss": 0.3234,
+   "lr": 5.123763991028291e-06,
+   "seconds": 1.47
+  },
+  {
+   "step": 364,
+   "micro_steps": 8,
+   "tokens": 26338,
+   "loss": 0.3065,
+   "lr": 4.951556604879048e-06,
+   "seconds": 1.22
+  },
+  {
+   "step": 365,
+   "micro_steps": 8,
+   "tokens": 28988,
+   "loss": 0.3106,
+   "lr": 4.782141965121128e-06,
+   "seconds": 2.17
+  },
+  {
+   "step": 366,
+   "micro_steps": 8,
+   "tokens": 28011,
+   "loss": 0.3373,
+   "lr": 4.615530574495325e-06,
+   "seconds": 2.76
+  },
+  {
+   "step": 367,
+   "micro_steps": 8,
+   "tokens": 29970,
+   "loss": 0.3181,
+   "lr": 4.4517327619569785e-06,
+   "seconds": 2.24
+  },
+  {
+   "step": 368,
+   "micro_steps": 8,
+   "tokens": 26355,
+   "loss": 0.3171,
+   "lr": 4.290758682035634e-06,
+   "seconds": 1.53
+  },
+  {
+   "step": 369,
+   "micro_steps": 8,
+   "tokens": 25797,
+   "loss": 0.3002,
+   "lr": 4.132618314205544e-06,
+   "seconds": 1.24
+  },
+  {
+   "step": 370,
+   "micro_steps": 8,
+   "tokens": 28006,
+   "loss": 0.3331,
+   "lr": 3.977321462266998e-06,
+   "seconds": 3.07
+  },
+  {
+   "step": 371,
+   "micro_steps": 8,
+   "tokens": 27180,
+   "loss": 0.2789,
+   "lr": 3.824877753738476e-06,
+   "seconds": 2.4
+  },
+  {
+   "step": 372,
+   "micro_steps": 8,
+   "tokens": 30860,
+   "loss": 0.3203,
+   "lr": 3.675296639259912e-06,
+   "seconds": 2.22
+  },
+  {
+   "step": 373,
+   "micro_steps": 8,
+   "tokens": 27168,
+   "loss": 0.3043,
+   "lr": 3.5285873920067157e-06,
+   "seconds": 2.09
+  },
+  {
+   "step": 374,
+   "micro_steps": 8,
+   "tokens": 29642,
+   "loss": 0.3557,
+   "lr": 3.38475910711491e-06,
+   "seconds": 1.66
+  },
+  {
+   "step": 375,
+   "micro_steps": 8,
+   "tokens": 30736,
+   "loss": 0.3173,
+   "lr": 3.2438207011173062e-06,
+   "seconds": 2.33
+  },
+  {
+   "step": 376,
+   "micro_steps": 8,
+   "tokens": 25194,
+   "loss": 0.3215,
+   "lr": 3.105780911390738e-06,
+   "seconds": 1.83
+  },
+  {
+   "step": 377,
+   "micro_steps": 8,
+   "tokens": 28235,
+   "loss": 0.324,
+   "lr": 2.97064829561432e-06,
+   "seconds": 1.55
+  },
+  {
+   "step": 378,
+   "micro_steps": 8,
+   "tokens": 24274,
+   "loss": 0.3273,
+   "lr": 2.8384312312390303e-06,
+   "seconds": 1.6
+  },
+  {
+   "step": 379,
+   "micro_steps": 8,
+   "tokens": 28324,
+   "loss": 0.3057,
+   "lr": 2.7091379149682685e-06,
+   "seconds": 1.56
+  },
+  {
+   "step": 380,
+   "micro_steps": 8,
+   "tokens": 23762,
+   "loss": 0.3,
+   "lr": 2.5827763622497393e-06,
+   "seconds": 1.55
+  },
+  {
+   "step": 381,
+   "micro_steps": 8,
+   "tokens": 25829,
+   "loss": 0.3159,
+   "lr": 2.4593544067785466e-06,
+   "seconds": 2.14
+  },
+  {
+   "step": 382,
+   "micro_steps": 8,
+   "tokens": 29524,
+   "loss": 0.2962,
+   "lr": 2.3388797000115427e-06,
+   "seconds": 2.59
+  },
+  {
+   "step": 383,
+   "micro_steps": 8,
+   "tokens": 30320,
+   "loss": 0.3243,
+   "lr": 2.221359710692961e-06,
+   "seconds": 3.34
+  },
+  {
+   "step": 384,
+   "micro_steps": 8,
+   "tokens": 24569,
+   "loss": 0.3393,
+   "lr": 2.1068017243914662e-06,
+   "seconds": 1.96
+  },
+  {
+   "step": 385,
+   "micro_steps": 8,
+   "tokens": 27533,
+   "loss": 0.3414,
+   "lr": 1.995212843048372e-06,
+   "seconds": 2.1
+  },
+  {
+   "step": 386,
+   "micro_steps": 8,
+   "tokens": 31061,
+   "loss": 0.3306,
+   "lr": 1.8865999845374793e-06,
+   "seconds": 1.61
+  },
+  {
+   "step": 387,
+   "micro_steps": 8,
+   "tokens": 23993,
+   "loss": 0.2972,
+   "lr": 1.7809698822361498e-06,
+   "seconds": 1.93
+  },
+  {
+   "step": 388,
+   "micro_steps": 8,
+   "tokens": 30290,
+   "loss": 0.337,
+   "lr": 1.6783290846078714e-06,
+   "seconds": 2.54
+  },
+  {
+   "step": 389,
+   "micro_steps": 8,
+   "tokens": 30717,
+   "loss": 0.3442,
+   "lr": 1.5786839547963006e-06,
+   "seconds": 1.67
+  },
+  {
+   "step": 390,
+   "micro_steps": 8,
+   "tokens": 28521,
+   "loss": 0.3186,
+   "lr": 1.4820406702308166e-06,
+   "seconds": 1.49
+  },
+  {
+   "step": 391,
+   "micro_steps": 8,
+   "tokens": 31464,
+   "loss": 0.3381,
+   "lr": 1.3884052222434718e-06,
+   "seconds": 4.14
+  },
+  {
+   "step": 392,
+   "micro_steps": 8,
+   "tokens": 26911,
+   "loss": 0.3338,
+   "lr": 1.297783415697673e-06,
+   "seconds": 1.94
+  },
+  {
+   "step": 393,
+   "micro_steps": 8,
+   "tokens": 28670,
+   "loss": 0.3123,
+   "lr": 1.210180868628219e-06,
+   "seconds": 2.84
+  },
+  {
+   "step": 394,
+   "micro_steps": 8,
+   "tokens": 37556,
+   "loss": 0.3101,
+   "lr": 1.1256030118930727e-06,
+   "seconds": 1.38
+  },
+  {
+   "step": 395,
+   "micro_steps": 8,
+   "tokens": 33701,
+   "loss": 0.3521,
+   "lr": 1.0440550888366486e-06,
+   "seconds": 2.15
+  },
+  {
+   "step": 396,
+   "micro_steps": 8,
+   "tokens": 29144,
+   "loss": 0.3158,
+   "lr": 9.655421549647603e-07,
+   "seconds": 2.01
+  },
+  {
+   "step": 397,
+   "micro_steps": 8,
+   "tokens": 29935,
+   "loss": 0.3264,
+   "lr": 8.900690776312281e-07,
+   "seconds": 1.51
+  },
+  {
+   "step": 398,
+   "micro_steps": 8,
+   "tokens": 29091,
+   "loss": 0.3329,
+   "lr": 8.176405357361195e-07,
+   "seconds": 1.62
+  },
+  {
+   "step": 399,
+   "micro_steps": 8,
+   "tokens": 26250,
+   "loss": 0.3354,
+   "lr": 7.482610194356476e-07,
+   "seconds": 1.9
+  },
+  {
+   "step": 400,
+   "micro_steps": 8,
+   "tokens": 27224,
+   "loss": 0.3292,
+   "lr": 6.819348298638839e-07,
+   "seconds": 1.61
+  },
+  {
+   "step": 401,
+   "micro_steps": 8,
+   "tokens": 36468,
+   "loss": 0.345,
+   "lr": 6.186660788660315e-07,
+   "seconds": 3.01
+  },
+  {
+   "step": 402,
+   "micro_steps": 8,
+   "tokens": 25005,
+   "loss": 0.2866,
+   "lr": 5.584586887435739e-07,
+   "seconds": 1.94
+  },
+  {
+   "step": 403,
+   "micro_steps": 8,
+   "tokens": 27263,
+   "loss": 0.3017,
+   "lr": 5.013163920110864e-07,
+   "seconds": 1.63
+  },
+  {
+   "step": 404,
+   "micro_steps": 8,
+   "tokens": 27423,
+   "loss": 0.3388,
+   "lr": 4.472427311648375e-07,
+   "seconds": 1.8
+  },
+  {
+   "step": 405,
+   "micro_steps": 8,
+   "tokens": 24802,
+   "loss": 0.2886,
+   "lr": 3.9624105846319815e-07,
+   "seconds": 2.1
+  },
+  {
+   "step": 406,
+   "micro_steps": 8,
+   "tokens": 32225,
+   "loss": 0.329,
+   "lr": 3.4831453571879667e-07,
+   "seconds": 2.55
+  },
+  {
+   "step": 407,
+   "micro_steps": 8,
+   "tokens": 25663,
+   "loss": 0.3113,
+   "lr": 3.034661341025258e-07,
+   "seconds": 2.35
+  },
+  {
+   "step": 408,
+   "micro_steps": 8,
+   "tokens": 24871,
+   "loss": 0.3263,
+   "lr": 2.6169863395932303e-07,
+   "seconds": 2.03
+  },
+  {
+   "step": 409,
+   "micro_steps": 8,
+   "tokens": 30161,
+   "loss": 0.3129,
+   "lr": 2.2301462463582557e-07,
+   "seconds": 1.95
+  },
+  {
+   "step": 410,
+   "micro_steps": 8,
+   "tokens": 24579,
+   "loss": 0.3325,
+   "lr": 1.8741650431982616e-07,
+   "seconds": 1.88
+  },
+  {
+   "step": 411,
+   "micro_steps": 8,
+   "tokens": 28894,
+   "loss": 0.3491,
+   "lr": 1.549064798916311e-07,
+   "seconds": 1.35
+  },
+  {
+   "step": 412,
+   "micro_steps": 8,
+   "tokens": 22203,
+   "loss": 0.2634,
+   "lr": 1.2548656678721406e-07,
+   "seconds": 2.2
+  },
+  {
+   "step": 413,
+   "micro_steps": 8,
+   "tokens": 29485,
+   "loss": 0.3399,
+   "lr": 9.915858887327156e-08,
+   "seconds": 2.33
+  },
+  {
+   "step": 414,
+   "micro_steps": 8,
+   "tokens": 23277,
+   "loss": 0.3023,
+   "lr": 7.59241783341913e-08,
+   "seconds": 1.73
+  },
+  {
+   "step": 415,
+   "micro_steps": 8,
+   "tokens": 26042,
+   "loss": 0.3437,
+   "lr": 5.578477557081074e-08,
+   "seconds": 1.42
+  },
+  {
+   "step": 416,
+   "micro_steps": 8,
+   "tokens": 29163,
+   "loss": 0.3244,
+   "lr": 3.8741629111171964e-08,
+   "seconds": 1.76
+  },
+  {
+   "step": 417,
+   "micro_steps": 8,
+   "tokens": 31609,
+   "loss": 0.3295,
+   "lr": 2.4795795533077982e-08,
+   "seconds": 1.45
+  },
+  {
+   "step": 418,
+   "micro_steps": 8,
+   "tokens": 30054,
+   "loss": 0.3093,
+   "lr": 1.394813939862849e-08,
+   "seconds": 1.51
+  },
+  {
+   "step": 419,
+   "micro_steps": 8,
+   "tokens": 31767,
+   "loss": 0.3078,
+   "lr": 6.199333200590518e-09,
+   "seconds": 2.04
+  },
+  {
+   "step": 420,
+   "micro_steps": 8,
+   "tokens": 33427,
+   "loss": 0.361,
+   "lr": 1.5498573207262113e-09,
+   "seconds": 2.2
+  }
+ ],
+ "peak_gb": 75.6,
+ "gpu_total_gb": 150.1,
+ "adapter": "/vol/r5/adapter",
+ "train_total_s": 6806.0,
+ "stopped_at_deadline": false
+}
