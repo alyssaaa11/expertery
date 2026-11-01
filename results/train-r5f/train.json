@@ -1,0 +1,4102 @@
+{
+ "transformers": "5.15.0",
+ "torch": "2.13.0+cu130",
+ "timeout_s": 12722,
+ "deadline_s": 12482,
+ "r5_subsample": {
+  "dropped": 0,
+  "ids": [],
+  "estimate": {
+   "tokens": 6304300,
+   "seconds": 7641.6,
+   "dollars": 9.6369
+  }
+ },
+ "lora_pattern": ".*language_model.*\\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)",
+ "trainable_params": 104792064,
+ "examples": 1722,
+ "dropped": 20,
+ "first_example": {
+  "prompt": "<|begin_of_text|><|start|>system<|message|>You write CadQuery Python code. Units are millimetres. Assign the final solid to a variable named result. Reply with exactly one Python code block and nothing else.\n\nReasoning strength: high.\n\n# Valid recipients: \"self\", \"user\".<|eot|><|start|>user<|message|>Units: millimetres. A pipe tee. Main tube along X: outer diameter 28.4, inner diameter 21.6, X from 0 to 92.1, axis at Y = 0, Z = 0. Branch tube along Y: outer diameter 26.4, inner diameter 19, axis at X = 49.6, Z = 0, Y from -1 to 33.2 (it joins the main tube). A flange at the X = 0 end: diameter 40.4, X from -6 to 0, with a centre hole of diameter 21.6.<|eot|><|start|>assistant",
+  "full": "<|begin_of_text|><|start|>system<|message|>You write CadQuery Python code. Units are millimetres. Assign the final solid to a variable named result. Reply with exactly one Python code block and nothing else.\n\nReasoning strength: high.\n\n# Valid recipients: \"self\", \"user\".<|eot|><|start|>user<|message|>Units: millimetres. A pipe tee. Main tube along X: outer diameter 28.4, inner diameter 21.6, X from 0 to 92.1, axis at Y = 0, Z = 0. Branch tube along Y: outer diameter 26.4, inner diameter 19, axis at X = 49.6, Z = 0, Y from -1 to 33.2 (it joins the main tube). A flange at the X = 0 end: diameter 40.4, X from -6 to 0, with a centre hole of diameter 21.6.<|eot|><|start|>assistant to=self<|message|>Units: millimetres. A pipe tee. Main tube along X: outer diameter 28.4, inner diameter 21.6, X from 0 to 92.1, axis at Y = 0, Z = 0. Branch tube along Y: outer diameter 26.4, inner diameter 19, axis at X = 49.6, Z = 0, Y from -1 to 33.2 (it joins the main tube). A flange at the X = 0 end: diameter 40.4, X from -6 to 0, with a centre hole of diameter 21.6.\n\nWe need CadQuery Python code. Units mm. Final solid in result. One solid only: fuse every part before you cut.\n\nWe need main tube outer diameter 28.4, inner 21.6. So it's a hollow cylinder along X from 0 to 92.1. Axis at Y=0 Z=0. So outer radius = 14.2. Inner radius = 10.8. Length = 92.1.\n\nWe can make outer solid via makeCylinder radius 14.2 height 92.1 start at (0,0,0) direction (1,0,0). That's outer.\n\nInner hollow: makeCylinder radius 10.8 height maybe a bit longer? Through hole. For a tube, we need hollow along X. Use inner cylinder to cut. Should be longer? Through holes: make cutter 1 mm longer on each side of the part. But for a tube along whole length, inner cylinder should span length plus some. But we can make from -1 to 93.1? Actually part from 0 to 92.1. If we cut with inner cylinder from -1 to 93.1 (i.e., height 94.1) start at -1. That ensures through.\n\nSimilarly branch tube along Y: outer diameter 26.4 radius 13.2, inner diameter 19 radius 9.5. Axis at X=49.6, Z=0, Y from -1 to 33.2. So direction along Y. Start point at Y = -1? The point is start of range. Direction (0,1,0). So start at (49.6, -1, 0). Height = 34.2? From -1 to 33.2 is 34.2. Yes.\n\nIt joins main tube. So we need to fuse main and branch outer solids, then cut inner holes? The rule says fuse every part before you cut. One solid only: fuse every part before you cut. That means we should create outer solids for main, branch, flange, fuse them together into one solid, then cut with inner holes (cylinders for hollow). Or we can cut each separately then fuse? Rule says fuse every part before you cut. So fuse outer solids first, then subtract inner solids.\n\nAlso flange at X=0 end: diameter 40.4 radius 20.2, X from -6 to 0, with centre hole diameter 21.6. Flange presumably is a disk? Diameter 40.4, thickness 6 mm (from -6 to 0). Center hole diameter 21.6. Axis at Y=0 Z=0 presumably? The main tube axis at Y=0 Z=0, so flange centered on same axis. So flange is a cylinder radius 20.2 height 6 along X? Wait X from -6 to 0. So flange extends negative X from main tube. So axis along X. So make cylinder radius 20.2 height 6 start at (-6,0,0) direction (1,0,0). Then cut center hole diameter 21.6 radius 10.8 through flange. Should be height maybe 8 mm? Through hole make longer 1mm each side. Flange extends -6 to 0. So hole cylinder radius 10.8 height 8? Actually need 8? Through: length 6 +2 =8. Start at -7? Wait start at -7? If start at -7 direction +X, height 8 => ends at 1. That covers. Better to start at -7.\n\nBut we also have main tube inner hole. When we fuse, the inner hole of main tube and branch tube and flange center hole must be connected? Flange center hole diameter 21.6 matches main inner diameter 21.6. So it's continuous.\n\nSo steps:\n\nCreate main_outer = cq.Solid.makeCylinder(14.2, 92.1, cq.Vector(0,0,0), cq.Vector(1,0,0))\nBranch_outer = cq.Solid.makeCylinder(13.2, 34.2, cq.Vector(49.6, -1, 0), cq.Vector(0,1,0))\nFlange_outer = cq.Solid.makeCylinder(20.2, 6, cq.Vector(-6,0,0), cq.Vector(1,0,0))\n\nFuse them: fused = main_outer.fuse(branch_outer).fuse(flange_outer)\n\nNow cutters:\n\nMain_inner = cq.Solid.makeCylinder(10.8, 94.1, cq.Vector(-1,0,0), cq.Vector(1,0,0))  ? Wait length 92.1 +2 =94.1. Start at -1? Then end at 93.1. That's good.\n\nBranch_inner = cq.Solid.makeCylinder(9.5, 36.2?, Actually branch length 34.2 +2 =36.2. Start at (49.6, -2?, 0)? If start at Y=-2, height 36.2 => end at 34.2. Or start at -2? The rule: make cutter 1 mm longer on each side. So start at -2? Wait start of part is -1, so start cutter at -2, end at 33.2+1=34.2. Height = 36.2. Yes.\n\nSo branch_inner = cq.Solid.makeCylinder(9.5, 36.2, cq.Vector(49.6, -2, 0), cq.Vector(0,1,0))\n\nFlange hole? Center hole diameter 21.6 radius 10.8. Flange from -6 to 0. Need hole through. We already have main_inner extending into flange? Main_inner starts at -1, ends at 93.1. So it covers flange from -1 to 0 only, not full -6 to 0. Flange hole needs to go full thickness. Could extend main_inner further left to -7. But main_inner radius 10.8 matches flange hole radius 10.8, so we could just extend main_inner to cover flange. Or create separate cutter for flange hole.\n\nSimpler: make main_inner long enough to cover flange fully. Start at -7, height 92.1+7+? Actually to cover up to 93.1. Start at -7, height = 100.1? Wait 93.1 - (-7) =100.1. That's okay. Or we can have separate flange hole cutter.\n\nLet's decide to have main_inner start at -7 with height 100.1? That would also cut into branch? No branch inner is separate.\n\nAlternative approach: create one inner cutter for main+flange continuous: radius 10.8, start at -7, height 100.1? Actually flange goes to -6, main to 92.1. So start -7, end 93.1 => height 100.1. That's fine.\n\nBut note branch tube joins main tube at X=49.6. The main inner cylinder at X=49.6 will intersect branch inner? Branch inner radius 9.5, main inner radius 10.8. At intersection, there will be overlap. That's okay.\n\nHowever, the branch tube inner should be connected to main inner to make a through hole. The branch inner cylinder extends in Y direction, crossing the main tube. The main inner cylinder extends in X direction. Their intersection will create a hole through. That's fine.\n\nBut the main inner cylinder at the branch location, the material of branch outer will be cut by both inner cylinders, resulting in a tee shape with intersecting holes.\n\nWe also need flange center hole diameter 21.6. If main_inner extended to -7, radius 10.8 covers flange hole.\n\nSo we can fuse outer solids, then cut with main_inner (extended) and branch_inner.\n\nPotential issue: The branch outer cylinder from Y=-1 to 33.2, axis X=49.6. Its lower end at Y=-1 is slightly below main tube (which is at Y=0). That means the branch tube protrudes down 1mm. That's fine.\n\nAlso note the branch tube joins main tube. At Y=0, the branch intersects main. The main tube outer radius 14.2, branch outer radius 13.2. Intersection will create some overlap. That's fine.\n\nNow we need final solid = result.\n\nImplementation details: CadQuery 2.8. Use cq.Solid.makeCylinder(radius, height, startVector, directionVector). The direction vector is not necessarily unit? Probably direction vector is direction. We'll use (1,0,0) etc.\n\nLet's code.\n\nPotential issue: When fusing, we may want to also include inner holes as separate cutters. Could fuse main_inner and branch_inner first? But rule says fuse every part before you cut. So we must not cut before fusing. That's fine.\n\nOne solid only: fuse every part before you cut.\n\nEdge case: flange outer is cylinder radius 20.2 height 6 at -6 to 0. Main outer starts at 0. So they touch at face. Fuse will merge.\n\nNow cutters: main_inner cylinder radius 10.8 height =? From -7 to 93.1 =100.1. Start at -7,0,0 direction 1,0,0.\n\nbranch_inner: radius 9.5 height 36.2 start at (49.6, -2,0) direction 0,1,0.\n\nWe could also need to cut flange hole deeper? Already covered.\n\nAlternative: we could also cut the flange outer's center hole with same radius as main inner, but it's okay.\n\nResult = fused.cut(main_inner).cut(branch_inner)\n\nCheck orientation: makeCylinder(radius, height, start, direction). direction vector is (dx, dy, dz). Might need normalized? Probably works with any length.\n\nLet's test mental.\n\nPotential problem: The branch tube outer cylinder starts at Y=-1, so its start point is at Y=-1. That's fine. The branch tube extends to Y=33.2. Height 34.2.\n\nNow the main tube outer starts at X=0. So the flange is at negative X.\n\nNow final solid assigned to result.\n\nThe code must be a single Python code block.\n\nWe should import cadquery as cq.\n\nAdd code:\n\nimport cadquery as cq\n\nmain_outer = cq.Solid.makeCylinder(14.2, 92.1, cq.Vector(0,0,0), cq.Vector(1,0,0))\nbranch_outer = cq.Solid.makeCylinder(13.2, 34.2, cq.Vector(49.6, -1, 0), cq.Vector(0,1,0))\nflange_outer = cq.Solid.makeCylinder(20.2, 6, cq.Vector(-6,0,0), cq.Vector(1,0,0))\n\nfused = main_outer.fuse(branch_outer).fuse(flange_outer)\n\nmain_inner = cq.Solid.makeCylinder(10.8, 100.1, cq.Vector(-7,0,0), cq.Vector(1,0,0))\nbranch_inner = cq.Solid.makeCylinder(9.5, 36.2, cq.Vector(49.6, -2, 0), cq.Vector(0,1,0))\n\nresult = fused.cut(main_inner).cut(branch_inner)\n\nThat's it.\n\nPotential nuance: The main inner cylinder radius 10.8 matches flange hole diameter 21.6. Good.\n\nMight need to ensure main_inner height covers up to 92.1 +1 =93.1. Starting at -7 => height =100.1. Yes.\n\nCould also use 101? Doesn't matter.\n\nCheck through holes 1 mm longer each side. We have 1 mm beyond flange start (-7 vs -6) and 1 mm beyond main end (93.1 vs 92.1). Good.\n\nBranch inner: start at -2 vs -1, end at 34.2 vs 33.2. Good.\n\nOne more nuance: The branch tube inner diameter 19 radius 9.5. At intersection with main tube, the main tube wall thickness might be cut away. That's expected.\n\nAlternative interpretation: The branch tube joins main tube, maybe the branch outer should intersect main outer, so the fused shape will have overlap. That's okay.\n\nCould also need to ensure the branch tube's inner hole is continuous with main inner hole. Since main inner cylinder passes through X=49.6 at Y=0, Z=0. Branch inner cylinder passes through Y direction at X=49.6, Z=0. Intersection at point. So they will create a connected hole.\n\nPotentially need to also cut a small cylindrical hole at intersection to avoid wall thickness? But it's fine.\n\nPotential issue: The flange center hole diameter 21.6, but we cut with main_inner radius 10.8. That's okay.\n\nOne more nuance: The flange outer diameter 40.4 radius 20.2. The main outer radius 14.2. At X=0, flange meets main. The flange hole radius 10.8 is smaller than main outer radius.\n\nAll good.\n\nEnsure variable named result.\n\nReturn code block only.\n\nPotential improvements: Use cq.Solid.makeCylinder with direction vector normalized? It may expect direction vector as axis direction, not necessarily unit. Might be okay.\n\nAlternative: Some CadQuery versions require direction vector to be unit length? Not sure. Usually makeCylinder takes radius, height, location, axis. Axis vector direction. Might be normalized internally. Safer to use unit vectors.\n\nWe'll use (1,0,0).\n\nFinal output.\n\nMight also want to make sure we don't accidentally create multiple solids. fused is Solid.\n\nResult assigned.\n\nMake code concise.\n\nAdd comments maybe but not needed.\n\nReturn exactly one Python code block.\n\nEdge: The problem says \"A flange at the X = 0 end: diameter 40.4, X from -6 to 0, with a centre hole of diameter 21.6.\" Could be a flange disk with thickness 6. We made cylinder. Good.\n\nPotential nuance: The flange center hole might be only through flange, not necessarily aligned with main inner? It is aligned.\n\nOkay.\n\nPotential nuance about units: mm, fine.\n\nReturn code.\n\nWe should ensure imports.\n\nFinal answer.<|eom|><|start|>assistant to=user<|message|>```python\nimport cadquery as cq\n\n# outer solids\nmain_outer = cq.Solid.makeCylinder(14.2, 92.1, cq.Vector(0, 0, 0), cq.Vector(1, 0, 0))\nbranch_outer = cq.Solid.makeCylinder(13.2, 34.2, cq.Vector(49.6, -1, 0), cq.Vector(0, 1, 0))\nflange_outer = cq.Solid.makeCylinder(20.2, 6, cq.Vector(-6, 0, 0), cq.Vector(1, 0, 0))\n\nfused = main_outer.fuse(branch_outer).fuse(flange_outer)\n\n# inner cutters, 1 mm overhang each side\nmain_inner = cq.Solid.makeCylinder(10.8, 100.1, cq.Vector(-7, 0, 0), cq.Vector(1, 0, 0))\nbranch_inner = cq.Solid.makeCylinder(9.5, 36.2, cq.Vector(49.6, -2, 0), cq.Vector(0, 1, 0))\n\nresult = fused.cut(main_inner).cut(branch_inner)\n```<|eot|>"
+ },
+ "first_loss_tokens": [
+  " to",
+  "=self",
+  "<|message|>",
+  "Units",
+  ":",
+  " mill",
+  "imetres",
+  ".",
+  " A",
+  " pipe",
+  " tee",
+  ".",
+  " Main",
+  " tube",
+  " along",
+  " X",
+  ":",
+  " outer",
+  " diameter",
+  " ",
+  "28",
+  ".",
+  "4",
+  ",",
+  " inner",
+  " diameter",
+  " ",
+  "21",
+  ".",
+  "6",
+  ",",
+  " X",
+  " from",
+  " ",
+  "0",
+  " to",
+  " ",
+  "92",
+  ".",
+  "1"
+ ],
+ "first_loss_tokens_per_source": {
+  "glimmer-first": {
+   "loss_tokens": [
+    " to",
+    "=self",
+    "<|message|>",
+    "Units",
+    ":",
+    " mill",
+    "imetres",
+    ".",
+    " A",
+    " pipe",
+    " tee",
+    ".",
+    " Main",
+    " tube",
+    " along",
+    " X",
+    ":",
+    " outer",
+    " diameter",
+    " ",
+    "28",
+    ".",
+    "4",
+    ",",
+    " inner",
+    " diameter",
+    " ",
+    "21",
+    ".",
+    "6",
+    ",",
+    " X",
+    " from",
+    " ",
+    "0",
+    " to",
+    " ",
+    "92",
+    ".",
+    "1"
+   ],
+   "n_kept": 1668,
+   "dropped_for_length": 10
+  },
+  "glimmer-selffix": {
+   "loss_tokens": [
+    " to",
+    "=self",
+    "<|message|>",
+    "Units",
+    ":",
+    " mill",
+    "imetres",
+    ".",
+    " A",
+    " pipe",
+    " tee",
+    "...",
+    " Fix",
+    " code",
+    ".\n\n",
+    "We",
+    " need",
+    " to",
+    " use",
+    " correct",
+    " API",
+    ":",
+    " cq",
+    ".S",
+    "olid",
+    ".make",
+    "C",
+    "ylinder",
+    "(radius",
+    ",",
+    " height",
+    ",",
+    " cq",
+    ".Vector",
+    "(x",
+    ",",
+    " y",
+    ",",
+    " z",
+    "),"
+   ],
+   "n_kept": 12,
+   "dropped_for_length": 6
+  },
+  "glimmer-hinted": {
+   "loss_tokens": [
+    " to",
+    "=self",
+    "<|message|>",
+    "Units",
+    ":",
+    " mill",
+    "imetres",
+    ".",
+    " Z",
+    " is",
+    " up",
+    ".",
+    " A",
+    " spool",
+    " (",
+    "bob",
+    "bin",
+    ")",
+    " on",
+    " the",
+    " Z",
+    " axis",
+    ",",
+    " centred",
+    " at",
+    " X",
+    " =",
+    " ",
+    "0",
+    ",",
+    " Y",
+    " =",
+    " ",
+    "0",
+    ".",
+    " Bottom",
+    " flange",
+    ":",
+    " diameter",
+    " "
+   ],
+   "n_kept": 42,
+   "dropped_for_length": 4
+  }
+ },
+ "dropped_for_length_per_source": {
+  "glimmer-selffix": 6,
+  "glimmer-hinted": 4,
+  "glimmer-first": 10
+ },
+ "schedule": {
+  "micro_steps": 3444,
+  "optimizer_steps": 431,
+  "groups": [
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   4
+  ]
+ },
+ "steps": [
+  {
+   "step": 1,
+   "micro_steps": 8,
+   "tokens": 25818,
+   "loss": 0.6296,
+   "lr": 4.761904761904762e-06,
+   "seconds": 1.1
+  },
+  {
+   "step": 2,
+   "micro_steps": 8,
+   "tokens": 33900,
+   "loss": 0.6011,
+   "lr": 9.523809523809525e-06,
+   "seconds": 2.89
+  },
+  {
+   "step": 3,
+   "micro_steps": 8,
+   "tokens": 28102,
+   "loss": 0.6432,
+   "lr": 1.4285714285714287e-05,
+   "seconds": 1.92
+  },
+  {
+   "step": 4,
+   "micro_steps": 8,
+   "tokens": 27530,
+   "loss": 0.5927,
+   "lr": 1.904761904761905e-05,
+   "seconds": 1.67
+  },
+  {
+   "step": 5,
+   "micro_steps": 8,
+   "tokens": 30658,
+   "loss": 0.5514,
+   "lr": 2.380952380952381e-05,
+   "seconds": 3.27
+  },
+  {
+   "step": 6,
+   "micro_steps": 8,
+   "tokens": 27158,
+   "loss": 0.5246,
+   "lr": 2.8571428571428574e-05,
+   "seconds": 1.88
+  },
+  {
+   "step": 7,
+   "micro_steps": 8,
+   "tokens": 28132,
+   "loss": 0.5293,
+   "lr": 3.3333333333333335e-05,
+   "seconds": 1.54
+  },
+  {
+   "step": 8,
+   "micro_steps": 8,
+   "tokens": 24225,
+   "loss": 0.4637,
+   "lr": 3.80952380952381e-05,
+   "seconds": 1.62
+  },
+  {
+   "step": 9,
+   "micro_steps": 8,
+   "tokens": 29680,
+   "loss": 0.5105,
+   "lr": 4.285714285714286e-05,
+   "seconds": 2.65
+  },
+  {
+   "step": 10,
+   "micro_steps": 8,
+   "tokens": 27929,
+   "loss": 0.4827,
+   "lr": 4.761904761904762e-05,
+   "seconds": 1.94
+  },
+  {
+   "step": 11,
+   "micro_steps": 8,
+   "tokens": 30612,
+   "loss": 0.4552,
+   "lr": 5.2380952380952384e-05,
+   "seconds": 3.41
+  },
+  {
+   "step": 12,
+   "micro_steps": 8,
+   "tokens": 27343,
+   "loss": 0.4882,
+   "lr": 5.714285714285715e-05,
+   "seconds": 1.63
+  },
+  {
+   "step": 13,
+   "micro_steps": 8,
+   "tokens": 27546,
+   "loss": 0.4469,
+   "lr": 6.19047619047619e-05,
+   "seconds": 1.36
+  },
+  {
+   "step": 14,
+   "micro_steps": 8,
+   "tokens": 26311,
+   "loss": 0.4735,
+   "lr": 6.666666666666667e-05,
+   "seconds": 1.92
+  },
+  {
+   "step": 15,
+   "micro_steps": 8,
+   "tokens": 24109,
+   "loss": 0.4582,
+   "lr": 7.142857142857143e-05,
+   "seconds": 2.63
+  },
+  {
+   "step": 16,
+   "micro_steps": 8,
+   "tokens": 32592,
+   "loss": 0.4065,
+   "lr": 7.61904761904762e-05,
+   "seconds": 2.72
+  },
+  {
+   "step": 17,
+   "micro_steps": 8,
+   "tokens": 30943,
+   "loss": 0.4756,
+   "lr": 8.095238095238096e-05,
+   "seconds": 3.36
+  },
+  {
+   "step": 18,
+   "micro_steps": 8,
+   "tokens": 28219,
+   "loss": 0.4257,
+   "lr": 8.571428571428573e-05,
+   "seconds": 2.8
+  },
+  {
+   "step": 19,
+   "micro_steps": 8,
+   "tokens": 23228,
+   "loss": 0.402,
+   "lr": 9.047619047619048e-05,
+   "seconds": 1.66
+  },
+  {
+   "step": 20,
+   "micro_steps": 8,
+   "tokens": 27492,
+   "loss": 0.4484,
+   "lr": 9.523809523809524e-05,
+   "seconds": 2.35
+  },
+  {
+   "step": 21,
+   "micro_steps": 8,
+   "tokens": 24235,
+   "loss": 0.4162,
+   "lr": 0.00010000000000000002,
+   "seconds": 1.91
+  },
+  {
+   "step": 22,
+   "micro_steps": 8,
+   "tokens": 31758,
+   "loss": 0.4093,
+   "lr": 0.0001,
+   "seconds": 2.15
+  },
+  {
+   "step": 23,
+   "micro_steps": 8,
+   "tokens": 27442,
+   "loss": 0.4101,
+   "lr": 9.999853218975135e-05,
+   "seconds": 2.27
+  },
+  {
+   "step": 24,
+   "micro_steps": 8,
+   "tokens": 28329,
+   "loss": 0.3813,
+   "lr": 9.999412884518409e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 25,
+   "micro_steps": 8,
+   "tokens": 27836,
+   "loss": 0.454,
+   "lr": 9.998679022482915e-05,
+   "seconds": 3.13
+  },
+  {
+   "step": 26,
+   "micro_steps": 8,
+   "tokens": 33905,
+   "loss": 0.3806,
+   "lr": 9.997651675955466e-05,
+   "seconds": 2.84
+  },
+  {
+   "step": 27,
+   "micro_steps": 8,
+   "tokens": 29150,
+   "loss": 0.3911,
+   "lr": 9.99633090525405e-05,
+   "seconds": 2.18
+  },
+  {
+   "step": 28,
+   "micro_steps": 8,
+   "tokens": 27535,
+   "loss": 0.401,
+   "lr": 9.9947167879243e-05,
+   "seconds": 1.95
+  },
+  {
+   "step": 29,
+   "micro_steps": 8,
+   "tokens": 29185,
+   "loss": 0.3899,
+   "lr": 9.992809418734932e-05,
+   "seconds": 2.25
+  },
+  {
+   "step": 30,
+   "micro_steps": 8,
+   "tokens": 28136,
+   "loss": 0.3817,
+   "lr": 9.99060890967219e-05,
+   "seconds": 2.01
+  },
+  {
+   "step": 31,
+   "micro_steps": 8,
+   "tokens": 30184,
+   "loss": 0.3632,
+   "lr": 9.988115389933262e-05,
+   "seconds": 3.41
+  },
+  {
+   "step": 32,
+   "micro_steps": 8,
+   "tokens": 25749,
+   "loss": 0.3696,
+   "lr": 9.985329005918702e-05,
+   "seconds": 1.55
+  },
+  {
+   "step": 33,
+   "micro_steps": 8,
+   "tokens": 29451,
+   "loss": 0.3824,
+   "lr": 9.982249921223831e-05,
+   "seconds": 2.29
+  },
+  {
+   "step": 34,
+   "micro_steps": 8,
+   "tokens": 30244,
+   "loss": 0.3778,
+   "lr": 9.978878316629133e-05,
+   "seconds": 2.23
+  },
+  {
+   "step": 35,
+   "micro_steps": 8,
+   "tokens": 27009,
+   "loss": 0.3948,
+   "lr": 9.975214390089637e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 36,
+   "micro_steps": 8,
+   "tokens": 31322,
+   "loss": 0.3488,
+   "lr": 9.9712583567233e-05,
+   "seconds": 4.03
+  },
+  {
+   "step": 37,
+   "micro_steps": 8,
+   "tokens": 23786,
+   "loss": 0.3367,
+   "lr": 9.967010448798375e-05,
+   "seconds": 1.48
+  },
+  {
+   "step": 38,
+   "micro_steps": 8,
+   "tokens": 31523,
+   "loss": 0.367,
+   "lr": 9.962470915719775e-05,
+   "seconds": 2.01
+  },
+  {
+   "step": 39,
+   "micro_steps": 8,
+   "tokens": 35646,
+   "loss": 0.3663,
+   "lr": 9.957640024014426e-05,
+   "seconds": 2.94
+  },
+  {
+   "step": 40,
+   "micro_steps": 8,
+   "tokens": 28613,
+   "loss": 0.4163,
+   "lr": 9.952518057315623e-05,
+   "seconds": 2.03
+  },
+  {
+   "step": 41,
+   "micro_steps": 8,
+   "tokens": 32124,
+   "loss": 0.3778,
+   "lr": 9.947105316346373e-05,
+   "seconds": 1.58
+  },
+  {
+   "step": 42,
+   "micro_steps": 8,
+   "tokens": 24843,
+   "loss": 0.3314,
+   "lr": 9.941402118901744e-05,
+   "seconds": 2.05
+  },
+  {
+   "step": 43,
+   "micro_steps": 8,
+   "tokens": 25748,
+   "loss": 0.3571,
+   "lr": 9.9354087998302e-05,
+   "seconds": 1.69
+  },
+  {
+   "step": 44,
+   "micro_steps": 8,
+   "tokens": 27060,
+   "loss": 0.3659,
+   "lr": 9.929125711013952e-05,
+   "seconds": 2.08
+  },
+  {
+   "step": 45,
+   "micro_steps": 8,
+   "tokens": 30445,
+   "loss": 0.3726,
+   "lr": 9.922553221348281e-05,
+   "seconds": 4.0
+  },
+  {
+   "step": 46,
+   "micro_steps": 8,
+   "tokens": 30005,
+   "loss": 0.3655,
+   "lr": 9.915691716719898e-05,
+   "seconds": 3.11
+  },
+  {
+   "step": 47,
+   "micro_steps": 8,
+   "tokens": 28654,
+   "loss": 0.3292,
+   "lr": 9.908541599984276e-05,
+   "seconds": 2.14
+  },
+  {
+   "step": 48,
+   "micro_steps": 8,
+   "tokens": 25491,
+   "loss": 0.3448,
+   "lr": 9.901103290941997e-05,
+   "seconds": 2.25
+  },
+  {
+   "step": 49,
+   "micro_steps": 8,
+   "tokens": 27511,
+   "loss": 0.3046,
+   "lr": 9.893377226314113e-05,
+   "seconds": 1.73
+  },
+  {
+   "step": 50,
+   "micro_steps": 8,
+   "tokens": 25263,
+   "loss": 0.3603,
+   "lr": 9.885363859716497e-05,
+   "seconds": 1.83
+  },
+  {
+   "step": 51,
+   "micro_steps": 8,
+   "tokens": 28211,
+   "loss": 0.3466,
+   "lr": 9.877063661633214e-05,
+   "seconds": 2.37
+  },
+  {
+   "step": 52,
+   "micro_steps": 8,
+   "tokens": 33502,
+   "loss": 0.3616,
+   "lr": 9.868477119388896e-05,
+   "seconds": 1.34
+  },
+  {
+   "step": 53,
+   "micro_steps": 8,
+   "tokens": 25955,
+   "loss": 0.3659,
+   "lr": 9.859604737120131e-05,
+   "seconds": 1.61
+  },
+  {
+   "step": 54,
+   "micro_steps": 8,
+   "tokens": 26836,
+   "loss": 0.3543,
+   "lr": 9.850447035745866e-05,
+   "seconds": 1.56
+  },
+  {
+   "step": 55,
+   "micro_steps": 8,
+   "tokens": 27793,
+   "loss": 0.3871,
+   "lr": 9.841004552936817e-05,
+   "seconds": 3.42
+  },
+  {
+   "step": 56,
+   "micro_steps": 8,
+   "tokens": 27134,
+   "loss": 0.3399,
+   "lr": 9.831277843083904e-05,
+   "seconds": 1.68
+  },
+  {
+   "step": 57,
+   "micro_steps": 8,
+   "tokens": 25030,
+   "loss": 0.3369,
+   "lr": 9.821267477265705e-05,
+   "seconds": 2.09
+  },
+  {
+   "step": 58,
+   "micro_steps": 8,
+   "tokens": 31668,
+   "loss": 0.3344,
+   "lr": 9.810974043214922e-05,
+   "seconds": 2.63
+  },
+  {
+   "step": 59,
+   "micro_steps": 8,
+   "tokens": 26779,
+   "loss": 0.3325,
+   "lr": 9.800398145283874e-05,
+   "seconds": 1.56
+  },
+  {
+   "step": 60,
+   "micro_steps": 8,
+   "tokens": 30454,
+   "loss": 0.3802,
+   "lr": 9.789540404409016e-05,
+   "seconds": 1.67
+  },
+  {
+   "step": 61,
+   "micro_steps": 8,
+   "tokens": 26017,
+   "loss": 0.3328,
+   "lr": 9.778401458074481e-05,
+   "seconds": 1.54
+  },
+  {
+   "step": 62,
+   "micro_steps": 8,
+   "tokens": 37122,
+   "loss": 0.3663,
+   "lr": 9.766981960274653e-05,
+   "seconds": 4.52
+  },
+  {
+   "step": 63,
+   "micro_steps": 8,
+   "tokens": 29650,
+   "loss": 0.3883,
+   "lr": 9.755282581475769e-05,
+   "seconds": 1.82
+  },
+  {
+   "step": 64,
+   "micro_steps": 8,
+   "tokens": 25310,
+   "loss": 0.362,
+   "lr": 9.74330400857655e-05,
+   "seconds": 1.76
+  },
+  {
+   "step": 65,
+   "micro_steps": 8,
+   "tokens": 29012,
+   "loss": 0.3816,
+   "lr": 9.731046944867883e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 66,
+   "micro_steps": 8,
+   "tokens": 23448,
+   "loss": 0.3377,
+   "lr": 9.718512109991514e-05,
+   "seconds": 1.75
+  },
+  {
+   "step": 67,
+   "micro_steps": 8,
+   "tokens": 27964,
+   "loss": 0.3526,
+   "lr": 9.705700239897809e-05,
+   "seconds": 1.55
+  },
+  {
+   "step": 68,
+   "micro_steps": 8,
+   "tokens": 28238,
+   "loss": 0.3305,
+   "lr": 9.692612086802535e-05,
+   "seconds": 3.32
+  },
+  {
+   "step": 69,
+   "micro_steps": 8,
+   "tokens": 27979,
+   "loss": 0.4125,
+   "lr": 9.679248419142703e-05,
+   "seconds": 2.68
+  },
+  {
+   "step": 70,
+   "micro_steps": 8,
+   "tokens": 23720,
+   "loss": 0.3321,
+   "lr": 9.665610021531447e-05,
+   "seconds": 2.32
+  },
+  {
+   "step": 71,
+   "micro_steps": 8,
+   "tokens": 31605,
+   "loss": 0.3826,
+   "lr": 9.651697694711959e-05,
+   "seconds": 2.44
+  },
+  {
+   "step": 72,
+   "micro_steps": 8,
+   "tokens": 35467,
+   "loss": 0.3818,
+   "lr": 9.637512255510475e-05,
+   "seconds": 2.44
+  },
+  {
+   "step": 73,
+   "micro_steps": 8,
+   "tokens": 27570,
+   "loss": 0.3554,
+   "lr": 9.623054536788314e-05,
+   "seconds": 1.89
+  },
+  {
+   "step": 74,
+   "micro_steps": 8,
+   "tokens": 25949,
+   "loss": 0.3183,
+   "lr": 9.608325387392986e-05,
+   "seconds": 1.56
+  },
+  {
+   "step": 75,
+   "micro_steps": 8,
+   "tokens": 24484,
+   "loss": 0.331,
+   "lr": 9.593325672108351e-05,
+   "seconds": 1.55
+  },
+  {
+   "step": 76,
+   "micro_steps": 8,
+   "tokens": 26015,
+   "loss": 0.3618,
+   "lr": 9.578056271603837e-05,
+   "seconds": 1.5
+  },
+  {
+   "step": 77,
+   "micro_steps": 8,
+   "tokens": 30823,
+   "loss": 0.3643,
+   "lr": 9.56251808238275e-05,
+   "seconds": 3.51
+  },
+  {
+   "step": 78,
+   "micro_steps": 8,
+   "tokens": 28619,
+   "loss": 0.3561,
+   "lr": 9.546712016729624e-05,
+   "seconds": 2.75
+  },
+  {
+   "step": 79,
+   "micro_steps": 8,
+   "tokens": 23442,
+   "loss": 0.3362,
+   "lr": 9.530639002656665e-05,
+   "seconds": 1.71
+  },
+  {
+   "step": 80,
+   "micro_steps": 8,
+   "tokens": 31727,
+   "loss": 0.3508,
+   "lr": 9.514299983849266e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 81,
+   "micro_steps": 8,
+   "tokens": 27579,
+   "loss": 0.3679,
+   "lr": 9.497695919610595e-05,
+   "seconds": 2.24
+  },
+  {
+   "step": 82,
+   "micro_steps": 8,
+   "tokens": 27412,
+   "loss": 0.3275,
+   "lr": 9.480827784805278e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 83,
+   "micro_steps": 8,
+   "tokens": 27419,
+   "loss": 0.3663,
+   "lr": 9.463696569802162e-05,
+   "seconds": 1.99
+  },
+  {
+   "step": 84,
+   "micro_steps": 8,
+   "tokens": 34302,
+   "loss": 0.4,
+   "lr": 9.446303280416168e-05,
+   "seconds": 2.18
+  },
+  {
+   "step": 85,
+   "micro_steps": 8,
+   "tokens": 30035,
+   "loss": 0.3609,
+   "lr": 9.428648937849228e-05,
+   "seconds": 3.99
+  },
+  {
+   "step": 86,
+   "micro_steps": 8,
+   "tokens": 37041,
+   "loss": 0.3689,
+   "lr": 9.410734578630343e-05,
+   "seconds": 1.71
+  },
+  {
+   "step": 87,
+   "micro_steps": 8,
+   "tokens": 27253,
+   "loss": 0.3659,
+   "lr": 9.392561254554713e-05,
+   "seconds": 2.49
+  },
+  {
+   "step": 88,
+   "micro_steps": 8,
+   "tokens": 29480,
+   "loss": 0.3476,
+   "lr": 9.374130032621993e-05,
+   "seconds": 2.38
+  },
+  {
+   "step": 89,
+   "micro_steps": 8,
+   "tokens": 29138,
+   "loss": 0.3516,
+   "lr": 9.35544199497364e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 90,
+   "micro_steps": 8,
+   "tokens": 30125,
+   "loss": 0.3655,
+   "lr": 9.336498238829384e-05,
+   "seconds": 2.66
+  },
+  {
+   "step": 91,
+   "micro_steps": 8,
+   "tokens": 27079,
+   "loss": 0.3374,
+   "lr": 9.317299876422796e-05,
+   "seconds": 1.11
+  },
+  {
+   "step": 92,
+   "micro_steps": 8,
+   "tokens": 24283,
+   "loss": 0.3495,
+   "lr": 9.297848034936006e-05,
+   "seconds": 2.44
+  },
+  {
+   "step": 93,
+   "micro_steps": 8,
+   "tokens": 27348,
+   "loss": 0.3588,
+   "lr": 9.278143856433503e-05,
+   "seconds": 1.71
+  },
+  {
+   "step": 94,
+   "micro_steps": 8,
+   "tokens": 40363,
+   "loss": 0.3696,
+   "lr": 9.258188497795093e-05,
+   "seconds": 2.39
+  },
+  {
+   "step": 95,
+   "micro_steps": 8,
+   "tokens": 26562,
+   "loss": 0.3753,
+   "lr": 9.237983130647974e-05,
+   "seconds": 1.81
+  },
+  {
+   "step": 96,
+   "micro_steps": 8,
+   "tokens": 29755,
+   "loss": 0.3724,
+   "lr": 9.217528941297941e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 97,
+   "micro_steps": 8,
+   "tokens": 25783,
+   "loss": 0.3639,
+   "lr": 9.19682713065975e-05,
+   "seconds": 1.46
+  },
+  {
+   "step": 98,
+   "micro_steps": 8,
+   "tokens": 25919,
+   "loss": 0.3256,
+   "lr": 9.17587891418659e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 99,
+   "micro_steps": 8,
+   "tokens": 26659,
+   "loss": 0.3875,
+   "lr": 9.154685521798736e-05,
+   "seconds": 2.44
+  },
+  {
+   "step": 100,
+   "micro_steps": 8,
+   "tokens": 29908,
+   "loss": 0.3596,
+   "lr": 9.13324819781133e-05,
+   "seconds": 2.2
+  },
+  {
+   "step": 101,
+   "micro_steps": 8,
+   "tokens": 37113,
+   "loss": 0.3773,
+   "lr": 9.111568200861325e-05,
+   "seconds": 2.69
+  },
+  {
+   "step": 102,
+   "micro_steps": 8,
+   "tokens": 27822,
+   "loss": 0.3645,
+   "lr": 9.089646803833589e-05,
+   "seconds": 2.04
+  },
+  {
+   "step": 103,
+   "micro_steps": 8,
+   "tokens": 26922,
+   "loss": 0.3576,
+   "lr": 9.067485293786172e-05,
+   "seconds": 1.39
+  },
+  {
+   "step": 104,
+   "micro_steps": 8,
+   "tokens": 26868,
+   "loss": 0.3611,
+   "lr": 9.045084971874738e-05,
+   "seconds": 1.58
+  },
+  {
+   "step": 105,
+   "micro_steps": 8,
+   "tokens": 30572,
+   "loss": 0.3538,
+   "lr": 9.022447153276168e-05,
+   "seconds": 1.84
+  },
+  {
+   "step": 106,
+   "micro_steps": 8,
+   "tokens": 31331,
+   "loss": 0.3766,
+   "lr": 8.999573167111348e-05,
+   "seconds": 1.68
+  },
+  {
+   "step": 107,
+   "micro_steps": 8,
+   "tokens": 24000,
+   "loss": 0.3455,
+   "lr": 8.976464356367134e-05,
+   "seconds": 1.47
+  },
+  {
+   "step": 108,
+   "micro_steps": 8,
+   "tokens": 26757,
+   "loss": 0.3206,
+   "lr": 8.953122077817491e-05,
+   "seconds": 4.02
+  },
+  {
+   "step": 109,
+   "micro_steps": 8,
+   "tokens": 31544,
+   "loss": 0.3535,
+   "lr": 8.929547701943848e-05,
+   "seconds": 1.92
+  },
+  {
+   "step": 110,
+   "micro_steps": 8,
+   "tokens": 23233,
+   "loss": 0.3518,
+   "lr": 8.905742612854628e-05,
+   "seconds": 1.68
+  },
+  {
+   "step": 111,
+   "micro_steps": 8,
+   "tokens": 27916,
+   "loss": 0.351,
+   "lr": 8.881708208203976e-05,
+   "seconds": 3.66
+  },
+  {
+   "step": 112,
+   "micro_steps": 8,
+   "tokens": 22806,
+   "loss": 0.3593,
+   "lr": 8.857445899109715e-05,
+   "seconds": 1.48
+  },
+  {
+   "step": 113,
+   "micro_steps": 8,
+   "tokens": 30394,
+   "loss": 0.3597,
+   "lr": 8.832957110070481e-05,
+   "seconds": 1.06
+  },
+  {
+   "step": 114,
+   "micro_steps": 8,
+   "tokens": 29035,
+   "loss": 0.3697,
+   "lr": 8.808243278882094e-05,
+   "seconds": 2.37
+  },
+  {
+   "step": 115,
+   "micro_steps": 8,
+   "tokens": 26068,
+   "loss": 0.3332,
+   "lr": 8.783305856553144e-05,
+   "seconds": 1.95
+  },
+  {
+   "step": 116,
+   "micro_steps": 8,
+   "tokens": 30381,
+   "loss": 0.3629,
+   "lr": 8.758146307219792e-05,
+   "seconds": 2.26
+  },
+  {
+   "step": 117,
+   "micro_steps": 8,
+   "tokens": 26188,
+   "loss": 0.3537,
+   "lr": 8.732766108059813e-05,
+   "seconds": 1.51
+  },
+  {
+   "step": 118,
+   "micro_steps": 8,
+   "tokens": 23137,
+   "loss": 0.3482,
+   "lr": 8.707166749205866e-05,
+   "seconds": 2.08
+  },
+  {
+   "step": 119,
+   "micro_steps": 8,
+   "tokens": 27756,
+   "loss": 0.374,
+   "lr": 8.681349733658002e-05,
+   "seconds": 2.17
+  },
+  {
+   "step": 120,
+   "micro_steps": 8,
+   "tokens": 26046,
+   "loss": 0.3556,
+   "lr": 8.65531657719542e-05,
+   "seconds": 1.37
+  },
+  {
+   "step": 121,
+   "micro_steps": 8,
+   "tokens": 28000,
+   "loss": 0.3314,
+   "lr": 8.629068808287475e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 122,
+   "micro_steps": 8,
+   "tokens": 27267,
+   "loss": 0.3503,
+   "lr": 8.602607968003935e-05,
+   "seconds": 1.43
+  },
+  {
+   "step": 123,
+   "micro_steps": 8,
+   "tokens": 26939,
+   "loss": 0.3251,
+   "lr": 8.575935609924504e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 124,
+   "micro_steps": 8,
+   "tokens": 23751,
+   "loss": 0.3539,
+   "lr": 8.549053300047603e-05,
+   "seconds": 2.33
+  },
+  {
+   "step": 125,
+   "micro_steps": 8,
+   "tokens": 26680,
+   "loss": 0.3589,
+   "lr": 8.521962616698427e-05,
+   "seconds": 1.54
+  },
+  {
+   "step": 126,
+   "micro_steps": 8,
+   "tokens": 33982,
+   "loss": 0.3661,
+   "lr": 8.494665150436288e-05,
+   "seconds": 1.88
+  },
+  {
+   "step": 127,
+   "micro_steps": 8,
+   "tokens": 23315,
+   "loss": 0.3302,
+   "lr": 8.467162503961208e-05,
+   "seconds": 2.58
+  },
+  {
+   "step": 128,
+   "micro_steps": 8,
+   "tokens": 30123,
+   "loss": 0.3506,
+   "lr": 8.43945629201985e-05,
+   "seconds": 1.58
+  },
+  {
+   "step": 129,
+   "micro_steps": 8,
+   "tokens": 25501,
+   "loss": 0.366,
+   "lr": 8.411548141310682e-05,
+   "seconds": 2.65
+  },
+  {
+   "step": 130,
+   "micro_steps": 8,
+   "tokens": 26577,
+   "loss": 0.3597,
+   "lr": 8.38343969038849e-05,
+   "seconds": 1.69
+  },
+  {
+   "step": 131,
+   "micro_steps": 8,
+   "tokens": 24727,
+   "loss": 0.3443,
+   "lr": 8.35513258956817e-05,
+   "seconds": 1.9
+  },
+  {
+   "step": 132,
+   "micro_steps": 8,
+   "tokens": 29308,
+   "loss": 0.3774,
+   "lr": 8.326628500827826e-05,
+   "seconds": 1.53
+  },
+  {
+   "step": 133,
+   "micro_steps": 8,
+   "tokens": 26684,
+   "loss": 0.3298,
+   "lr": 8.297929097711205e-05,
+   "seconds": 1.81
+  },
+  {
+   "step": 134,
+   "micro_steps": 8,
+   "tokens": 24807,
+   "loss": 0.3454,
+   "lr": 8.269036065229427e-05,
+   "seconds": 1.62
+  },
+  {
+   "step": 135,
+   "micro_steps": 8,
+   "tokens": 31543,
+   "loss": 0.3395,
+   "lr": 8.239951099762058e-05,
+   "seconds": 2.38
+  },
+  {
+   "step": 136,
+   "micro_steps": 8,
+   "tokens": 30395,
+   "loss": 0.3906,
+   "lr": 8.210675908957512e-05,
+   "seconds": 1.88
+  },
+  {
+   "step": 137,
+   "micro_steps": 8,
+   "tokens": 28192,
+   "loss": 0.3703,
+   "lr": 8.181212211632799e-05,
+   "seconds": 1.53
+  },
+  {
+   "step": 138,
+   "micro_steps": 8,
+   "tokens": 26747,
+   "loss": 0.3472,
+   "lr": 8.151561737672591e-05,
+   "seconds": 1.88
+  },
+  {
+   "step": 139,
+   "micro_steps": 8,
+   "tokens": 26350,
+   "loss": 0.3499,
+   "lr": 8.121726227927671e-05,
+   "seconds": 2.2
+  },
+  {
+   "step": 140,
+   "micro_steps": 8,
+   "tokens": 29952,
+   "loss": 0.3748,
+   "lr": 8.091707434112716e-05,
+   "seconds": 1.69
+  },
+  {
+   "step": 141,
+   "micro_steps": 8,
+   "tokens": 28731,
+   "loss": 0.3428,
+   "lr": 8.061507118703457e-05,
+   "seconds": 1.56
+  },
+  {
+   "step": 142,
+   "micro_steps": 8,
+   "tokens": 29508,
+   "loss": 0.3642,
+   "lr": 8.03112705483319e-05,
+   "seconds": 2.69
+  },
+  {
+   "step": 143,
+   "micro_steps": 8,
+   "tokens": 27466,
+   "loss": 0.369,
+   "lr": 8.000569026188685e-05,
+   "seconds": 1.66
+  },
+  {
+   "step": 144,
+   "micro_steps": 8,
+   "tokens": 25010,
+   "loss": 0.38,
+   "lr": 7.96983482690544e-05,
+   "seconds": 1.82
+  },
+  {
+   "step": 145,
+   "micro_steps": 8,
+   "tokens": 24685,
+   "loss": 0.3311,
+   "lr": 7.938926261462366e-05,
+   "seconds": 1.82
+  },
+  {
+   "step": 146,
+   "micro_steps": 8,
+   "tokens": 29518,
+   "loss": 0.3754,
+   "lr": 7.907845144575829e-05,
+   "seconds": 3.07
+  },
+  {
+   "step": 147,
+   "micro_steps": 8,
+   "tokens": 26770,
+   "loss": 0.3636,
+   "lr": 7.876593301093104e-05,
+   "seconds": 1.37
+  },
+  {
+   "step": 148,
+   "micro_steps": 8,
+   "tokens": 29008,
+   "loss": 0.3588,
+   "lr": 7.845172565885237e-05,
+   "seconds": 1.92
+  },
+  {
+   "step": 149,
+   "micro_steps": 8,
+   "tokens": 30489,
+   "loss": 0.3715,
+   "lr": 7.813584783739314e-05,
+   "seconds": 2.29
+  },
+  {
+   "step": 150,
+   "micro_steps": 8,
+   "tokens": 27281,
+   "loss": 0.3374,
+   "lr": 7.781831809250151e-05,
+   "seconds": 1.75
+  },
+  {
+   "step": 151,
+   "micro_steps": 8,
+   "tokens": 26410,
+   "loss": 0.3555,
+   "lr": 7.749915506711401e-05,
+   "seconds": 2.51
+  },
+  {
+   "step": 152,
+   "micro_steps": 8,
+   "tokens": 30425,
+   "loss": 0.3517,
+   "lr": 7.717837750006106e-05,
+   "seconds": 1.82
+  },
+  {
+   "step": 153,
+   "micro_steps": 8,
+   "tokens": 26790,
+   "loss": 0.3652,
+   "lr": 7.685600422496666e-05,
+   "seconds": 1.5
+  },
+  {
+   "step": 154,
+   "micro_steps": 8,
+   "tokens": 35906,
+   "loss": 0.3579,
+   "lr": 7.653205416914267e-05,
+   "seconds": 4.73
+  },
+  {
+   "step": 155,
+   "micro_steps": 8,
+   "tokens": 32578,
+   "loss": 0.371,
+   "lr": 7.620654635247762e-05,
+   "seconds": 4.48
+  },
+  {
+   "step": 156,
+   "micro_steps": 8,
+   "tokens": 29925,
+   "loss": 0.3181,
+   "lr": 7.587949988631982e-05,
+   "seconds": 3.21
+  },
+  {
+   "step": 157,
+   "micro_steps": 8,
+   "tokens": 21813,
+   "loss": 0.3252,
+   "lr": 7.555093397235552e-05,
+   "seconds": 1.12
+  },
+  {
+   "step": 158,
+   "micro_steps": 8,
+   "tokens": 30721,
+   "loss": 0.3601,
+   "lr": 7.522086790148133e-05,
+   "seconds": 3.72
+  },
+  {
+   "step": 159,
+   "micro_steps": 8,
+   "tokens": 28330,
+   "loss": 0.3681,
+   "lr": 7.48893210526717e-05,
+   "seconds": 3.83
+  },
+  {
+   "step": 160,
+   "micro_steps": 8,
+   "tokens": 29407,
+   "loss": 0.3507,
+   "lr": 7.455631289184116e-05,
+   "seconds": 1.97
+  },
+  {
+   "step": 161,
+   "micro_steps": 8,
+   "tokens": 27306,
+   "loss": 0.3493,
+   "lr": 7.422186297070135e-05,
+   "seconds": 1.5
+  },
+  {
+   "step": 162,
+   "micro_steps": 8,
+   "tokens": 23392,
+   "loss": 0.3299,
+   "lr": 7.388599092561315e-05,
+   "seconds": 1.35
+  },
+  {
+   "step": 163,
+   "micro_steps": 8,
+   "tokens": 27250,
+   "loss": 0.3309,
+   "lr": 7.354871647643376e-05,
+   "seconds": 1.87
+  },
+  {
+   "step": 164,
+   "micro_steps": 8,
+   "tokens": 28256,
+   "loss": 0.3634,
+   "lr": 7.32100594253589e-05,
+   "seconds": 1.81
+  },
+  {
+   "step": 165,
+   "micro_steps": 8,
+   "tokens": 28441,
+   "loss": 0.3371,
+   "lr": 7.287003965576019e-05,
+   "seconds": 1.09
+  },
+  {
+   "step": 166,
+   "micro_steps": 8,
+   "tokens": 31608,
+   "loss": 0.354,
+   "lr": 7.252867713101771e-05,
+   "seconds": 2.35
+  },
+  {
+   "step": 167,
+   "micro_steps": 8,
+   "tokens": 29600,
+   "loss": 0.3944,
+   "lr": 7.218599189334799e-05,
+   "seconds": 3.61
+  },
+  {
+   "step": 168,
+   "micro_steps": 8,
+   "tokens": 25729,
+   "loss": 0.3445,
+   "lr": 7.184200406262717e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 169,
+   "micro_steps": 8,
+   "tokens": 27573,
+   "loss": 0.3561,
+   "lr": 7.149673383520977e-05,
+   "seconds": 3.62
+  },
+  {
+   "step": 170,
+   "micro_steps": 8,
+   "tokens": 28961,
+   "loss": 0.3415,
+   "lr": 7.115020148274295e-05,
+   "seconds": 1.54
+  },
+  {
+   "step": 171,
+   "micro_steps": 8,
+   "tokens": 24274,
+   "loss": 0.3501,
+   "lr": 7.080242735097623e-05,
+   "seconds": 1.43
+  },
+  {
+   "step": 172,
+   "micro_steps": 8,
+   "tokens": 25047,
+   "loss": 0.3253,
+   "lr": 7.045343185856701e-05,
+   "seconds": 1.5
+  },
+  {
+   "step": 173,
+   "micro_steps": 8,
+   "tokens": 24988,
+   "loss": 0.3126,
+   "lr": 7.01032354958817e-05,
+   "seconds": 2.2
+  },
+  {
+   "step": 174,
+   "micro_steps": 8,
+   "tokens": 29825,
+   "loss": 0.3287,
+   "lr": 6.975185882379271e-05,
+   "seconds": 3.0
+  },
+  {
+   "step": 175,
+   "micro_steps": 8,
+   "tokens": 26794,
+   "loss": 0.3145,
+   "lr": 6.939932247247126e-05,
+   "seconds": 1.73
+  },
+  {
+   "step": 176,
+   "micro_steps": 8,
+   "tokens": 29017,
+   "loss": 0.3186,
+   "lr": 6.904564714017614e-05,
+   "seconds": 1.65
+  },
+  {
+   "step": 177,
+   "micro_steps": 8,
+   "tokens": 27108,
+   "loss": 0.3811,
+   "lr": 6.869085359203844e-05,
+   "seconds": 1.68
+  },
+  {
+   "step": 178,
+   "micro_steps": 8,
+   "tokens": 25698,
+   "loss": 0.3633,
+   "lr": 6.833496265884241e-05,
+   "seconds": 1.48
+  },
+  {
+   "step": 179,
+   "micro_steps": 8,
+   "tokens": 28918,
+   "loss": 0.3748,
+   "lr": 6.79779952358024e-05,
+   "seconds": 2.15
+  },
+  {
+   "step": 180,
+   "micro_steps": 8,
+   "tokens": 29326,
+   "loss": 0.3485,
+   "lr": 6.76199722813361e-05,
+   "seconds": 1.53
+  },
+  {
+   "step": 181,
+   "micro_steps": 8,
+   "tokens": 24956,
+   "loss": 0.3206,
+   "lr": 6.726091481583397e-05,
+   "seconds": 2.07
+  },
+  {
+   "step": 182,
+   "micro_steps": 8,
+   "tokens": 32757,
+   "loss": 0.3565,
+   "lr": 6.690084392042513e-05,
+   "seconds": 2.37
+  },
+  {
+   "step": 183,
+   "micro_steps": 8,
+   "tokens": 27346,
+   "loss": 0.3661,
+   "lr": 6.653978073573962e-05,
+   "seconds": 1.75
+  },
+  {
+   "step": 184,
+   "micro_steps": 8,
+   "tokens": 28065,
+   "loss": 0.3332,
+   "lr": 6.617774646066712e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 185,
+   "micro_steps": 8,
+   "tokens": 30123,
+   "loss": 0.3621,
+   "lr": 6.581476235111243e-05,
+   "seconds": 3.38
+  },
+  {
+   "step": 186,
+   "micro_steps": 8,
+   "tokens": 31173,
+   "loss": 0.364,
+   "lr": 6.545084971874738e-05,
+   "seconds": 2.01
+  },
+  {
+   "step": 187,
+   "micro_steps": 8,
+   "tokens": 29599,
+   "loss": 0.3327,
+   "lr": 6.508602992975963e-05,
+   "seconds": 2.27
+  },
+  {
+   "step": 188,
+   "micro_steps": 8,
+   "tokens": 33670,
+   "loss": 0.3566,
+   "lr": 6.472032440359816e-05,
+   "seconds": 2.29
+  },
+  {
+   "step": 189,
+   "micro_steps": 8,
+   "tokens": 31281,
+   "loss": 0.3607,
+   "lr": 6.43537546117158e-05,
+   "seconds": 1.72
+  },
+  {
+   "step": 190,
+   "micro_steps": 8,
+   "tokens": 26180,
+   "loss": 0.3477,
+   "lr": 6.398634207630841e-05,
+   "seconds": 1.63
+  },
+  {
+   "step": 191,
+   "micro_steps": 8,
+   "tokens": 30165,
+   "loss": 0.3415,
+   "lr": 6.361810836905138e-05,
+   "seconds": 4.03
+  },
+  {
+   "step": 192,
+   "micro_steps": 8,
+   "tokens": 30300,
+   "loss": 0.3771,
+   "lr": 6.32490751098331e-05,
+   "seconds": 1.41
+  },
+  {
+   "step": 193,
+   "micro_steps": 8,
+   "tokens": 28507,
+   "loss": 0.3321,
+   "lr": 6.287926396548556e-05,
+   "seconds": 1.59
+  },
+  {
+   "step": 194,
+   "micro_steps": 8,
+   "tokens": 29777,
+   "loss": 0.3649,
+   "lr": 6.250869664851227e-05,
+   "seconds": 1.31
+  },
+  {
+   "step": 195,
+   "micro_steps": 8,
+   "tokens": 29730,
+   "loss": 0.3644,
+   "lr": 6.213739491581348e-05,
+   "seconds": 2.23
+  },
+  {
+   "step": 196,
+   "micro_steps": 8,
+   "tokens": 34021,
+   "loss": 0.3564,
+   "lr": 6.17653805674087e-05,
+   "seconds": 1.38
+  },
+  {
+   "step": 197,
+   "micro_steps": 8,
+   "tokens": 31998,
+   "loss": 0.3189,
+   "lr": 6.139267544515689e-05,
+   "seconds": 4.11
+  },
+  {
+   "step": 198,
+   "micro_steps": 8,
+   "tokens": 26663,
+   "loss": 0.3136,
+   "lr": 6.101930143147395e-05,
+   "seconds": 1.57
+  },
+  {
+   "step": 199,
+   "micro_steps": 8,
+   "tokens": 27238,
+   "loss": 0.3634,
+   "lr": 6.0645280448048044e-05,
+   "seconds": 1.67
+  },
+  {
+   "step": 200,
+   "micro_steps": 8,
+   "tokens": 30037,
+   "loss": 0.3194,
+   "lr": 6.027063445455249e-05,
+   "seconds": 2.22
+  },
+  {
+   "step": 201,
+   "micro_steps": 8,
+   "tokens": 28761,
+   "loss": 0.3441,
+   "lr": 5.9895385447356434e-05,
+   "seconds": 2.3
+  },
+  {
+   "step": 202,
+   "micro_steps": 8,
+   "tokens": 25049,
+   "loss": 0.3466,
+   "lr": 5.951955545823342e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 203,
+   "micro_steps": 8,
+   "tokens": 24871,
+   "loss": 0.3497,
+   "lr": 5.914316655306784e-05,
+   "seconds": 2.1
+  },
+  {
+   "step": 204,
+   "micro_steps": 8,
+   "tokens": 30161,
+   "loss": 0.3319,
+   "lr": 5.876624083055939e-05,
+   "seconds": 2.16
+  },
+  {
+   "step": 205,
+   "micro_steps": 8,
+   "tokens": 24579,
+   "loss": 0.353,
+   "lr": 5.8388800420925616e-05,
+   "seconds": 1.88
+  },
+  {
+   "step": 206,
+   "micro_steps": 8,
+   "tokens": 28894,
+   "loss": 0.3683,
+   "lr": 5.801086748460255e-05,
+   "seconds": 1.34
+  },
+  {
+   "step": 207,
+   "micro_steps": 8,
+   "tokens": 26194,
+   "loss": 0.291,
+   "lr": 5.7632464210943726e-05,
+   "seconds": 4.53
+  },
+  {
+   "step": 208,
+   "micro_steps": 8,
+   "tokens": 28904,
+   "loss": 0.3419,
+   "lr": 5.725361281691724e-05,
+   "seconds": 1.74
+  },
+  {
+   "step": 209,
+   "micro_steps": 8,
+   "tokens": 24326,
+   "loss": 0.333,
+   "lr": 5.687433554580147e-05,
+   "seconds": 2.09
+  },
+  {
+   "step": 210,
+   "micro_steps": 8,
+   "tokens": 26616,
+   "loss": 0.3727,
+   "lr": 5.649465466587902e-05,
+   "seconds": 1.62
+  },
+  {
+   "step": 211,
+   "micro_steps": 8,
+   "tokens": 28511,
+   "loss": 0.3324,
+   "lr": 5.611459246912938e-05,
+   "seconds": 2.06
+  },
+  {
+   "step": 212,
+   "micro_steps": 8,
+   "tokens": 32197,
+   "loss": 0.3583,
+   "lr": 5.573417126992003e-05,
+   "seconds": 1.6
+  },
+  {
+   "step": 213,
+   "micro_steps": 8,
+   "tokens": 32554,
+   "loss": 0.3436,
+   "lr": 5.535341340369638e-05,
+   "seconds": 4.43
+  },
+  {
+   "step": 214,
+   "micro_steps": 8,
+   "tokens": 31293,
+   "loss": 0.3225,
+   "lr": 5.4972341225670354e-05,
+   "seconds": 1.42
+  },
+  {
+   "step": 215,
+   "micro_steps": 8,
+   "tokens": 34125,
+   "loss": 0.376,
+   "lr": 5.459097710950791e-05,
+   "seconds": 3.98
+  },
+  {
+   "step": 216,
+   "micro_steps": 8,
+   "tokens": 29139,
+   "loss": 0.331,
+   "lr": 5.4209343446015356e-05,
+   "seconds": 1.76
+  },
+  {
+   "step": 217,
+   "micro_steps": 8,
+   "tokens": 30050,
+   "loss": 0.3553,
+   "lr": 5.38274626418248e-05,
+   "seconds": 1.69
+  },
+  {
+   "step": 218,
+   "micro_steps": 8,
+   "tokens": 26484,
+   "loss": 0.3529,
+   "lr": 5.3445357118078545e-05,
+   "seconds": 1.17
+  },
+  {
+   "step": 219,
+   "micro_steps": 8,
+   "tokens": 32296,
+   "loss": 0.3506,
+   "lr": 5.306304930911278e-05,
+   "seconds": 1.84
+  },
+  {
+   "step": 220,
+   "micro_steps": 8,
+   "tokens": 27833,
+   "loss": 0.3072,
+   "lr": 5.268056166114028e-05,
+   "seconds": 1.33
+  },
+  {
+   "step": 221,
+   "micro_steps": 8,
+   "tokens": 29767,
+   "loss": 0.3546,
+   "lr": 5.229791663093267e-05,
+   "seconds": 3.43
+  },
+  {
+   "step": 222,
+   "micro_steps": 8,
+   "tokens": 27394,
+   "loss": 0.3268,
+   "lr": 5.191513668450178e-05,
+   "seconds": 2.18
+  },
+  {
+   "step": 223,
+   "micro_steps": 8,
+   "tokens": 24616,
+   "loss": 0.3283,
+   "lr": 5.1532244295780776e-05,
+   "seconds": 1.44
+  },
+  {
+   "step": 224,
+   "micro_steps": 8,
+   "tokens": 25356,
+   "loss": 0.3353,
+   "lr": 5.1149261945304526e-05,
+   "seconds": 1.5
+  },
+  {
+   "step": 225,
+   "micro_steps": 8,
+   "tokens": 31292,
+   "loss": 0.3175,
+   "lr": 5.0766212118889824e-05,
+   "seconds": 1.46
+  },
+  {
+   "step": 226,
+   "micro_steps": 8,
+   "tokens": 27651,
+   "loss": 0.3296,
+   "lr": 5.038311730631509e-05,
+   "seconds": 1.71
+  },
+  {
+   "step": 227,
+   "micro_steps": 8,
+   "tokens": 28120,
+   "loss": 0.3369,
+   "lr": 5e-05,
+   "seconds": 1.99
+  },
+  {
+   "step": 228,
+   "micro_steps": 8,
+   "tokens": 31506,
+   "loss": 0.3472,
+   "lr": 4.9616882693684923e-05,
+   "seconds": 1.66
+  },
+  {
+   "step": 229,
+   "micro_steps": 8,
+   "tokens": 25776,
+   "loss": 0.3363,
+   "lr": 4.923378788111019e-05,
+   "seconds": 3.05
+  },
+  {
+   "step": 230,
+   "micro_steps": 8,
+   "tokens": 22183,
+   "loss": 0.3447,
+   "lr": 4.8850738054695486e-05,
+   "seconds": 1.75
+  },
+  {
+   "step": 231,
+   "micro_steps": 8,
+   "tokens": 32199,
+   "loss": 0.3381,
+   "lr": 4.8467755704219236e-05,
+   "seconds": 3.71
+  },
+  {
+   "step": 232,
+   "micro_steps": 8,
+   "tokens": 29945,
+   "loss": 0.351,
+   "lr": 4.8084863315498234e-05,
+   "seconds": 2.26
+  },
+  {
+   "step": 233,
+   "micro_steps": 8,
+   "tokens": 29137,
+   "loss": 0.3252,
+   "lr": 4.770208336906735e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 234,
+   "micro_steps": 8,
+   "tokens": 25075,
+   "loss": 0.3068,
+   "lr": 4.731943833885973e-05,
+   "seconds": 1.73
+  },
+  {
+   "step": 235,
+   "micro_steps": 8,
+   "tokens": 26543,
+   "loss": 0.364,
+   "lr": 4.693695069088724e-05,
+   "seconds": 1.41
+  },
+  {
+   "step": 236,
+   "micro_steps": 8,
+   "tokens": 25194,
+   "loss": 0.341,
+   "lr": 4.6554642881921467e-05,
+   "seconds": 1.72
+  },
+  {
+   "step": 237,
+   "micro_steps": 8,
+   "tokens": 30776,
+   "loss": 0.3179,
+   "lr": 4.6172537358175214e-05,
+   "seconds": 1.51
+  },
+  {
+   "step": 238,
+   "micro_steps": 8,
+   "tokens": 26584,
+   "loss": 0.3475,
+   "lr": 4.579065655398465e-05,
+   "seconds": 1.41
+  },
+  {
+   "step": 239,
+   "micro_steps": 8,
+   "tokens": 30103,
+   "loss": 0.3342,
+   "lr": 4.54090228904921e-05,
+   "seconds": 1.42
+  },
+  {
+   "step": 240,
+   "micro_steps": 8,
+   "tokens": 24699,
+   "loss": 0.3649,
+   "lr": 4.5027658774329644e-05,
+   "seconds": 1.39
+  },
+  {
+   "step": 241,
+   "micro_steps": 8,
+   "tokens": 34203,
+   "loss": 0.35,
+   "lr": 4.464658659630363e-05,
+   "seconds": 4.02
+  },
+  {
+   "step": 242,
+   "micro_steps": 8,
+   "tokens": 30688,
+   "loss": 0.3452,
+   "lr": 4.4265828730079987e-05,
+   "seconds": 1.72
+  },
+  {
+   "step": 243,
+   "micro_steps": 8,
+   "tokens": 29145,
+   "loss": 0.3449,
+   "lr": 4.388540753087063e-05,
+   "seconds": 2.7
+  },
+  {
+   "step": 244,
+   "micro_steps": 8,
+   "tokens": 27552,
+   "loss": 0.3179,
+   "lr": 4.350534533412097e-05,
+   "seconds": 2.0
+  },
+  {
+   "step": 245,
+   "micro_steps": 8,
+   "tokens": 29178,
+   "loss": 0.3471,
+   "lr": 4.312566445419853e-05,
+   "seconds": 1.23
+  },
+  {
+   "step": 246,
+   "micro_steps": 8,
+   "tokens": 27668,
+   "loss": 0.3271,
+   "lr": 4.2746387183082755e-05,
+   "seconds": 1.52
+  },
+  {
+   "step": 247,
+   "micro_steps": 8,
+   "tokens": 27822,
+   "loss": 0.3211,
+   "lr": 4.236753578905627e-05,
+   "seconds": 2.03
+  },
+  {
+   "step": 248,
+   "micro_steps": 8,
+   "tokens": 28131,
+   "loss": 0.3345,
+   "lr": 4.1989132515397446e-05,
+   "seconds": 1.21
+  },
+  {
+   "step": 249,
+   "micro_steps": 8,
+   "tokens": 30905,
+   "loss": 0.3356,
+   "lr": 4.16111995790744e-05,
+   "seconds": 2.52
+  },
+  {
+   "step": 250,
+   "micro_steps": 8,
+   "tokens": 29463,
+   "loss": 0.3425,
+   "lr": 4.123375916944061e-05,
+   "seconds": 1.7
+  },
+  {
+   "step": 251,
+   "micro_steps": 8,
+   "tokens": 24217,
+   "loss": 0.315,
+   "lr": 4.085683344693216e-05,
+   "seconds": 1.46
+  },
+  {
+   "step": 252,
+   "micro_steps": 8,
+   "tokens": 30632,
+   "loss": 0.3031,
+   "lr": 4.0480444541766576e-05,
+   "seconds": 1.21
+  },
+  {
+   "step": 253,
+   "micro_steps": 8,
+   "tokens": 30852,
+   "loss": 0.3155,
+   "lr": 4.0104614552643584e-05,
+   "seconds": 1.85
+  },
+  {
+   "step": 254,
+   "micro_steps": 8,
+   "tokens": 32008,
+   "loss": 0.3403,
+   "lr": 3.9729365545447514e-05,
+   "seconds": 1.4
+  },
+  {
+   "step": 255,
+   "micro_steps": 8,
+   "tokens": 31512,
+   "loss": 0.3455,
+   "lr": 3.935471955195196e-05,
+   "seconds": 1.55
+  },
+  {
+   "step": 256,
+   "micro_steps": 8,
+   "tokens": 30173,
+   "loss": 0.3583,
+   "lr": 3.898069856852607e-05,
+   "seconds": 1.65
+  },
+  {
+   "step": 257,
+   "micro_steps": 8,
+   "tokens": 27374,
+   "loss": 0.3151,
+   "lr": 3.8607324554843136e-05,
+   "seconds": 1.83
+  },
+  {
+   "step": 258,
+   "micro_steps": 8,
+   "tokens": 23660,
+   "loss": 0.3013,
+   "lr": 3.823461943259132e-05,
+   "seconds": 2.26
+  },
+  {
+   "step": 259,
+   "micro_steps": 8,
+   "tokens": 28069,
+   "loss": 0.3325,
+   "lr": 3.786260508418655e-05,
+   "seconds": 1.4
+  },
+  {
+   "step": 260,
+   "micro_steps": 8,
+   "tokens": 26373,
+   "loss": 0.3381,
+   "lr": 3.749130335148775e-05,
+   "seconds": 1.59
+  },
+  {
+   "step": 261,
+   "micro_steps": 8,
+   "tokens": 32077,
+   "loss": 0.3354,
+   "lr": 3.7120736034514455e-05,
+   "seconds": 1.92
+  },
+  {
+   "step": 262,
+   "micro_steps": 8,
+   "tokens": 28215,
+   "loss": 0.2957,
+   "lr": 3.675092489016693e-05,
+   "seconds": 1.41
+  },
+  {
+   "step": 263,
+   "micro_steps": 8,
+   "tokens": 28167,
+   "loss": 0.3212,
+   "lr": 3.638189163094864e-05,
+   "seconds": 1.98
+  },
+  {
+   "step": 264,
+   "micro_steps": 8,
+   "tokens": 28281,
+   "loss": 0.2709,
+   "lr": 3.601365792369161e-05,
+   "seconds": 1.57
+  },
+  {
+   "step": 265,
+   "micro_steps": 8,
+   "tokens": 25542,
+   "loss": 0.3371,
+   "lr": 3.5646245388284213e-05,
+   "seconds": 1.5
+  },
+  {
+   "step": 266,
+   "micro_steps": 8,
+   "tokens": 25505,
+   "loss": 0.3184,
+   "lr": 3.5279675596401846e-05,
+   "seconds": 2.28
+  },
+  {
+   "step": 267,
+   "micro_steps": 8,
+   "tokens": 34181,
+   "loss": 0.3268,
+   "lr": 3.4913970070240386e-05,
+   "seconds": 3.8
+  },
+  {
+   "step": 268,
+   "micro_steps": 8,
+   "tokens": 27978,
+   "loss": 0.3213,
+   "lr": 3.4549150281252636e-05,
+   "seconds": 1.64
+  },
+  {
+   "step": 269,
+   "micro_steps": 8,
+   "tokens": 26122,
+   "loss": 0.338,
+   "lr": 3.418523764888758e-05,
+   "seconds": 1.98
+  },
+  {
+   "step": 270,
+   "micro_steps": 8,
+   "tokens": 25648,
+   "loss": 0.339,
+   "lr": 3.382225353933288e-05,
+   "seconds": 2.11
+  },
+  {
+   "step": 271,
+   "micro_steps": 8,
+   "tokens": 29724,
+   "loss": 0.3221,
+   "lr": 3.3460219264260396e-05,
+   "seconds": 1.32
+  },
+  {
+   "step": 272,
+   "micro_steps": 8,
+   "tokens": 24482,
+   "loss": 0.317,
+   "lr": 3.309915607957487e-05,
+   "seconds": 1.62
+  },
+  {
+   "step": 273,
+   "micro_steps": 8,
+   "tokens": 30419,
+   "loss": 0.2992,
+   "lr": 3.273908518416604e-05,
+   "seconds": 1.79
+  },
+  {
+   "step": 274,
+   "micro_steps": 8,
+   "tokens": 28861,
+   "loss": 0.3337,
+   "lr": 3.238002771866391e-05,
+   "seconds": 1.9
+  },
+  {
+   "step": 275,
+   "micro_steps": 8,
+   "tokens": 30265,
+   "loss": 0.3084,
+   "lr": 3.202200476419761e-05,
+   "seconds": 1.28
+  },
+  {
+   "step": 276,
+   "micro_steps": 8,
+   "tokens": 26248,
+   "loss": 0.3263,
+   "lr": 3.166503734115761e-05,
+   "seconds": 1.6
+  },
+  {
+   "step": 277,
+   "micro_steps": 8,
+   "tokens": 32602,
+   "loss": 0.3329,
+   "lr": 3.130914640796157e-05,
+   "seconds": 1.85
+  },
+  {
+   "step": 278,
+   "micro_steps": 8,
+   "tokens": 32841,
+   "loss": 0.354,
+   "lr": 3.095435285982387e-05,
+   "seconds": 2.18
+  },
+  {
+   "step": 279,
+   "micro_steps": 8,
+   "tokens": 25294,
+   "loss": 0.3175,
+   "lr": 3.060067752752874e-05,
+   "seconds": 2.19
+  },
+  {
+   "step": 280,
+   "micro_steps": 8,
+   "tokens": 28804,
+   "loss": 0.3518,
+   "lr": 3.0248141176207296e-05,
+   "seconds": 1.49
+  },
+  {
+   "step": 281,
+   "micro_steps": 8,
+   "tokens": 25073,
+   "loss": 0.3425,
+   "lr": 2.9896764504118312e-05,
+   "seconds": 1.38
+  },
+  {
+   "step": 282,
+   "micro_steps": 8,
+   "tokens": 27169,
+   "loss": 0.3168,
+   "lr": 2.9546568141433006e-05,
+   "seconds": 1.68
+  },
+  {
+   "step": 283,
+   "micro_steps": 8,
+   "tokens": 25752,
+   "loss": 0.3015,
+   "lr": 2.9197572649023786e-05,
+   "seconds": 2.44
+  },
+  {
+   "step": 284,
+   "micro_steps": 8,
+   "tokens": 29866,
+   "loss": 0.3592,
+   "lr": 2.8849798517257065e-05,
+   "seconds": 1.66
+  },
+  {
+   "step": 285,
+   "micro_steps": 8,
+   "tokens": 23901,
+   "loss": 0.3146,
+   "lr": 2.8503266164790232e-05,
+   "seconds": 1.12
+  },
+  {
+   "step": 286,
+   "micro_steps": 8,
+   "tokens": 30480,
+   "loss": 0.3427,
+   "lr": 2.815799593737285e-05,
+   "seconds": 2.94
+  },
+  {
+   "step": 287,
+   "micro_steps": 8,
+   "tokens": 36538,
+   "loss": 0.3584,
+   "lr": 2.7814008106652012e-05,
+   "seconds": 2.35
+  },
+  {
+   "step": 288,
+   "micro_steps": 8,
+   "tokens": 28548,
+   "loss": 0.3244,
+   "lr": 2.74713228689823e-05,
+   "seconds": 2.44
+  },
+  {
+   "step": 289,
+   "micro_steps": 8,
+   "tokens": 25990,
+   "loss": 0.2948,
+   "lr": 2.7129960344239824e-05,
+   "seconds": 1.3
+  },
+  {
+   "step": 290,
+   "micro_steps": 8,
+   "tokens": 23996,
+   "loss": 0.3092,
+   "lr": 2.6789940574641102e-05,
+   "seconds": 1.56
+  },
+  {
+   "step": 291,
+   "micro_steps": 8,
+   "tokens": 27626,
+   "loss": 0.3302,
+   "lr": 2.645128352356625e-05,
+   "seconds": 2.49
+  },
+  {
+   "step": 292,
+   "micro_steps": 8,
+   "tokens": 26765,
+   "loss": 0.3309,
+   "lr": 2.6114009074386846e-05,
+   "seconds": 2.37
+  },
+  {
+   "step": 293,
+   "micro_steps": 8,
+   "tokens": 28596,
+   "loss": 0.3204,
+   "lr": 2.5778137029298654e-05,
+   "seconds": 2.09
+  },
+  {
+   "step": 294,
+   "micro_steps": 8,
+   "tokens": 25638,
+   "loss": 0.2938,
+   "lr": 2.5443687108158836e-05,
+   "seconds": 1.29
+  },
+  {
+   "step": 295,
+   "micro_steps": 8,
+   "tokens": 32516,
+   "loss": 0.3301,
+   "lr": 2.5110678947328302e-05,
+   "seconds": 1.53
+  },
+  {
+   "step": 296,
+   "micro_steps": 8,
+   "tokens": 26425,
+   "loss": 0.3319,
+   "lr": 2.4779132098518675e-05,
+   "seconds": 1.24
+  },
+  {
+   "step": 297,
+   "micro_steps": 8,
+   "tokens": 29645,
+   "loss": 0.3112,
+   "lr": 2.4449066027644475e-05,
+   "seconds": 4.0
+  },
+  {
+   "step": 298,
+   "micro_steps": 8,
+   "tokens": 26177,
+   "loss": 0.3262,
+   "lr": 2.4120500113680177e-05,
+   "seconds": 1.68
+  },
+  {
+   "step": 299,
+   "micro_steps": 8,
+   "tokens": 33107,
+   "loss": 0.3636,
+   "lr": 2.379345364752239e-05,
+   "seconds": 2.94
+  },
+  {
+   "step": 300,
+   "micro_steps": 8,
+   "tokens": 27790,
+   "loss": 0.3362,
+   "lr": 2.346794583085733e-05,
+   "seconds": 1.67
+  },
+  {
+   "step": 301,
+   "micro_steps": 8,
+   "tokens": 36760,
+   "loss": 0.3462,
+   "lr": 2.3143995775033345e-05,
+   "seconds": 3.17
+  },
+  {
+   "step": 302,
+   "micro_steps": 8,
+   "tokens": 28735,
+   "loss": 0.3391,
+   "lr": 2.282162249993895e-05,
+   "seconds": 1.55
+  },
+  {
+   "step": 303,
+   "micro_steps": 8,
+   "tokens": 31221,
+   "loss": 0.334,
+   "lr": 2.2500844932885984e-05,
+   "seconds": 1.36
+  },
+  {
+   "step": 304,
+   "micro_steps": 8,
+   "tokens": 30237,
+   "loss": 0.3167,
+   "lr": 2.2181681907498502e-05,
+   "seconds": 1.48
+  },
+  {
+   "step": 305,
+   "micro_steps": 8,
+   "tokens": 27483,
+   "loss": 0.3193,
+   "lr": 2.1864152162606882e-05,
+   "seconds": 2.54
+  },
+  {
+   "step": 306,
+   "micro_steps": 8,
+   "tokens": 28698,
+   "loss": 0.311,
+   "lr": 2.154827434114765e-05,
+   "seconds": 1.58
+  },
+  {
+   "step": 307,
+   "micro_steps": 8,
+   "tokens": 23614,
+   "loss": 0.3289,
+   "lr": 2.1234066989068972e-05,
+   "seconds": 1.33
+  },
+  {
+   "step": 308,
+   "micro_steps": 8,
+   "tokens": 27288,
+   "loss": 0.3225,
+   "lr": 2.0921548554241732e-05,
+   "seconds": 1.63
+  },
+  {
+   "step": 309,
+   "micro_steps": 8,
+   "tokens": 39225,
+   "loss": 0.3376,
+   "lr": 2.061073738537635e-05,
+   "seconds": 3.36
+  },
+  {
+   "step": 310,
+   "micro_steps": 8,
+   "tokens": 28692,
+   "loss": 0.3451,
+   "lr": 2.0301651730945627e-05,
+   "seconds": 1.19
+  },
+  {
+   "step": 311,
+   "micro_steps": 8,
+   "tokens": 29992,
+   "loss": 0.3413,
+   "lr": 1.9994309738113178e-05,
+   "seconds": 1.72
+  },
+  {
+   "step": 312,
+   "micro_steps": 8,
+   "tokens": 25656,
+   "loss": 0.3216,
+   "lr": 1.9688729451668114e-05,
+   "seconds": 2.44
+  },
+  {
+   "step": 313,
+   "micro_steps": 8,
+   "tokens": 25237,
+   "loss": 0.3186,
+   "lr": 1.9384928812965453e-05,
+   "seconds": 1.33
+  },
+  {
+   "step": 314,
+   "micro_steps": 8,
+   "tokens": 26338,
+   "loss": 0.3514,
+   "lr": 1.9082925658872853e-05,
+   "seconds": 1.96
+  },
+  {
+   "step": 315,
+   "micro_steps": 8,
+   "tokens": 30102,
+   "loss": 0.3175,
+   "lr": 1.878273772072332e-05,
+   "seconds": 1.53
+  },
+  {
+   "step": 316,
+   "micro_steps": 8,
+   "tokens": 31185,
+   "loss": 0.357,
+   "lr": 1.84843826232741e-05,
+   "seconds": 1.9
+  },
+  {
+   "step": 317,
+   "micro_steps": 8,
+   "tokens": 34052,
+   "loss": 0.3383,
+   "lr": 1.818787788367202e-05,
+   "seconds": 2.03
+  },
+  {
+   "step": 318,
+   "micro_steps": 8,
+   "tokens": 26469,
+   "loss": 0.3192,
+   "lr": 1.7893240910424876e-05,
+   "seconds": 2.23
+  },
+  {
+   "step": 319,
+   "micro_steps": 8,
+   "tokens": 25223,
+   "loss": 0.3273,
+   "lr": 1.7600489002379443e-05,
+   "seconds": 1.89
+  },
+  {
+   "step": 320,
+   "micro_steps": 8,
+   "tokens": 31866,
+   "loss": 0.3361,
+   "lr": 1.730963934770575e-05,
+   "seconds": 3.85
+  },
+  {
+   "step": 321,
+   "micro_steps": 8,
+   "tokens": 31772,
+   "loss": 0.3346,
+   "lr": 1.7020709022887947e-05,
+   "seconds": 1.67
+  },
+  {
+   "step": 322,
+   "micro_steps": 8,
+   "tokens": 25189,
+   "loss": 0.3215,
+   "lr": 1.673371499172174e-05,
+   "seconds": 1.73
+  },
+  {
+   "step": 323,
+   "micro_steps": 8,
+   "tokens": 22432,
+   "loss": 0.3014,
+   "lr": 1.6448674104318307e-05,
+   "seconds": 1.26
+  },
+  {
+   "step": 324,
+   "micro_steps": 8,
+   "tokens": 34725,
+   "loss": 0.3334,
+   "lr": 1.6165603096115107e-05,
+   "seconds": 2.14
+  },
+  {
+   "step": 325,
+   "micro_steps": 8,
+   "tokens": 23425,
+   "loss": 0.2878,
+   "lr": 1.5884518586893187e-05,
+   "seconds": 1.21
+  },
+  {
+   "step": 326,
+   "micro_steps": 8,
+   "tokens": 25372,
+   "loss": 0.342,
+   "lr": 1.560543707980152e-05,
+   "seconds": 1.97
+  },
+  {
+   "step": 327,
+   "micro_steps": 8,
+   "tokens": 27400,
+   "loss": 0.3355,
+   "lr": 1.532837496038792e-05,
+   "seconds": 1.46
+  },
+  {
+   "step": 328,
+   "micro_steps": 8,
+   "tokens": 28914,
+   "loss": 0.3293,
+   "lr": 1.5053348495637138e-05,
+   "seconds": 1.83
+  },
+  {
+   "step": 329,
+   "micro_steps": 8,
+   "tokens": 28428,
+   "loss": 0.338,
+   "lr": 1.4780373833015737e-05,
+   "seconds": 2.34
+  },
+  {
+   "step": 330,
+   "micro_steps": 8,
+   "tokens": 25824,
+   "loss": 0.2972,
+   "lr": 1.4509466999523985e-05,
+   "seconds": 1.87
+  },
+  {
+   "step": 331,
+   "micro_steps": 8,
+   "tokens": 29737,
+   "loss": 0.3143,
+   "lr": 1.4240643900754975e-05,
+   "seconds": 2.55
+  },
+  {
+   "step": 332,
+   "micro_steps": 8,
+   "tokens": 27299,
+   "loss": 0.3296,
+   "lr": 1.3973920319960655e-05,
+   "seconds": 1.48
+  },
+  {
+   "step": 333,
+   "micro_steps": 8,
+   "tokens": 23113,
+   "loss": 0.3194,
+   "lr": 1.370931191712525e-05,
+   "seconds": 1.49
+  },
+  {
+   "step": 334,
+   "micro_steps": 8,
+   "tokens": 25752,
+   "loss": 0.3353,
+   "lr": 1.3446834228045812e-05,
+   "seconds": 2.05
+  },
+  {
+   "step": 335,
+   "micro_steps": 8,
+   "tokens": 29516,
+   "loss": 0.349,
+   "lr": 1.3186502663419986e-05,
+   "seconds": 1.7
+  },
+  {
+   "step": 336,
+   "micro_steps": 8,
+   "tokens": 25208,
+   "loss": 0.3119,
+   "lr": 1.2928332507941342e-05,
+   "seconds": 1.92
+  },
+  {
+   "step": 337,
+   "micro_steps": 8,
+   "tokens": 28221,
+   "loss": 0.2997,
+   "lr": 1.2672338919401866e-05,
+   "seconds": 1.78
+  },
+  {
+   "step": 338,
+   "micro_steps": 8,
+   "tokens": 28438,
+   "loss": 0.321,
+   "lr": 1.2418536927802094e-05,
+   "seconds": 1.34
+  },
+  {
+   "step": 339,
+   "micro_steps": 8,
+   "tokens": 22612,
+   "loss": 0.2954,
+   "lr": 1.216694143446857e-05,
+   "seconds": 1.44
+  },
+  {
+   "step": 340,
+   "micro_steps": 8,
+   "tokens": 27527,
+   "loss": 0.356,
+   "lr": 1.191756721117906e-05,
+   "seconds": 2.05
+  },
+  {
+   "step": 341,
+   "micro_steps": 8,
+   "tokens": 32251,
+   "loss": 0.3264,
+   "lr": 1.1670428899295205e-05,
+   "seconds": 3.04
+  },
+  {
+   "step": 342,
+   "micro_steps": 8,
+   "tokens": 23904,
+   "loss": 0.2937,
+   "lr": 1.1425541008902851e-05,
+   "seconds": 1.56
+  },
+  {
+   "step": 343,
+   "micro_steps": 8,
+   "tokens": 30300,
+   "loss": 0.3317,
+   "lr": 1.1182917917960245e-05,
+   "seconds": 3.27
+  },
+  {
+   "step": 344,
+   "micro_steps": 8,
+   "tokens": 25326,
+   "loss": 0.341,
+   "lr": 1.0942573871453733e-05,
+   "seconds": 1.54
+  },
+  {
+   "step": 345,
+   "micro_steps": 8,
+   "tokens": 27796,
+   "loss": 0.3279,
+   "lr": 1.0704522980561533e-05,
+   "seconds": 2.15
+  },
+  {
+   "step": 346,
+   "micro_steps": 8,
+   "tokens": 23628,
+   "loss": 0.3207,
+   "lr": 1.0468779221825103e-05,
+   "seconds": 1.23
+  },
+  {
+   "step": 347,
+   "micro_steps": 8,
+   "tokens": 28901,
+   "loss": 0.3468,
+   "lr": 1.0235356436328675e-05,
+   "seconds": 1.96
+  },
+  {
+   "step": 348,
+   "micro_steps": 8,
+   "tokens": 28276,
+   "loss": 0.3175,
+   "lr": 1.0004268328886523e-05,
+   "seconds": 1.8
+  },
+  {
+   "step": 349,
+   "micro_steps": 8,
+   "tokens": 23039,
+   "loss": 0.3092,
+   "lr": 9.775528467238327e-06,
+   "seconds": 2.01
+  },
+  {
+   "step": 350,
+   "micro_steps": 8,
+   "tokens": 30517,
+   "loss": 0.2993,
+   "lr": 9.549150281252633e-06,
+   "seconds": 1.87
+  },
+  {
+   "step": 351,
+   "micro_steps": 8,
+   "tokens": 30311,
+   "loss": 0.354,
+   "lr": 9.325147062138278e-06,
+   "seconds": 2.41
+  },
+  {
+   "step": 352,
+   "micro_steps": 8,
+   "tokens": 30348,
+   "loss": 0.3553,
+   "lr": 9.103531961664118e-06,
+   "seconds": 1.56
+  },
+  {
+   "step": 353,
+   "micro_steps": 8,
+   "tokens": 26585,
+   "loss": 0.3339,
+   "lr": 8.884317991386764e-06,
+   "seconds": 3.24
+  },
+  {
+   "step": 354,
+   "micro_steps": 8,
+   "tokens": 25515,
+   "loss": 0.3102,
+   "lr": 8.6675180218867e-06,
+   "seconds": 2.31
+  },
+  {
+   "step": 355,
+   "micro_steps": 8,
+   "tokens": 30176,
+   "loss": 0.3509,
+   "lr": 8.453144782012639e-06,
+   "seconds": 2.2
+  },
+  {
+   "step": 356,
+   "micro_steps": 8,
+   "tokens": 30439,
+   "loss": 0.3285,
+   "lr": 8.241210858134108e-06,
+   "seconds": 3.03
+  },
+  {
+   "step": 357,
+   "micro_steps": 8,
+   "tokens": 26267,
+   "loss": 0.3227,
+   "lr": 8.031728693402502e-06,
+   "seconds": 1.55
+  },
+  {
+   "step": 358,
+   "micro_steps": 8,
+   "tokens": 29790,
+   "loss": 0.358,
+   "lr": 7.824710587020596e-06,
+   "seconds": 1.95
+  },
+  {
+   "step": 359,
+   "micro_steps": 8,
+   "tokens": 25434,
+   "loss": 0.3321,
+   "lr": 7.62016869352028e-06,
+   "seconds": 1.95
+  },
+  {
+   "step": 360,
+   "micro_steps": 8,
+   "tokens": 23631,
+   "loss": 0.328,
+   "lr": 7.418115022049083e-06,
+   "seconds": 1.34
+  },
+  {
+   "step": 361,
+   "micro_steps": 8,
+   "tokens": 27781,
+   "loss": 0.3347,
+   "lr": 7.218561435664977e-06,
+   "seconds": 2.48
+  },
+  {
+   "step": 362,
+   "micro_steps": 8,
+   "tokens": 28078,
+   "loss": 0.3513,
+   "lr": 7.0215196506399515e-06,
+   "seconds": 1.46
+  },
+  {
+   "step": 363,
+   "micro_steps": 8,
+   "tokens": 26783,
+   "loss": 0.3226,
+   "lr": 6.8270012357720455e-06,
+   "seconds": 1.66
+  },
+  {
+   "step": 364,
+   "micro_steps": 8,
+   "tokens": 32462,
+   "loss": 0.3477,
+   "lr": 6.6350176117061845e-06,
+   "seconds": 2.04
+  },
+  {
+   "step": 365,
+   "micro_steps": 8,
+   "tokens": 26555,
+   "loss": 0.3034,
+   "lr": 6.445580050263611e-06,
+   "seconds": 2.06
+  },
+  {
+   "step": 366,
+   "micro_steps": 8,
+   "tokens": 27268,
+   "loss": 0.327,
+   "lr": 6.258699673780083e-06,
+   "seconds": 1.6
+  },
+  {
+   "step": 367,
+   "micro_steps": 8,
+   "tokens": 31612,
+   "loss": 0.3541,
+   "lr": 6.07438745445289e-06,
+   "seconds": 2.98
+  },
+  {
+   "step": 368,
+   "micro_steps": 8,
+   "tokens": 27717,
+   "loss": 0.3231,
+   "lr": 5.892654213696592e-06,
+   "seconds": 1.65
+  },
+  {
+   "step": 369,
+   "micro_steps": 8,
+   "tokens": 30337,
+   "loss": 0.3398,
+   "lr": 5.7135106215077335e-06,
+   "seconds": 2.33
+  },
+  {
+   "step": 370,
+   "micro_steps": 8,
+   "tokens": 31751,
+   "loss": 0.3451,
+   "lr": 5.536967195838333e-06,
+   "seconds": 1.8
+  },
+  {
+   "step": 371,
+   "micro_steps": 8,
+   "tokens": 32411,
+   "loss": 0.3038,
+   "lr": 5.3630343019783704e-06,
+   "seconds": 1.44
+  },
+  {
+   "step": 372,
+   "micro_steps": 8,
+   "tokens": 26384,
+   "loss": 0.2972,
+   "lr": 5.191722151947226e-06,
+   "seconds": 1.85
+  },
+  {
+   "step": 373,
+   "micro_steps": 8,
+   "tokens": 25185,
+   "loss": 0.3125,
+   "lr": 5.0230408038940635e-06,
+   "seconds": 2.41
+  },
+  {
+   "step": 374,
+   "micro_steps": 8,
+   "tokens": 29327,
+   "loss": 0.3614,
+   "lr": 4.857000161507353e-06,
+   "seconds": 2.55
+  },
+  {
+   "step": 375,
+   "micro_steps": 8,
+   "tokens": 31091,
+   "loss": 0.3314,
+   "lr": 4.69360997343335e-06,
+   "seconds": 2.3
+  },
+  {
+   "step": 376,
+   "micro_steps": 8,
+   "tokens": 29117,
+   "loss": 0.327,
+   "lr": 4.532879832703757e-06,
+   "seconds": 1.52
+  },
+  {
+   "step": 377,
+   "micro_steps": 8,
+   "tokens": 23326,
+   "loss": 0.2965,
+   "lr": 4.374819176172501e-06,
+   "seconds": 1.24
+  },
+  {
+   "step": 378,
+   "micro_steps": 8,
+   "tokens": 27560,
+   "loss": 0.3294,
+   "lr": 4.21943728396163e-06,
+   "seconds": 3.17
+  },
+  {
+   "step": 379,
+   "micro_steps": 8,
+   "tokens": 27496,
+   "loss": 0.3178,
+   "lr": 4.0667432789165075e-06,
+   "seconds": 1.03
+  },
+  {
+   "step": 380,
+   "micro_steps": 8,
+   "tokens": 28599,
+   "loss": 0.3267,
+   "lr": 3.916746126070142e-06,
+   "seconds": 1.48
+  },
+  {
+   "step": 381,
+   "micro_steps": 8,
+   "tokens": 26434,
+   "loss": 0.3065,
+   "lr": 3.7694546321168756e-06,
+   "seconds": 1.3
+  },
+  {
+   "step": 382,
+   "micro_steps": 8,
+   "tokens": 31585,
+   "loss": 0.3666,
+   "lr": 3.6248774448952695e-06,
+   "seconds": 1.61
+  },
+  {
+   "step": 383,
+   "micro_steps": 8,
+   "tokens": 27654,
+   "loss": 0.3369,
+   "lr": 3.483023052880413e-06,
+   "seconds": 1.68
+  },
+  {
+   "step": 384,
+   "micro_steps": 8,
+   "tokens": 24988,
+   "loss": 0.3283,
+   "lr": 3.3438997846855393e-06,
+   "seconds": 1.88
+  },
+  {
+   "step": 385,
+   "micro_steps": 8,
+   "tokens": 33233,
+   "loss": 0.33,
+   "lr": 3.207515808572975e-06,
+   "seconds": 1.41
+  },
+  {
+   "step": 386,
+   "micro_steps": 8,
+   "tokens": 24181,
+   "loss": 0.3203,
+   "lr": 3.0738791319746606e-06,
+   "seconds": 2.14
+  },
+  {
+   "step": 387,
+   "micro_steps": 8,
+   "tokens": 25591,
+   "loss": 0.2999,
+   "lr": 2.942997601021924e-06,
+   "seconds": 1.19
+  },
+  {
+   "step": 388,
+   "micro_steps": 8,
+   "tokens": 23859,
+   "loss": 0.2891,
+   "lr": 2.8148789000848664e-06,
+   "seconds": 1.71
+  },
+  {
+   "step": 389,
+   "micro_steps": 8,
+   "tokens": 27957,
+   "loss": 0.3158,
+   "lr": 2.689530551321179e-06,
+   "seconds": 1.52
+  },
+  {
+   "step": 390,
+   "micro_steps": 8,
+   "tokens": 29347,
+   "loss": 0.3002,
+   "lr": 2.5669599142344958e-06,
+   "seconds": 2.49
+  },
+  {
+   "step": 391,
+   "micro_steps": 8,
+   "tokens": 28968,
+   "loss": 0.2999,
+   "lr": 2.4471741852423237e-06,
+   "seconds": 1.96
+  },
+  {
+   "step": 392,
+   "micro_steps": 8,
+   "tokens": 26593,
+   "loss": 0.349,
+   "lr": 2.330180397253473e-06,
+   "seconds": 1.78
+  },
+  {
+   "step": 393,
+   "micro_steps": 8,
+   "tokens": 25275,
+   "loss": 0.3276,
+   "lr": 2.2159854192551956e-06,
+   "seconds": 1.27
+  },
+  {
+   "step": 394,
+   "micro_steps": 8,
+   "tokens": 27665,
+   "loss": 0.3553,
+   "lr": 2.104595955909844e-06,
+   "seconds": 2.08
+  },
+  {
+   "step": 395,
+   "micro_steps": 8,
+   "tokens": 31471,
+   "loss": 0.3274,
+   "lr": 1.996018547161266e-06,
+   "seconds": 1.51
+  },
+  {
+   "step": 396,
+   "micro_steps": 8,
+   "tokens": 23922,
+   "loss": 0.309,
+   "lr": 1.8902595678507829e-06,
+   "seconds": 1.9
+  },
+  {
+   "step": 397,
+   "micro_steps": 8,
+   "tokens": 30398,
+   "loss": 0.3147,
+   "lr": 1.7873252273429509e-06,
+   "seconds": 3.52
+  },
+  {
+   "step": 398,
+   "micro_steps": 8,
+   "tokens": 29722,
+   "loss": 0.3485,
+   "lr": 1.6872215691609684e-06,
+   "seconds": 1.73
+  },
+  {
+   "step": 399,
+   "micro_steps": 8,
+   "tokens": 28997,
+   "loss": 0.3217,
+   "lr": 1.5899544706318381e-06,
+   "seconds": 1.67
+  },
+  {
+   "step": 400,
+   "micro_steps": 8,
+   "tokens": 26572,
+   "loss": 0.3269,
+   "lr": 1.495529642541349e-06,
+   "seconds": 1.75
+  },
+  {
+   "step": 401,
+   "micro_steps": 8,
+   "tokens": 34214,
+   "loss": 0.3393,
+   "lr": 1.4039526287986882e-06,
+   "seconds": 3.68
+  },
+  {
+   "step": 402,
+   "micro_steps": 8,
+   "tokens": 28382,
+   "loss": 0.3192,
+   "lr": 1.3152288061110518e-06,
+   "seconds": 1.45
+  },
+  {
+   "step": 403,
+   "micro_steps": 8,
+   "tokens": 31943,
+   "loss": 0.3336,
+   "lr": 1.2293633836678697e-06,
+   "seconds": 2.02
+  },
+  {
+   "step": 404,
+   "micro_steps": 8,
+   "tokens": 34421,
+   "loss": 0.3474,
+   "lr": 1.1463614028350389e-06,
+   "seconds": 2.99
+  },
+  {
+   "step": 405,
+   "micro_steps": 8,
+   "tokens": 25648,
+   "loss": 0.3108,
+   "lr": 1.0662277368588824e-06,
+   "seconds": 1.36
+  },
+  {
+   "step": 406,
+   "micro_steps": 8,
+   "tokens": 25065,
+   "loss": 0.3146,
+   "lr": 9.889670905800397e-07,
+   "seconds": 1.65
+  },
+  {
+   "step": 407,
+   "micro_steps": 8,
+   "tokens": 36999,
+   "loss": 0.3647,
+   "lr": 9.145840001572537e-07,
+   "seconds": 2.66
+  },
+  {
+   "step": 408,
+   "micro_steps": 8,
+   "tokens": 26901,
+   "loss": 0.3299,
+   "lr": 8.430828328010232e-07,
+   "seconds": 2.18
+  },
+  {
+   "step": 409,
+   "micro_steps": 8,
+   "tokens": 30813,
+   "loss": 0.3482,
+   "lr": 7.744677865171967e-07,
+   "seconds": 2.87
+  },
+  {
+   "step": 410,
+   "micro_steps": 8,
+   "tokens": 26650,
+   "loss": 0.3211,
+   "lr": 7.087428898604975e-07,
+   "seconds": 1.49
+  },
+  {
+   "step": 411,
+   "micro_steps": 8,
+   "tokens": 37347,
+   "loss": 0.3629,
+   "lr": 6.459120016980014e-07,
+   "seconds": 2.13
+  },
+  {
+   "step": 412,
+   "micro_steps": 8,
+   "tokens": 23771,
+   "loss": 0.2774,
+   "lr": 5.859788109825793e-07,
+   "seconds": 1.46
+  },
+  {
+   "step": 413,
+   "micro_steps": 8,
+   "tokens": 34252,
+   "loss": 0.3103,
+   "lr": 5.289468365362815e-07,
+   "seconds": 1.59
+  },
+  {
+   "step": 414,
+   "micro_steps": 8,
+   "tokens": 27169,
+   "loss": 0.3297,
+   "lr": 4.7481942684378113e-07,
+   "seconds": 1.67
+  },
+  {
+   "step": 415,
+   "micro_steps": 8,
+   "tokens": 24165,
+   "loss": 0.2999,
+   "lr": 4.2359975985574175e-07,
+   "seconds": 1.37
+  },
+  {
+   "step": 416,
+   "micro_steps": 8,
+   "tokens": 32238,
+   "loss": 0.3333,
+   "lr": 3.752908428022506e-07,
+   "seconds": 2.16
+  },
+  {
+   "step": 417,
+   "micro_steps": 8,
+   "tokens": 27284,
+   "loss": 0.3163,
+   "lr": 3.2989551201624835e-07,
+   "seconds": 1.22
+  },
+  {
+   "step": 418,
+   "micro_steps": 8,
+   "tokens": 24415,
+   "loss": 0.3315,
+   "lr": 2.87416432767007e-07,
+   "seconds": 1.4
+  },
+  {
+   "step": 419,
+   "micro_steps": 8,
+   "tokens": 29777,
+   "loss": 0.328,
+   "lr": 2.478560991036383e-07,
+   "seconds": 2.23
+  },
+  {
+   "step": 420,
+   "micro_steps": 8,
+   "tokens": 24849,
+   "loss": 0.3119,
+   "lr": 2.112168337086773e-07,
+   "seconds": 1.38
+  },
+  {
+   "step": 421,
+   "micro_steps": 8,
+   "tokens": 29651,
+   "loss": 0.3555,
+   "lr": 1.7750078776168632e-07,
+   "seconds": 1.62
+  },
+  {
+   "step": 422,
+   "micro_steps": 8,
+   "tokens": 21047,
+   "loss": 0.2732,
+   "lr": 1.4670994081297795e-07,
+   "seconds": 1.12
+  },
+  {
+   "step": 423,
+   "micro_steps": 8,
+   "tokens": 32691,
+   "loss": 0.3081,
+   "lr": 1.1884610066738578e-07,
+   "seconds": 1.64
+  },
+  {
+   "step": 424,
+   "micro_steps": 8,
+   "tokens": 26495,
+   "loss": 0.3322,
+   "lr": 9.391090327811048e-08,
+   "seconds": 1.24
+  },
+  {
+   "step": 425,
+   "micro_steps": 8,
+   "tokens": 26259,
+   "loss": 0.3425,
+   "lr": 7.190581265067997e-08,
+   "seconds": 1.84
+  },
+  {
+   "step": 426,
+   "micro_steps": 8,
+   "tokens": 27611,
+   "loss": 0.3294,
+   "lr": 5.2832120757007054e-08,
+   "seconds": 2.41
+  },
+  {
+   "step": 427,
+   "micro_steps": 8,
+   "tokens": 33166,
+   "loss": 0.3351,
+   "lr": 3.669094745950008e-08,
+   "seconds": 2.68
+  },
+  {
+   "step": 428,
+   "micro_steps": 8,
+   "tokens": 27142,
+   "loss": 0.3214,
+   "lr": 2.3483240445343334e-08,
+   "seconds": 2.03
+  },
+  {
+   "step": 429,
+   "micro_steps": 8,
+   "tokens": 36118,
+   "loss": 0.3043,
+   "lr": 1.3209775170852645e-08,
+   "seconds": 2.77
+  },
+  {
+   "step": 430,
+   "micro_steps": 8,
+   "tokens": 30464,
+   "loss": 0.3476,
+   "lr": 5.8711548159229305e-09,
+   "seconds": 2.06
+  },
+  {
+   "step": 431,
+   "micro_steps": 4,
+   "tokens": 17462,
+   "loss": 0.3509,
+   "lr": 1.467810248650947e-09,
+   "seconds": 2.29
+  }
+ ],
+ "peak_gb": 76.5,
+ "gpu_total_gb": 150.1,
+ "adapter": "/vol/r5f/adapter",
+ "train_total_s": 6992.5,
+ "stopped_at_deadline": false
+}
