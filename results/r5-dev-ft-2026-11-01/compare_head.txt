@@ -1,0 +1,14 @@
+{
+ "n_common_jobs": 100,
+ "arms": {
+  "FT": {
+   "n": 100,
+   "pass": 94,
+   "rate": 94.0,
+   "completion_per_correct": 3596.159574468085,
+   "thinking_share": 1.0,
+   "crashes": 2,
+   "invalid": 0
+  },
+  "A": {
+   "n": 100,

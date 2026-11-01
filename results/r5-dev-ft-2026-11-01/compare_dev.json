@@ -1,0 +1,48 @@
+{
+ "n_common_jobs": 100,
+ "arms": {
+  "FT": {
+   "n": 100,
+   "pass": 94,
+   "rate": 94.0,
+   "completion_per_correct": 3596.159574468085,
+   "thinking_share": 1.0,
+   "crashes": 2,
+   "invalid": 0
+  },
+  "A": {
+   "n": 100,
+   "pass": 62,
+   "rate": 62.0,
+   "completion_per_correct": 7637.241935483871,
+   "thinking_share": 1.0,
+   "crashes": 12,
+   "invalid": 0
+  },
+  "A+card": {
+   "n": 100,
+   "pass": 96,
+   "rate": 96.0,
+   "completion_per_correct": 3579.78125,
+   "thinking_share": 1.0,
+   "crashes": 0,
+   "invalid": 0
+  }
+ },
+ "FT_minus_Acard": [
+  -2.0,
+  -8.0,
+  3.0
+ ],
+ "FT_minus_A": [
+  32.0,
+  22.0,
+  42.0
+ ],
+ "reading": {
+  "as_good_as_card (est >= -3 and lo >= -10)": true,
+  "beats_plain (est >= +10)": true,
+  "cheaper (completion/correct FT <= A+card)": false,
+  "thinking_ok (FT share >= 0.90)": true
+ }
+}

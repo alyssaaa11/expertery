@@ -1,0 +1,38 @@
+{
+ "arm": "FT",
+ "grader": "factory",
+ "status": "COMPLETE",
+ "n": 100,
+ "PASS": 94,
+ "FAIL": 6,
+ "INVALID": 0,
+ "pass_rate": 0.94,
+ "pass_rate_tight": 0.94,
+ "pass_at_k": 0.94,
+ "by_level": {},
+ "prompt_tokens": 24358,
+ "completion_tokens": 338039,
+ "total_tokens": 362397,
+ "tokens_per_correct": 3855.2872340425533,
+ "prompt_per_correct": 259.1276595744681,
+ "completion_per_correct": 3596.159574468085,
+ "seconds_per_answer": {
+  "median": 138.739,
+  "mean": 149.72627
+ },
+ "wall_seconds": 1130.617,
+ "cold_start_s": 301.437,
+ "dollars_per_correct": 0.00835266696217494,
+ "server": {
+  "models": [
+   "forge"
+  ],
+  "image_digest": null
+ },
+ "k": 1,
+ "workers": 16,
+ "budget": 3.5,
+ "budget_stopped": false,
+ "skipped": 0,
+ "dev_gate": "GO"
+}
