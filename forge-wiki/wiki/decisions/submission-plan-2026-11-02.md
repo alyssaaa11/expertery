@@ -73,6 +73,14 @@ rubric Impact 30 / Meta tooling 25 / Depth 20 / Demo 25 (kickoff slide, see proj
 - decision (user, 2026-11-02 evening): page style = like the FYNSEC Dribbble shot (dark frame, light card, large refined type, 3D object), **with movement**; the logo must represent the product. Rejected: plain dark/steel v1 and cinematic factory-photo v2 ("too boring, too simple").
 - hypothesis (Claude): mockup v3 at ~/projects/forge/docs/product/mockup/index.html (v1, v2 kept beside it): Gemini 3D object (bracket on teal glass layers, an illustration, not a Homegrown output), logo = hex nut with a teal sprout. digital-marketer review: docs/product/home-page-review-digital-marketer-2026-11-02.md.
 
+### Product build log (2026-11-02 evening)
+- decision (user, "ok"/"yes okay yes"): build with Muse Code; the demo is **live with a daily cap** (not recorded-only). The $20/day value still needs an explicit yes before deploy.
+- verified: Muse P1 page (2c6a339, ~17 calls) matches mockup v3; Claude checked desktop, the demo flow and phone layout via headless Chrome/CDP (scripts in the job tmp, method: mobile emulation 390 px, element-overflow scan).
+- verified: Muse P2 backend (2faf9d9, 62 calls). Claude fixes (disclosed): the loop continues after a build (FTX self-check round); phone CSS; static mount last.
+- verified: verifier NO-GO W1-W4 (report ~/agents/verifier/reports/forge-web-backend-2026-11-02.md): mount order, status probe boots the A100, uncharged failed builds, timeout leaves model running. Muse P2b fix round running (specs/MUSE_PRODUCT_P2B_PROMPT.md).
+- open: REASONING_STRENGTH high vs xhigh (user asked; small check on factory jobs proposed), cap value, Modal billing alert at the cap, deploy yes.
+- lesson (how learned): `envsave get` needs the es_ opaque key; two Muse launches failed with "empty API key" until the help text showed it. Check: `envsave get <name>` returns empty.
+
 ## Item 9: Impact options (user has no engineer contact)
 1. Hackathon Discord / community: post the live page, ask builders to try it (Claude drafts, user sends).
 2. CadQuery community (Discord, GitHub discussions): the most relevant testers.
