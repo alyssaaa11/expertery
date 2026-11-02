@@ -71,6 +71,20 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
+- **TODO to submission (2026-11-02 19:30; review from the user; deadline form Nov 4 9 PM ET = Nov 5 03:00, own target
+  Nov 4 18:00)**
+  - [x] README: Oct 26 work marked "after the 12:00 ET kickoff"; HerdShot link removed (private, 404), copies in docs/herdshot.
+  - [x] GitHub description + 10 topics (Muse Code, specs/MUSE_GH_META_2026-11-02.md).
+  - [x] README "The Homegrown agent (self-check loop)" section (Best Agentic).
+  - [ ] decision (user, 2026-11-02): **product LAST**, after all other fixes: page/command "describe a part → build, check,
+        fix → checked part + picture"; README "Run the trained model".
+  - [ ] Model access (user asked "why?", explained; undecided): Modal endpoint up Nov 5-9 with cap and/or LoRA on HF
+        (needs user's HF login; public + permanent). Needed for "does it hold up live" + Open Weights check.
+  - [ ] 3-minute video → link at the top of the README.
+  - [ ] Bonus: X post with the demo (user approval, x-post-queue --account alyssa; engagement to Nov 8); Community Vote
+        link after submitting; Open Weights depends on model access.
+  - [ ] Impact: one real engineer/company tries it + a short quote (user).
+  - [ ] Submission form (user).
 - **NOW (2026-11-02 15:10): SECOND LOOK done (labelled; exam headline stays 83.3%). Trained Glimmer r5f inside the
   BX fix loop (FTX): 83/90 = 92.2% (hard 41/45 = BX's). Pre-registered "about as good as BX": PASS.**
   - verified (results/exam2-ftx-2026-11-02/compare_ftx.json): FTX−BX −2.2 [−11.1, +5.6]; FTX−FT +8.9 [+1.1, +18.9]

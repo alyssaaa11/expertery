@@ -32,6 +32,27 @@ the company, and the usual fix is a long manual pasted into every prompt. Can a 
 7. **The Homegrown box (the product):** the trained Glimmer writes the part, the box builds and measures it, and
    Glimmer fixes crashes or mismatches itself (up to 3 rounds) before delivering a checked part.
 
+## The Homegrown agent (self-check loop)
+The Homegrown box is an agent: the trained Glimmer acts, observes the real result with a tool, and decides what to do
+next, without ever seeing the correct answer.
+```
+describe a part
+   ↓
+Glimmer writes CadQuery code
+   ↓
+TOOL: locked cloud box runs the code and measures the part (size, volume, number of solids)
+   ├─ crash      → Glimmer reads the error and rewrites the code
+   ├─ built      → Glimmer compares the measurements with every number in the request
+   │                ├─ matches  → "DONE"
+   │                └─ mismatch → Glimmer rewrites the code
+   └─ at most 3 rounds; the last part that built is delivered (and, in the exam, graded)
+```
+- Reference-free: the agent only sees its own error messages and its own part's measurements, so it works on real
+  requests where nobody knows the answer.
+- Measured: on the exam the loop rescued 12 answers (4 after crashes, 8 after a measurement mismatch) and lifted the
+  trained model from 83.3% to 92.2% (labelled second look). Mean 2.16 rounds per part.
+- Code: `do_bx_cloud_call` with `--bx-loop` in [`experiments/final/runner_final.py`](experiments/final/runner_final.py).
+
 ## Results (rules written down before every test; the exam ran once)
 **Exam: 30 hand-made CAD parts** (15 medium, 15 hard), written before any training and never used to build anything;
 3 tries each, scored at 0.2%. Plan: [`experiments/final/PLAN.md`](experiments/final/PLAN.md); freeze:
