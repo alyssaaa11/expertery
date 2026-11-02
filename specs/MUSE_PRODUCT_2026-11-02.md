@@ -81,7 +81,10 @@ Create `deploy/modal_web.py` (Modal app name `homegrown-web`, CPU only, `min_con
   `forge-glimmer`, env `VLLM_API_KEY`). Messages start from `runner_final.ft_messages(job)`. Then up to 3 model calls:
   after a crash append the assistant reply and `runner.bx_error_message(error)`; after a build append
   `runner.bx_self_check_message(measure)`; a reply without a code fence ("DONE") ends the loop. Build every request body exactly as the FTX arm does (`runner.build_bx_body`: 16,000 max tokens, the same
-  temperature/top_p/top_k, and reasoning_strength "xhigh", which is what the 92% second look used; verifier F1). Import these helpers (`runner` is experiments/first-test/runner.py, imported by runner_final.py the same way); do not copy-paste them. If an import is impossible
+  temperature/top_p/top_k, and the same reasoning setting). Make the reasoning strength ONE setting, env `REASONING_STRENGTH`
+  (allowed: "high" or "xhigh"; default "xhigh" = what the 92% second look used, verifier F1). The decision is open: the user
+  asked whether "high" (what the model was trained on) is better or faster; a small check on factory practice jobs decides
+  before deploy. Test: the body sent to the model carries exactly the configured value. Import these helpers (`runner` is experiments/first-test/runner.py, imported by runner_final.py the same way); do not copy-paste them. If an import is impossible
   without side effects, stop and report it instead of rewriting them.
 - **The box:** each answer runs in `cloud_cq.run_answer_in_box(code)` (the locked Modal sandbox, app `forge-cq`).
   Measurements come from its measure output. The **verdict on the page is a no-reference self-check**, because a
