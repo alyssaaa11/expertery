@@ -7,7 +7,8 @@ d7b2f3790ac334a10f25a99759d319d0527941e1143d9e976fa0b13569f06319  experiments/fi
 7745fac5c63787ebb9c0df91f09262a07de5a6b0d9afd6200a04c949b436ef2b  experiments/first-test/jobs.py
 7f63fcc1eac6757a284b23124e24388404c2c2874e201c81672186cd0dc0d87d  deploy/modal_forge.py
 e1f88e6da0ca53bc3ff1754881da70f9c5a465dfdd83a7673d197e637947bd49  deploy/modal_glimmer.py
-5b19b3bd12885e9106a77e82d7bbe2e8a03f98c55c1fa2c02bb0e52f1cdeb7fd  experiments/final/PLAN.md
+# (superseded first hash, before the run sheet was added) 5b19b3bd12885e9106a77e82d7bbe2e8a03f98c55c1fa2c02bb0e52f1cdeb7fd  experiments/final/PLAN.md
+3615b8179b3451e2c15856ba84371c695a5f057f647e9ae58ca5f9b3328c6d73  experiments/final/PLAN.md
 464ef0f9d80c5e1992b51b6120f3acae00b91e961593da5d0782e5d60029a7e7  experiments/r5/PLAN.md
 9d0929b235888958c70a4e7528fc99f5f30f303f99293aa534c633c5cd5729c7  experiments/final/RULE_CARD.md
 9c39e09accca3fd5d35c5482cd957d997e30a409ab6c30906e3d2f5cb21f3cd1  experiments/final/compare.py
@@ -37,3 +38,5 @@ r5f/merged/tokenizer_config.json
 # generation_config.json (r5f == r5): temperature 1.0, top_p 0.95, top_k 64, do_sample true
 519ca0cad3bf6cb10c4f74dfb64786f651533bae2f316c609d66e0bcf5adfde6
 # vLLM image digest (verifier evidence 04, 2026-11-02): muse-glimmer sha256:413c8fbecb1204a218117c77a4ea4b3a211d5686ff99c31d82ba6dd0cec8c5a6
+4f010de62708fbc78d60a73a21d5170a2021cfc51dda30a2395b8db2585a5dd6  experiments/final/compare_ft_acard.py
+# Re-hash note: PLAN.md re-hashed and compare_ft_acard.py added at 10:39, after session 6a had started; both files' content is the one committed in e2efdb1 BEFORE 6a started (verifier follow-up m…390).
