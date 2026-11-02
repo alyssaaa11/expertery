@@ -113,3 +113,6 @@
 
 ## 2026-11-02 11:40
 - EXAM (one-shot): r5f 75/90 = 83.3%; A+card 85.6%; B2 87.8%; BX 94.4%; bars a,b FAIL, c,d PASS. Status NOW rewritten.
+
+## 2026-11-02 ~12:30
+- superintel advice (~/agents/superintel/reports/forge-product-mode-advice_2026-11-02.md): product mode as DEMO only (~3 h, $1-2; retry+picker tops at pass@3 27/30, A+card also 27); checker = deterministic checks + Glimmer judge (not Jev: non-Meta); framing 53% -> 83% no manual, 3.4k tok/17 s vs 21.8k/44 s; optional FT inside BX fix loop as labelled second look; spend rest on video/README/install. Awaiting user decision.
