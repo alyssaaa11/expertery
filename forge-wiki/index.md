@@ -1,5 +1,7 @@
 # Forge wiki: index
 
+> **Name change (2026-11-02):** the project is now called **Homegrown** (it was "Forge"). Internal code, cloud apps, file names and the frozen exam files keep the old `forge` names on purpose, so nothing breaks and the exam evidence (sha256 fingerprints) stays valid.
+
 Project folder: `~/projects/forge` (README routes to code, results and everything else).
 
 - [forge-in-simple-words](wiki/forge-in-simple-words.md): **the project in everyday words**: school comparison, 2 simple diagrams, word list for every technical word

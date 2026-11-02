@@ -1,5 +1,7 @@
 # Forge status: START HERE each day
 
+> **Name change (2026-11-02):** the project is now called **Homegrown** (it was "Forge"). Internal code, cloud apps, file names and the frozen exam files keep the old `forge` names on purpose, so nothing breaks and the exam evidence (sha256 fingerprints) stays valid.
+
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 

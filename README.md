@@ -1,4 +1,6 @@
-# Forge
+# Homegrown
+
+> **Name change (2026-11-02):** the project is now called **Homegrown** (it was "Forge"). Internal code, cloud apps, file names and the frozen exam files keep the old `forge` names on purpose, so nothing breaks and the exam evidence (sha256 fingerprints) stays valid.
 
 **Teach a small open model to use a company's CAD tool as well as a big model with every trick, but many times
 cheaper, faster and fully private.** Built with Muse Spark Open.

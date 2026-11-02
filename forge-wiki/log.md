@@ -119,3 +119,8 @@
 
 ## 2026-11-02 15:10
 - SECOND LOOK FTX (r5f + BX fix loop): 83/90 = 92.2%, ≈ BX (−2.2 [−11.1, +5.6]) PASS; 2.7× fewer tokens; same time per answer.
+
+## 2026-11-02 18:05
+- decision (user): project renamed **Homegrown** (was Forge). Visible text (README title + note, wiki status/index note,
+  video explainer source, factory diagram) renamed; internal code, Modal apps/volumes/secrets, env vars, file names and
+  frozen exam files keep `forge` on purpose (no breakage; exam sha256 evidence valid). README full rewrite still to do.
