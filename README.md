@@ -12,8 +12,7 @@ Meta Global AI Developer Hackathon 2026 · Indie track, Push the Frontier · bui
 
 ![Homegrown factory](docs/video/homegrown-factory-diagram.png)
 
-Interactive diagram: [`docs/video/homegrown-factory.html`](docs/video/homegrown-factory.html) · explainer video
-(NotebookLM, 7 min): [`docs/video/forge-factory-explainer.mp4`](docs/video/forge-factory-explainer.mp4)
+Interactive diagram: [`docs/video/homegrown-factory.html`](docs/video/homegrown-factory.html)
 
 ## The problem
 Companies want AI that is good at their own tools, but big models are expensive, private designs often may not leave
@@ -200,7 +199,7 @@ Every paid script refuses to run past its money cap.
 | `company/` | the fictional company tool Keel (earlier direction) |
 | `results/` | run results, Muse Code logs and diaries |
 | `forge-wiki/` | the project's knowledge base (Obsidian vault): status, findings, decisions, lessons |
-| `docs/diagrams/`, `docs/video/` | diagrams (open the `.html` files in a browser), the factory diagram and the explainer video |
+| `docs/diagrams/`, `docs/video/` | diagrams (open the `.html` files in a browser), the factory diagram |
 
 Training rule: never `modal run forge_train.py::train` directly; it bypasses the exam guard and the money cap.
 

@@ -19,3 +19,4 @@ results/**/sandbox_*/
 # local dashboard output (contains local paths + verifier lines)
 results/dashboard/
 .cache/
+*.mp4
