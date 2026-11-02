@@ -199,6 +199,12 @@ def _container_count():
 @modal.asgi_app()
 def web():
     """Build the real deps and return the shared FastAPI app."""
+    # Startup check + effective config log, no secrets (verifier, Claude fix).
+    if not FORGE_URL:
+        raise RuntimeError("FORGE_URL is empty in the container; deploy with "
+                           "FORGE_URL set (it is baked into the image env)")
+    print("homegrown-web config:", {k: os.environ.get(k, "(default)")
+                                    for k in _BAKED_ENV})
     sys.path.insert(0, REMOTE_PKG)
     for _p in (REMOTE_PKG + "/experiments/final",
                REMOTE_PKG + "/experiments/first-test"):
