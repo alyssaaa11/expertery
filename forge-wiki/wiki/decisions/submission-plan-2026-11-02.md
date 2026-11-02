@@ -78,7 +78,8 @@ rubric Impact 30 / Meta tooling 25 / Depth 20 / Demo 25 (kickoff slide, see proj
 - verified: Muse P1 page (2c6a339, ~17 calls) matches mockup v3; Claude checked desktop, the demo flow and phone layout via headless Chrome/CDP (scripts in the job tmp, method: mobile emulation 390 px, element-overflow scan).
 - verified: Muse P2 backend (2faf9d9, 62 calls). Claude fixes (disclosed): the loop continues after a build (FTX self-check round); phone CSS; static mount last.
 - verified: verifier NO-GO W1-W4 (report ~/agents/verifier/reports/forge-web-backend-2026-11-02.md): mount order, status probe boots the A100, uncharged failed builds, timeout leaves model running. Muse P2b fix round running (specs/MUSE_PRODUCT_P2B_PROMPT.md).
-- open: REASONING_STRENGTH high vs xhigh (user asked; small check on factory jobs proposed), cap value, Modal billing alert at the cap, deploy yes.
+- decision (user, 'ok' to '$20/day OK? + high-vs-xhigh check?', 2026-11-02 ~21:00): DAILY_CAP_USD = 20; run the high-vs-xhigh check (factory practice jobs, not the exam). Deploy starts with xhigh (the measured 92% setup) until the check says otherwise.
+- open: Modal billing alert at the cap (user's account), deploy GO from the verifier.
 - lesson (how learned): `envsave get` needs the es_ opaque key; two Muse launches failed with "empty API key" until the help text showed it. Check: `envsave get <name>` returns empty.
 
 ## Item 9: Impact options (user has no engineer contact)
