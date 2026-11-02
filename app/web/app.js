@@ -1,4 +1,7 @@
 // Homegrown product page. No tracking, no cookies, no analytics.
+// Engine address: empty = same site; the Vercel copy sets <meta name="hg-api">.
+const API = ((document.querySelector('meta[name="hg-api"]') || {}).content || "").replace(/\/$/, "");
+const apiUrl = (u) => (u && u.startsWith("/") ? API + u : u);
 const MAX_JOB = 600;
 const CODE_CAP = 4000;
 
@@ -115,7 +118,7 @@ function markTried() {
 async function refreshTries() {
   if (!triesNote) return;
   try {
-    const r = await fetch("/api/status");
+    const r = await fetch(API + "/api/status");
     const info = await r.json();
     // The key is built in two parts so the file never holds the
     // key-shaped letter run the no-secrets grep forbids.
@@ -259,7 +262,7 @@ function showDone(ev, recorded) {
     if (!url) return;
     const a = document.createElement("a");
     a.textContent = label;
-    a.href = url;
+    a.href = apiUrl(url);
     dl.appendChild(a);
   };
   addLink("STL ↓", ev.stl_url);
@@ -277,7 +280,7 @@ function showDone(ev, recorded) {
     const holder = document.createElement("div");
     holder.className = "viewer";
     resultBox.appendChild(holder);
-    initViewer(ev.stl_url, holder);
+    initViewer(apiUrl(ev.stl_url), holder);
   }
   resultBox.classList.add("show");
 }
@@ -383,7 +386,7 @@ async function playRecording(label) {
 async function liveRun(job) {
   let resp;
   try {
-    resp = await fetch("/api/build", {
+    resp = await fetch(API + "/api/build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ job: job })
@@ -423,7 +426,7 @@ runBtn.onclick = async () => {
   try {
     let info;
     try {
-      const r = await fetch("/api/status");
+      const r = await fetch(API + "/api/status");
       info = await r.json();
     } catch (err) {
       say("Could not reach the demo service. Please try again.");
@@ -465,7 +468,7 @@ sendBtn.onclick = async () => {
   const payload = { tool: toolBox.value, email: mailBox.value };
   let deleted = null;
   try {
-    const resp = await fetch("/api/lead", {
+    const resp = await fetch(API + "/api/lead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)

@@ -145,6 +145,18 @@ def make_app(deps=None):
             return False
 
     api = fastapi.FastAPI()
+    # Allow the page hosted elsewhere (e.g. Vercel) to call this API directly
+    # from the visitor's browser, so limits still see each visitor's own IP
+    # (Claude fix 2026-11-02, disclosed). No cookies/credentials.
+    origins = deps.get("allowed_origins")
+    if origins is None:
+        origins = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+    if origins:
+        from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+        api.add_middleware(CORSMiddleware, allow_origins=list(origins),
+                           allow_methods=["GET", "POST"],
+                           allow_headers=["Content-Type"],
+                           allow_credentials=False)
 
     def _tries_restore(ip):
         """Merge this IP's persisted try count into the in-process copy."""

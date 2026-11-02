@@ -429,3 +429,39 @@ def test_privacy_line_and_no_contact_placeholder():
         "the word delete as the tool." in html
     js = (ROOT / "app" / "web" / "app.js").read_text()
     assert "CONTACT_EMAIL" not in js
+
+
+# ------------------------------------------------- CORS for the Vercel page
+VERCEL = "https://homegrown-factory.vercel.app"
+
+
+@needs_fastapi
+def test_cors_allows_configured_origin_only():
+    deps, _ = make_deps()
+    deps["allowed_origins"] = [VERCEL]
+    with TestClient(webapp.make_app(deps)) as client:
+        ok = client.get("/api/status", headers={"Origin": VERCEL})
+        assert ok.headers.get("access-control-allow-origin") == VERCEL
+        pre = client.options("/api/build", headers={
+            "Origin": VERCEL, "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type"})
+        assert pre.status_code == 200
+        bad = client.get("/api/status", headers={"Origin": "https://evil.example"})
+        assert "access-control-allow-origin" not in bad.headers
+
+
+@needs_fastapi
+def test_no_cors_when_not_configured(monkeypatch):
+    monkeypatch.delenv("ALLOWED_ORIGINS", raising=False)
+    deps, _ = make_deps()
+    with TestClient(webapp.make_app(deps)) as client:
+        r = client.get("/api/status", headers={"Origin": VERCEL})
+        assert "access-control-allow-origin" not in r.headers
+
+
+def test_page_uses_api_base_everywhere():
+    js = (Path(__file__).resolve().parents[1] / "web" / "app.js").read_text()
+    assert 'fetch("/api' not in js
+    assert js.count('fetch(API + "/api/') >= 3
+    html = (Path(__file__).resolve().parents[1] / "web" / "index.html").read_text()
+    assert '<meta name="hg-api" content="">' in html
