@@ -83,9 +83,10 @@ def test_config_defaults_match_backend():
         src, re.MULTILINE)
     found = {name: default for _, name, default in pairs}
     for name in ("MAX_JOB_CHARS", "MAX_BUILDS_PER_IP_HOUR",
-                 "MAX_CONCURRENT_BUILDS", "DAILY_CAP_USD", "GPU_USD_PER_S",
+                 "MAX_CONCURRENT_BUILDS", "MAX_LEADS_PER_IP_HOUR",
+                 "DAILY_CAP_USD", "GPU_USD_PER_S",
                  "SANDBOX_USD_PER_BUILD", "IDLE_TAIL_USD", "WAKE_USD",
-                 "BUILD_LIMIT_S", "WEB_TIMEOUT_S"):
+                 "SCALE_DOWN_S", "BUILD_LIMIT_S", "WEB_TIMEOUT_S"):
         assert name in found, name
         assert float(found[name]) == float(getattr(config, name)), name
     assert "LEAD_EMAIL_MAX = 200" in src

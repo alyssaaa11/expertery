@@ -80,14 +80,24 @@ def _measure_line(measure):
         return "Measured the built part."
 
 
+def _past_deadline(now, deadline):
+    """True when a deadline was passed and no new work may start."""
+    return deadline is not None and now() >= deadline
+
+
 def run_job(job_text, model_call, box_run, model=MODEL_NAME,
-            clock=None):
+            clock=None, deadline=None):
     """Yield SSE-style event dicts for one visitor job.
 
     Event steps: write, build, fix, measure, done (or error). The first
     event is yielded before the first model call. The final done event
     carries verdict/reasons/measurements/code/rounds/seconds/gpu_seconds;
     the web layer adds the file URLs.
+
+    ``deadline`` (same clock as ``clock``) is the wall-clock limit for the
+    whole build (verifier W4): no new model call and no new box run starts
+    once it has passed. The caller also sizes each model call's own timeout
+    from the time left until the deadline.
     """
     now = clock or time.monotonic
     t0 = now()
@@ -102,6 +112,8 @@ def run_job(job_text, model_call, box_run, model=MODEL_NAME,
         yield {"step": "write", "round": rounds,
                "detail": "Writing the part script (round %d of %d)."
                          % (rounds, MAX_CALLS)}
+        if _past_deadline(now, deadline):
+            break
         body = build_body(model, messages)
         try:
             content, gpu_s = model_call(messages, body)
@@ -119,6 +131,8 @@ def run_job(job_text, model_call, box_run, model=MODEL_NAME,
                 last_error = "the model sent no code"
             break
         code = runner.extract_code(content)
+        if _past_deadline(now, deadline):
+            break
         try:
             boxed = box_run(code)
         except Exception as e:  # noqa: BLE001 -- harness error is a crash

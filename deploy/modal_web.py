@@ -12,9 +12,14 @@ Needs the Modal secret ``forge-glimmer`` (env ``VLLM_API_KEY`` inside the
 container) and env ``FORGE_URL`` (the ``forge`` endpoint from
 deploy/modal_forge.py). REASONING_STRENGTH ("high"|"xhigh", default
 "xhigh") and the limits below are env-overridable at deploy.
+
+The FastAPI app itself is built by ``app.backend.webapp.make_app`` (pure,
+testable without Modal); ``web()`` below only builds the real deps
+(model/box/stores/clocks) and calls it. The static page is mounted LAST
+inside the factory so it never swallows /api/* and /files (verifier
+blocker 2026-11-02; Claude order fix, kept).
 """
 
-import asyncio
 import json
 import os
 import sys
@@ -29,8 +34,6 @@ import modal  # noqa: E402
 from app.backend import budget as budget_mod  # noqa: E402
 from app.backend import image_files as image_files_mod  # noqa: E402
 from app.backend import limits as limits_mod  # noqa: E402
-from app.backend import loop as loop_mod  # noqa: E402
-from app.backend import stream as stream_mod  # noqa: E402
 
 # ------------------------------------------------------------- config block
 # All limits in one place, read from env with the spec defaults. These
@@ -39,15 +42,16 @@ from app.backend import stream as stream_mod  # noqa: E402
 MAX_JOB_CHARS = int(os.environ.get("MAX_JOB_CHARS", "600"))
 MAX_BUILDS_PER_IP_HOUR = int(os.environ.get("MAX_BUILDS_PER_IP_HOUR", "4"))
 MAX_CONCURRENT_BUILDS = int(os.environ.get("MAX_CONCURRENT_BUILDS", "2"))
+MAX_LEADS_PER_IP_HOUR = int(os.environ.get("MAX_LEADS_PER_IP_HOUR", "5"))
 DAILY_CAP_USD = float(os.environ.get("DAILY_CAP_USD", "20"))
 GPU_USD_PER_S = float(os.environ.get("GPU_USD_PER_S", "0.000694"))
 SANDBOX_USD_PER_BUILD = float(os.environ.get("SANDBOX_USD_PER_BUILD", "0.002"))
 IDLE_TAIL_USD = float(os.environ.get("IDLE_TAIL_USD", "0.21"))
 WAKE_USD = float(os.environ.get("WAKE_USD", "0.45"))
+SCALE_DOWN_S = float(os.environ.get("SCALE_DOWN_S", "300"))
 BUILD_LIMIT_S = float(os.environ.get("BUILD_LIMIT_S", "600"))
 WEB_TIMEOUT_S = float(os.environ.get("WEB_TIMEOUT_S", "720"))
 HEARTBEAT_S = 15.0
-PROBE_TIMEOUT_S = 3.0
 FILE_TTL_S = 24 * 3600.0
 LEAD_EMAIL_MAX = 200
 LEAD_TOOL_MAX = 300
@@ -57,11 +61,6 @@ LEAD_TOOL_MAX = 300
 
 FORGE_URL = os.environ.get("FORGE_URL", "")
 FORGE_MODEL = "forge"
-
-PAUSED_MESSAGE = "Demo paused: today's budget is used up. Here is a recorded run instead."
-BUSY_MESSAGE = "Busy, try again in a minute"
-RATE_MESSAGE = "Please wait a bit before building again"
-TIMEOUT_MESSAGE = "This part took too long; try a simpler one"
 
 # ------------------------------------------------------------- Modal pieces
 app = modal.App("homegrown-web")
@@ -92,22 +91,6 @@ REMOTE_PKG = "/pkg"
 def _vllm_headers():
     return {"Content-Type": "application/json",
             "Authorization": "Bearer " + os.environ.get("VLLM_API_KEY", "")}
-
-
-def probe_model():
-    """Cheap readiness probe: GET {FORGE_URL}/v1/models (3 s timeout)."""
-    if not FORGE_URL:
-        return False
-    try:
-        req = urllib.request.Request(
-            FORGE_URL.rstrip("/") + "/v1/models",
-            headers={"Authorization": "Bearer "
-                     + os.environ.get("VLLM_API_KEY", "")},
-            method="GET")
-        with urllib.request.urlopen(req, timeout=PROBE_TIMEOUT_S) as resp:
-            return 200 <= resp.status < 300
-    except Exception:  # noqa: BLE001 -- any failure means "not ready"
-        return False
 
 
 def post_chat(body, timeout):
@@ -171,29 +154,30 @@ def _mirror_spend(mny):
         pass
 
 
-def _request_ip(request):
-    """Client IP: connection peer fallback, LAST X-Forwarded-For hop first."""
-    peer = ""
-    try:
-        peer = (request.client.host if request.client else "") or ""
-    except Exception:  # noqa: BLE001
-        peer = ""
-    return limits_mod.client_ip(
-        request.headers.get("x-forwarded-for", ""), peer)
+def _container_count():
+    """Containers up for the trained serve function, without an input.
 
-
-def _fire_warmup(mny, ip):
-    """Fire one non-blocking warm-up request (throttled, charged on fire)."""
-    body = {"model": FORGE_MODEL,
-            "messages": [{"role": "user",
-                          "content": "Reply with exactly the word DONE."}],
-            "max_tokens": 16, "temperature": 0.0}
-    mny.note_warmup(ip)
-    _mirror_spend(mny)
+    Uses ``get_current_stats`` (no request to the model, so a scaled-down
+    model is NOT booted by asking). ``None`` means unknown; the caller
+    then relies on the in-process warm state only.
+    """
     try:
-        post_chat(body, timeout=30)
-    except Exception:  # noqa: BLE001 -- warm-ups are best effort
-        pass
+        fn = modal.Function.from_name("forge-trained", "serve")
+        stats = fn.get_current_stats()
+    except Exception:  # noqa: BLE001 -- best effort only
+        return None
+    if not stats:
+        return 0
+    for key in ("num_active_containers", "active_containers",
+                "num_containers", "containers"):
+        try:
+            value = stats.get(key) if isinstance(stats, dict) \
+                else getattr(stats, key, None)
+        except Exception:  # noqa: BLE001
+            value = None
+        if isinstance(value, (int, float)):
+            return int(value)
+    return None
 
 
 @app.function(image=_web_image(), cpu=1, min_containers=0, max_containers=1,
@@ -201,11 +185,7 @@ def _fire_warmup(mny, ip):
               secrets=[modal.Secret.from_name("forge-glimmer")])
 @modal.asgi_app()
 def web():
-    """The FastAPI app: static page + status/build/lead/files APIs."""
-    import fastapi
-    from fastapi.responses import JSONResponse, Response
-    from fastapi.staticfiles import StaticFiles
-
+    """Build the real deps and return the shared FastAPI app."""
     sys.path.insert(0, REMOTE_PKG)
     for _p in (REMOTE_PKG + "/experiments/final",
                REMOTE_PKG + "/experiments/first-test"):
@@ -213,185 +193,53 @@ def web():
             sys.path.insert(0, _p)
     import cloud_cq  # noqa: E402 -- locked sandbox runner only
 
-    api = fastapi.FastAPI()
+    from app.backend import webapp as webapp_mod  # noqa: E402
 
-    # One process (max_containers=1): counters live here behind this lock;
-    # the Modal Dicts are only persistence across restarts.
-    rates = limits_mod.RateState()
+    # One process (max_containers=1): counters live here; the Modal Dicts
+    # are only persistence across restarts.
     money = budget_mod.Budget()
-    state_lock = asyncio.Lock()
+    rates = limits_mod.RateState()
+    lead_rates = limits_mod.LeadRate()
 
-    @api.get("/api/status")
-    async def status(request: fastapi.Request):
-        ip = _request_ip(request)
-        async with state_lock:
-            _reconcile_spend(money)
-            if money.is_capped():
-                return {"state": "paused", "message": PAUSED_MESSAGE}
-        ok = await asyncio.to_thread(probe_model)
-        async with state_lock:
-            state, message = money.status(ok)
-            if state == "waking" and money.may_warmup(ip):
-                threading.Thread(target=_fire_warmup, args=(money, ip),
-                                 daemon=True).start()
-                # The charge lands in note_warmup when the thread runs;
-                # mirror again on the next request (single process).
-            return {"state": state, "message": message}
+    def _model(messages, body, timeout):
+        t0 = time.monotonic()
+        data = post_chat(body, timeout=timeout)
+        elapsed = time.monotonic() - t0  # model seconds estimate: latency
+        content = (((data.get("choices") or [{}])[0].get("message")
+                     or {}).get("content")) or ""
+        return content, elapsed
 
-    @api.post("/api/build")
-    async def build(request: fastapi.Request):
-        try:
-            payload = await request.json()
-        except Exception:  # noqa: BLE001
-            payload = {}
-        job = (payload or {}).get("job", "")
-        denied = limits_mod.check_job(job)
-        if denied:
-            return JSONResponse({"message": denied[1]}, status_code=denied[0])
-        ip = _request_ip(request)
-        async with state_lock:
-            _reconcile_spend(money)
-            if money.is_capped():
-                return JSONResponse({"message": PAUSED_MESSAGE},
-                                    status_code=429)
-            denied = rates.check_ip(ip)
-            if denied:
-                return JSONResponse({"message": denied[1]},
-                                    status_code=denied[0])
-            denied = rates.try_acquire()
-            if denied:
-                return JSONResponse({"message": denied[1]},
-                                    status_code=denied[0])
-            rates.note_build(ip)
-        run_id = limits_mod.new_run_id()
+    def _box(code):
+        return cloud_cq.run_answer_in_box(code)
 
-        def _model_call(messages, body):
-            t0 = time.monotonic()
-            data = post_chat(body, timeout=600)
-            gpu_s = time.monotonic() - t0  # GPU-seconds estimate: latency
-            content = (((data.get("choices") or [{}])[0].get("message")
-                         or {}).get("content")) or ""
-            return content, gpu_s
+    def _warmer(_ip):
+        body = {"model": FORGE_MODEL,
+                "messages": [{"role": "user", "content":
+                              "Reply with exactly the word DONE."}],
+                "max_tokens": 16, "temperature": 0.0}
 
-        final_box = {}  # the last built answer's BREP (never executed here)
-
-        def _box_run(code):
-            out = cloud_cq.run_answer_in_box(code)
-            if out and out.get("brep_bytes") is not None:
-                final_box["code"] = code
-                final_box["brep"] = out["brep_bytes"]
-            return out
-
-        _END = object()
-
-        async def _aiter():
-            gen = loop_mod.run_job(job, _model_call, _box_run,
-                                   model=FORGE_MODEL)
-            while True:
-                try:
-                    ev = await asyncio.to_thread(next, gen, _END)
-                except Exception as e:  # noqa: BLE001 -- never stack-trace
-                    yield stream_mod.error_event("Build failed: %s" % e)
-                    return
-                if ev is _END:
-                    return
-                if ev["step"] == "done" and ev.get("code"):
-                    try:
-                        _store_run_files(
-                            run_id, final_box.get("code", ev["code"]),
-                            final_box.get("brep"))
-                    except Exception:  # noqa: BLE001 -- files optional
-                        pass
-                    try:
-                        money.charge_build(ev.get("gpu_seconds", 0))
-                        _mirror_spend(money)
-                    except Exception:  # noqa: BLE001
-                        pass
-                    ev = dict(ev, stl_url="/files/%s.stl" % run_id,
-                              step_url="/files/%s.step" % run_id,
-                              code_url="/files/%s.py" % run_id)
-                yield ev
-
-        async def _bounded():
-            # First event goes out immediately; heartbeat at least every
-            # HEARTBEAT_S; whole build limited to BUILD_LIMIT_S.
+        def _send():
             try:
-                async with asyncio.timeout(BUILD_LIMIT_S):
-                    async for chunk in stream_mod.with_heartbeat(_aiter()):
-                        yield chunk
-            except TimeoutError:
-                yield stream_mod.encode_event(
-                    stream_mod.error_event(TIMEOUT_MESSAGE))
-            finally:
-                rates.release()
-
-        return fastapi.responses.StreamingResponse(
-            _bounded(), media_type="text/event-stream")
-
-    @api.post("/api/lead")
-    async def lead(request: fastapi.Request):
-        try:
-            payload = await request.json()
-        except Exception:  # noqa: BLE001
-            payload = {}
-        tool = (payload or {}).get("tool", "")
-        email = (payload or {}).get("email", "")
-        denied = limits_mod.check_lead(tool, email)
-        if denied:
-            return JSONResponse({"message": denied[1]}, status_code=denied[0])
-        record = limits_mod.lead_record(tool, email)  # never printed/logged
-        try:
-            seen = list(leads_dict.get("leads") or [])
-        except Exception:  # noqa: BLE001
-            seen = []
-        seen.append(record)
-        try:
-            leads_dict["leads"] = seen
-        except Exception:  # noqa: BLE001
-            pass
-        return {"ok": True}
-
-    @api.get("/files/{filename}")
-    async def files(filename: str):
-        name, dot, ext = filename.rpartition(".")
-        if not dot or ext not in ("stl", "step", "py") or not name:
-            return JSONResponse({"message": "Not found"}, status_code=404)
-        try:
-            blob = files_dict.get("%s.%s" % (name, ext))
-        except Exception:  # noqa: BLE001
-            blob = None
-        if not blob or time.time() - blob.get("ts", 0) > FILE_TTL_S:
-            try:
-                del files_dict["%s.%s" % (name, ext)]
-            except Exception:  # noqa: BLE001
+                post_chat(body, timeout=30)
+            except Exception:  # noqa: BLE001 -- warm-ups are best effort
                 pass
-            return JSONResponse({"message": "Not found"}, status_code=404)
-        ctype = {"stl": "model/stl", "step": "application/step",
-                 "py": "text/plain"}[ext]
-        data = blob["bytes"]
-        if isinstance(data, str):
-            data = data.encode("utf-8")
-        return Response(bytes(data), media_type=ctype)
 
-    # Static page LAST, so it doesn't swallow /api/* and /files (verifier
-    # blocker 2026-11-02; Claude fix, disclosed).
-    api.mount("/", StaticFiles(directory=REMOTE_PKG + "/app/web",
-                               html=True), name="web")
-    return api
+        threading.Thread(target=_send, daemon=True).start()
 
-
-def _store_run_files(run_id, code, brep_bytes):
-    """Convert the sandbox BREP to STL/STEP and keep all three for 24 h.
-
-    The web container only reads BREP bytes; model/visitor code is never
-    executed here.
-    """
-    files_dict["%s.py" % run_id] = {
-        "bytes": (code or "").encode("utf-8"), "ts": time.time()}
-    if not brep_bytes:
-        return
-    stl_bytes, step_bytes = convert_brep(brep_bytes)
-    files_dict["%s.stl" % run_id] = {"bytes": bytes(stl_bytes),
-                                     "ts": time.time()}
-    files_dict["%s.step" % run_id] = {"bytes": bytes(step_bytes),
-                                      "ts": time.time()}
+    return webapp_mod.make_app({
+        "model": _model,
+        "box": _box,
+        "convert": convert_brep,
+        "warmer": _warmer,
+        "containers": _container_count,
+        "leads": leads_dict,
+        "files": files_dict,
+        "money": money,
+        "rates": rates,
+        "lead_rates": lead_rates,
+        "build_limit_s": BUILD_LIMIT_S,
+        "file_ttl_s": FILE_TTL_S,
+        "web_dir": REMOTE_PKG + "/app/web",
+        "mirror": _mirror_spend,
+        "reconcile": _reconcile_spend,
+    })

@@ -7,6 +7,7 @@ holds the pure rules so tests can drive them with a fake clock; the lock
 itself lives in ``deploy/modal_web.py``.
 """
 
+import threading
 import time
 import uuid
 
@@ -69,10 +70,15 @@ def lead_record(tool, email, ts=None):
 
 
 class RateState:
-    """Per-IP hourly builds and global concurrency (one web process)."""
+    """Per-IP hourly builds and global concurrency (one web process).
+
+    The web layer releases a slot from a worker thread (verifier W4), so
+    the counter is lock-guarded.
+    """
 
     def __init__(self, now=None):
         self._now = now or time.time
+        self._mu = threading.Lock()
         self._ip_hits = {}  # ip -> [unix seconds of accepted builds]
         self._active = 0
 
@@ -83,27 +89,62 @@ class RateState:
 
     def check_ip(self, ip):
         """None when this IP may start a build, else (429, message)."""
-        recent = self._prune(ip, self._now())
-        if len(recent) >= config.MAX_BUILDS_PER_IP_HOUR:
-            return 429, config.RATE_MESSAGE
-        return None
+        with self._mu:
+            recent = self._prune(ip, self._now())
+            if len(recent) >= config.MAX_BUILDS_PER_IP_HOUR:
+                return 429, config.RATE_MESSAGE
+            return None
 
     def note_build(self, ip):
         """Record an accepted build for the IP hourly count."""
-        self._ip_hits.setdefault(ip, []).append(self._now())
+        with self._mu:
+            self._ip_hits.setdefault(ip, []).append(self._now())
 
     def try_acquire(self):
         """A concurrency slot, or (429, message) when full."""
-        if self._active >= config.MAX_CONCURRENT_BUILDS:
-            return 429, config.BUSY_MESSAGE
-        self._active += 1
-        return None
+        with self._mu:
+            if self._active >= config.MAX_CONCURRENT_BUILDS:
+                return 429, config.BUSY_MESSAGE
+            self._active += 1
+            return None
 
     def release(self):
         """Give a concurrency slot back (never below zero)."""
-        self._active = max(0, self._active - 1)
+        with self._mu:
+            self._active = max(0, self._active - 1)
 
     @property
     def active(self):
         """Currently held concurrency slots (for tests)."""
-        return self._active
+        with self._mu:
+            return self._active
+
+
+class LeadRate:
+    """Per-IP lead posts (one web process; verifier privacy fix).
+
+    At most MAX_LEADS_PER_IP_HOUR posts per IP per hour; the 6th (by
+    default) is rejected with 429. Every POST counts, including delete
+    requests and invalid ones.
+    """
+
+    def __init__(self, now=None, limit=None, window_s=3600.0):
+        self._now = now or time.time
+        self._limit = config.MAX_LEADS_PER_IP_HOUR \
+            if limit is None else limit
+        self._window = window_s
+        self._hits = {}  # ip -> [unix seconds of lead posts]
+
+    def check(self, ip):
+        """None when this IP may post a lead, else (429, message)."""
+        t = self._now()
+        recent = [h for h in self._hits.get(ip, [])
+                  if t - h < self._window]
+        self._hits[ip] = recent
+        if len(recent) >= self._limit:
+            return 429, "Please wait a bit before sending again"
+        return None
+
+    def note(self, ip):
+        """Record a lead post for the IP hourly count."""
+        self._hits.setdefault(ip, []).append(self._now())

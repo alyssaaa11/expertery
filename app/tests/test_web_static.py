@@ -68,8 +68,8 @@ def test_app_js_api_wiring():
     assert "es_" not in js
     assert "API_KEY" not in js
     assert "apikey" not in js.lower()
-    assert "CONTACT_EMAIL" in js
-    assert js.count("CONTACT_EMAIL") == 1
+    assert "CONTACT_EMAIL" not in js  # placeholder removed (P2b privacy fix)
+    assert "Deleted." in js  # delete-confirmation shown after a delete lead
     assert "maxlength" in (WEB / "index.html").read_text().lower()
     assert "Self-check PASS" in js
     assert "Built (size not checked)" in js

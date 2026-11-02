@@ -43,8 +43,10 @@ SANDBOX_USD_PER_BUILD = _env_float("SANDBOX_USD_PER_BUILD", 0.002)
 IDLE_TAIL_USD = _env_float("IDLE_TAIL_USD", 0.21)  # 300 s scale-down, once/burst
 WAKE_USD = _env_float("WAKE_USD", 0.45)  # each actually-fired warm-up
 BURST_GAP_S = 300.0  # no build for this long ends a burst
+SCALE_DOWN_S = 300.0  # model stays warm this long after a real response
 WARMUP_GLOBAL_S = 600.0  # at most one warm-up per 10 min globally
 WARMUP_IP_S = 3600.0  # at most one warm-up per hour per IP
+MAX_LEADS_PER_IP_HOUR = _env_int("MAX_LEADS_PER_IP_HOUR", 5)  # 6th -> 429
 
 # --- model ---------------------------------------------------------------
 # ONE reasoning-strength setting (verifier F1). "xhigh" is what the 92%

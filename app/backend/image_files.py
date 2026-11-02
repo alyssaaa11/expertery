@@ -8,6 +8,10 @@ and budget_left.py which runner_final.py imports with a fallback).
 NEVER the exam answers or training data: no expected.json, no jobs.py, no
 results/ file, no other exam file. Only ``cloud_cq.run_answer_in_box`` is
 used; the grader app is not deployed.
+
+app/web/dev_server.py (the local stdlib fake server) stays in the repo for
+browser tests but is NOT in the image: the image serves only index.html,
+styles.css, app.js, object.jpeg and recorded_run.json.
 """
 
 WEB_FILES = [
@@ -16,7 +20,6 @@ WEB_FILES = [
     "app/web/app.js",
     "app/web/object.jpeg",
     "app/web/recorded_run.json",
-    "app/web/dev_server.py",
 ]
 
 BACKEND_FILES = [
@@ -28,6 +31,7 @@ BACKEND_FILES = [
     "app/backend/budget.py",
     "app/backend/stream.py",
     "app/backend/image_files.py",
+    "app/backend/webapp.py",
 ]
 
 # experiments/final/runner_final.py imports runner (frozen, same way) and

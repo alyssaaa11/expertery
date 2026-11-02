@@ -1,5 +1,4 @@
 // Homegrown product page. No tracking, no cookies, no analytics.
-const REPLY_TO = "CONTACT_EMAIL";
 const MAX_JOB = 600;
 const CODE_CAP = 4000;
 
@@ -416,20 +415,24 @@ const toolBox = document.getElementById("tool");
 const mailBox = document.getElementById("email");
 const sendBtn = document.getElementById("leadsend");
 const formBox = document.getElementById("leadform");
-const mailto = document.createElement("a");
-mailto.href = "mailto:" + REPLY_TO;
 sendBtn.onclick = async () => {
   const payload = { tool: toolBox.value, email: mailBox.value };
+  let deleted = null;
   try {
-    await fetch("/api/lead", {
+    const resp = await fetch("/api/lead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
+    try {
+      deleted = (await resp.json()).deleted;
+    } catch (err) { /* ignore */ }
   } catch (err) { /* ignore */ }
   formBox.textContent = "";
   const done = document.createElement("div");
   done.className = "formdone";
-  done.textContent = "Thanks, we read every answer.";
+  done.textContent = (deleted !== null && deleted !== undefined)
+    ? "Deleted."
+    : "Thanks, we read every answer.";
   formBox.appendChild(done);
 };

@@ -8,11 +8,19 @@ fired. Warm-ups are throttled: at most one per 10 minutes globally and one
 per hour per IP. Spend is kept keyed by UTC date; at or over the cap the
 API reports paused and refuses builds.
 
+Warmth is learned WITHOUT any request to the model (verifier W2): the last
+real model response sets ``warm_until`` = response time + SCALE_DOWN_S
+(the 300 s scale-down). A build that starts while not warm is a cold start
+and is charged WAKE_USD once. The web layer may additionally treat a
+positive container count (Modal ``get_current_stats``, best effort) as warm.
+
 Tests drive this with a fake clock; ``deploy/modal_web.py`` mirrors the
-numbers into a Modal Dict for persistence across restarts.
+numbers into a Modal Dict for persistence across restarts. The web layer
+calls mutating methods from a worker thread, so they are lock-guarded.
 """
 
 import datetime
+import threading
 import time
 
 from . import config
@@ -30,15 +38,18 @@ class Budget:
 
     def __init__(self, now=None):
         self._now = now or time.time
+        self._mu = threading.Lock()
         self._spend = {}  # day_key -> dollars
         self._last_build = None  # unix seconds of the last charged build
         self._last_warmup = None  # unix seconds of the last fired warm-up
         self._ip_warmups = {}  # ip -> unix seconds of its last warm-up
+        self._warm_until = None  # wall seconds; warm while now < this
 
     # -- spend ---------------------------------------------------------
     def spent_today(self):
         """Dollars charged in the current UTC day."""
-        return self._spend.get(day_key(self._now()), 0.0)
+        with self._mu:
+            return self._spend.get(day_key(self._now()), 0.0)
 
     def is_capped(self):
         """True once today's spend is at or over the daily cap."""
@@ -55,49 +66,78 @@ class Budget:
         GPU seconds plus one sandbox fee, plus one idle tail when this
         build starts a new burst.
         """
-        t = self._now()
-        try:
-            gpu = float(gpu_seconds or 0.0)
-        except (TypeError, ValueError):
-            gpu = 0.0
-        cost = gpu * config.GPU_USD_PER_S + config.SANDBOX_USD_PER_BUILD
-        if self._last_build is None or \
-                t - self._last_build > config.BURST_GAP_S:
-            cost += config.IDLE_TAIL_USD  # one tail per burst
-        self._last_build = t
-        return self._add(cost)
+        with self._mu:
+            t = self._now()
+            try:
+                gpu = float(gpu_seconds or 0.0)
+            except (TypeError, ValueError):
+                gpu = 0.0
+            cost = gpu * config.GPU_USD_PER_S + config.SANDBOX_USD_PER_BUILD
+            if self._last_build is None or \
+                    t - self._last_build > config.BURST_GAP_S:
+                cost += config.IDLE_TAIL_USD  # one tail per burst
+            self._last_build = t
+            return self._add(cost)
+
+    # -- warmth (no model request; verifier W2) ------------------------
+    def is_warm(self):
+        """True while the model is known warm from a recent response."""
+        with self._mu:
+            return self._warm_until is not None and \
+                self._now() < self._warm_until
+
+    def note_model_response(self):
+        """Record a real model response: warm for one scale-down window."""
+        with self._mu:
+            self._warm_until = self._now() + config.SCALE_DOWN_S
+
+    def note_cold_build(self):
+        """Charge WAKE_USD once for a build that starts while not warm."""
+        with self._mu:
+            return self._add(config.WAKE_USD)
 
     # -- warm-ups ------------------------------------------------------
     def may_warmup(self, ip):
         """True when a warm-up for this IP may fire now (throttled)."""
-        t = self._now()
-        if self._last_warmup is not None and \
-                t - self._last_warmup < config.WARMUP_GLOBAL_S:
-            return False
-        last = self._ip_warmups.get(ip)
-        if last is not None and t - last < config.WARMUP_IP_S:
-            return False
-        return True
+        with self._mu:
+            t = self._now()
+            if self._last_warmup is not None and \
+                    t - self._last_warmup < config.WARMUP_GLOBAL_S:
+                return False
+            last = self._ip_warmups.get(ip)
+            if last is not None and t - last < config.WARMUP_IP_S:
+                return False
+            return True
 
     def note_warmup(self, ip):
         """Record an actually-fired warm-up and charge WAKE_USD."""
-        t = self._now()
-        self._last_warmup = t
-        self._ip_warmups[ip] = t
-        return self._add(config.WAKE_USD)
+        with self._mu:
+            t = self._now()
+            self._last_warmup = t
+            self._ip_warmups[ip] = t
+            return self._add(config.WAKE_USD)
 
     # -- status --------------------------------------------------------
-    def status(self, probe_ok):
-        """(state, message) with NO side effects.
+    def warm_status(self, container_warm=False):
+        """(state, message) with NO side effects and NO model request.
 
-        Never wakes the model by itself: when the state is "waking" the
-        caller decides (via may_warmup/note_warmup) whether to actually
-        fire a warm-up request.
+        Ready when a recent real response (or a positive container count
+        learned without sending an input) says the model is up; otherwise
+        waking. The caller decides (via may_warmup/note_warmup) whether to
+        actually fire a throttled warm-up request.
         """
         if self.is_capped():
             return "paused", config.PAUSED_MESSAGE
-        if probe_ok:
+        if self.is_warm() or container_warm:
             return "ready", "The model is ready"
         return ("waking",
                 "Waking up the model (this takes a few minutes). "
                 "Here is a recorded run meanwhile.")
+
+    def status(self, probe_ok):
+        """(state, message) with NO side effects.
+
+        Kept for compatibility: a truthy probe is treated like a warm
+        signal. The web layer no longer probes; it uses warm_status().
+        """
+        return self.warm_status(container_warm=bool(probe_ok))
