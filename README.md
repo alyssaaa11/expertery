@@ -51,11 +51,11 @@ the company, and the usual fix is a long manual pasted into every prompt. Can a 
   manual and 2.7× fewer tokens; not faster per answer (266 s vs 301 s).
 - Homegrown one try vs rule card: −2.2 [−12.2, +6.7], a tie. The loop added +8.9 [+1.1, +18.9] points (the loop also
   uses "xhigh" reasoning, so both changes are counted together).
-- **Honest misses:** the original pre-registered claim ("as good as the best setup on one try" and "clearly beats the
+- **What did not hold:** the original pre-registered claim ("as good as the best setup on one try" and "clearly beats the
   manual") **failed**: −11.1 [−24.4, +1.1] and −4.4 [−21.1, +11.1]. The cost bars passed on the token form only.
   The 92% is a labelled second look at the same exam, run once with rules written first.
 - Secret practice-style test (100 jobs from the generator, never trained on): plain 62, plain + card 96, Homegrown 96.
-  The hand-made exam is the harder, more honest test.
+  The hand-made exam is the harder and more reliable test.
 
 Readings: [`results/exam-2026-11-02/`](results/exam-2026-11-02/) (`compare_bars.json`, `compare_ft_acard.json`) and
 [`results/exam2-ftx-2026-11-02/compare_ftx.json`](results/exam2-ftx-2026-11-02/compare_ftx.json). Every claim with its
@@ -66,13 +66,49 @@ source: [`forge-wiki/wiki/status.md`](forge-wiki/wiki/status.md).
   referee-checked answers worked (62 → 96 on the secret practice test).
 - The referee is everything: the model learns exactly what the referee approves.
 - A self-check loop (run, measure, fix) adds about 9 points on hard parts: crashes and two-piece parts get fixed.
-- A test made by the same generator as the lessons is too easy (96%); the hand-made exam (83%) is the honest number.
+- A test made by the same generator as the lessons is too easy (96%); the hand-made exam (83%) is the number to trust.
 
 ## For other tools
 Only three pieces change per tool: a **job generator**, a **sandbox** to run answers, and a **referee** that decides
 right or wrong automatically. The rest (Glimmer, Spark tutor, self-fix, lessons, training, the box loop) stays the
 same. Best exam for a company: 30-100 of its own past jobs with known correct results, never shown to the factory.
 Status: proven on CAD only.
+
+## Before Homegrown: HerdShot (Oct 26 - 28)
+The first two days went to an earlier idea, **HerdShot**: stop false facts from spreading inside teams of AI agents.
+Repository: [github.com/alyssaaa11/herdshot](https://github.com/alyssaaa11/herdshot) (first commit Oct 26, 19:19);
+copies of its reports are in [`docs/herdshot/`](docs/herdshot/).
+| Date | What was built | Result |
+|---|---|---|
+| Oct 26 | Harness: seeded agent-team worlds, private ballots, cost limiter, verifier and "antibody" defences, Glimmer-on-Modal deploy, live replay viewer (built by a Claude Code swarm) | built and tested offline |
+| Oct 27 | **Test A** on Muse Spark 1.3: 70 team runs, 5 kinds of lies ([`testA.md`](docs/herdshot/testA.md)) | 0% of the other agents privately believed the lie in every family (needed ≥ 40% in 3 of 5) → **NO-GO** |
+| Oct 27 | **A2** groupthink test, 4 roles with a stale document ([`a2.md`](docs/herdshot/a2.md)) | 12.5% believed the stale value, also with 2 agents pushing it → groupthink **not shown** |
+| Oct 27 | **C1** two agents editing the same file in parallel, Haiku / Sonnet / Opus ([`c1.md`](docs/herdshot/c1.md)) | together 4-8/16 vs alone 13-16/16, but every failure was visible (git conflicts or failing tests) → no hidden problem to solve |
+| Oct 27 | **C2** a lead agent writes a shared plan first ([`c2.md`](docs/herdshot/c2.md)) | 7/16 vs 4/16, below the pre-set bar of 12 |
+| Oct 28 | Direction research (new ideas scored; Homegrown, then called Forge, ranked first) | HerdShot paused; Homegrown started at 12:45 |
+
+**Conclusion** ([`2026-10-27-day-conclusion.md`](docs/herdshot/2026-10-27-day-conclusion.md)): today's agents read the
+project files and reject false facts, and a simple verifier agent already solves what HerdShot set out to do. Rather
+than build a product for a problem our own tests could not show, we stopped and chose a direction with measurable room
+to improve. The same habits carried over: rules written before each test, money caps, and a verifier before every
+paid step.
+
+## Where Modal, Baseten and Meta were used
+All cloud work ran on hackathon credits; every paid script has a money cap.
+| Service | What ran there | When |
+|---|---|---|
+| **Modal** (GPU + CPU sandboxes) | Glimmer 30B served with vLLM (A100-80GB) for every Glimmer answer: Keel test, first CAD test, baselines, the 2,000-job factory first try, self-fix, hinted retries, dev tests, the exam and the second look | Oct 28 - Nov 2 |
+| **Modal** | The locked CadQuery box and the referee (CPU sandboxes, no network) that build and grade every answer | Oct 30 - Nov 2 |
+| **Modal** | Training: smoke test and first round on H100; rounds R3, R5 and the final r5f on H200; LoRA merges; model files on Modal volumes | Oct 29 - Nov 1 |
+| **Baseten** (Muse Spark Open) | HerdShot backend added (no spend) | Oct 27 |
+| **Baseten** | First CAD test, Spark arm (30/30) | Oct 28 |
+| **Baseten** | Factory teacher answers: pilot $0.52, main run $4.38, R3 run $4.98 (those answers trained R1/R3, which did not help) | Oct 30 |
+| **Baseten** | Spark tutor hints on the 76 unsolved jobs ($3.05) | Nov 1 |
+| **Meta API** (Muse Spark 1.3) | HerdShot test A, 70 agent-team runs ($22.92) | Oct 27 |
+| **Meta API** (Muse Code) | Every build round of the factory, runners, training pipeline, second-look arm, and the GitHub pushes | Oct 28 - Nov 2 |
+
+Money: about $72 of Modal credit and about $13 of Baseten credit over the whole Homegrown project, plus Muse Code on
+Meta credit (each round's cost is in its log in `results/`).
 
 ## Built during the hackathon
 Everything here was made during the hackathon; the first commit is Oct 28. `deploy/modal_glimmer.py` was adapted from
@@ -88,9 +124,6 @@ our earlier hackathon project HerdShot (written Oct 26, kickoff day).
 
 The full day-by-day log is in [`forge-wiki/log.md`](forge-wiki/log.md).
 
-Money: about $72 of Modal credit and about $13 of Baseten credit over the whole project, plus Muse Code on Meta
-credit (each round's cost is in its log in `results/`). Every paid script refuses to run past its money cap.
-
 Note on the git history: early market notes (Oct 28) listed defence and medical companies as example customers. We
 removed them on Oct 30 to follow the hackathon rules; the project was never built for those uses. The history is kept
 as proof of when each part was built.
@@ -103,7 +136,7 @@ as proof of when each part was built.
 | Muse Spark 1.3 (api.meta.ai) | Muse Code, the coding agent that wrote the code | Meta API terms |
 | Muse Wonder (api.meta.ai) | optional backup teacher (`--escalate`); **never used for training data** | [Meta Model API Terms](https://dev.meta.ai/legal/terms-of-service) §10.1 forbid training competing models on outputs without Meta's written authorization, so Wonder outputs stay out of training |
 
-## Who wrote what (honest version)
+## Who wrote what
 - **Product code** (factory, teacher runner, learning loop, gallery, cloud box and referee, runners, training pipeline,
   the Keel company tool and dashboard, their tests): written by **Muse Code** (Meta's coding agent) from written specs.
   Each build round's full event log and a readable diary are in [`results/`](results/) (`muse-*.jsonl`; diaries
