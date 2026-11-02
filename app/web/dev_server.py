@@ -16,7 +16,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 GAP_S = 0.8
-FAKE = {"builds": 0, "max_tries": 2, "tries_left": 25}  # fake counters (local preview only)
+FAKE = {"builds": 0, "max_tries": 1, "tries_left": 25}  # fake counters (local preview only)
 
 
 class Handler(SimpleHTTPRequestHandler):
