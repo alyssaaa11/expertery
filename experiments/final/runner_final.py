@@ -63,6 +63,7 @@ FT_ARM = "FT"
 A_MODEL = "muse-glimmer"
 A_ARM = "A"
 BX_ARM = "BX"
+FTX_ARM = "FTX"
 VALID_FINAL_ARMS = (FT_ARM, A_ARM, BX_ARM)
 GPU_DOLLARS_PER_HOUR = runner.GPU_DOLLARS_PER_HOUR  # 2.50, same yardstick
 CALL_TIMEOUT = runner.CALL_TIMEOUT
@@ -600,14 +601,24 @@ def do_ft_call(job, model, endpoint, secrets, exam, post_fn, sleep_fn,
 def do_bx_cloud_call(job, model, endpoint, secrets, manual_text, post_fn,
                      sleep_fn, exec_fn, grade_fn, exam="first-test",
                      call_timeout=CALL_TIMEOUT, hint_text=None,
-                     examples=None, rep=0):
+                     examples=None, rep=0, messages=None,
+                     arm_label=BX_ARM):
     """Arm BX on the cloud box: the frozen runner.do_bx_call loop, except
     each program runs in the cloud box (which returns run_error + measure
     in the run_code_sandboxed field format) and the verdict comes from the
     cloud grader. Sends exactly the same message list, round by round, as
-    runner.do_bx_call with the same replies (covered by test)."""
-    messages = runner.build_messages("BX", job["text"], manual_text,
-                                     hint_text, examples)
+    runner.do_bx_call with the same replies (covered by test).
+
+    `messages`: starting message list (a copy is used, so the caller's
+    list is never mutated); None builds the frozen BX prompt. Arm FTX
+    passes ft_messages(job["text"]) here. `arm_label` lands on the "arm"
+    field of every round record and of the final record (BX by default,
+    FTX for the second-look arm)."""
+    if messages is None:
+        messages = runner.build_messages("BX", job["text"], manual_text,
+                                         hint_text, examples)
+    else:
+        messages = [dict(m) for m in messages]
     start = runner.utcnow_iso()
     t0 = time.monotonic()
     rounds = []
@@ -643,7 +654,7 @@ def do_bx_cloud_call(job, model, endpoint, secrets, manual_text, post_fn,
             n += 1
             rec = {
                 "job": job["id"],
-                "arm": BX_ARM,
+                "arm": arm_label,
                 "bx_final": False,
                 "round": n,
                 "rep": rep,
@@ -782,7 +793,7 @@ def do_bx_cloud_call(job, model, endpoint, secrets, manual_text, post_fn,
         "rep": rep,
         "sample": rep,
         "level": job.get("level"),
-        "arm": BX_ARM,
+        "arm": arm_label,
         "grader": exam,
         "model": model,
         "start": start,
@@ -1206,6 +1217,34 @@ def run_bx_fill(baseline_dir, exam_jobs, out_dir, endpoint, model, key,
     return sent, summary, missing
 
 
+def run_ftx_suite(jobs, out_dir, endpoint, model, key, exam, post_fn,
+                  sleep_fn, exec_fn, grade_fn, server_info_fn=None,
+                  k=3, workers=8, budget=5.0, gpu_start=None):
+    """Arm FTX: the trained model answers with the FT prompt and then
+    gets exactly the BX fix loop (do_bx_cloud_call with the FT starting
+    messages), graded by the cloud grader.
+
+    Runs every (job, rep) pair through the same run_pairs machinery as
+    run_bx_fill (final record + per-round records in calls.jsonl, finals
+    with bx_final True); the summary arm is FTX. Budget, workers, k and
+    gpu_start behave exactly as the FT path."""
+    secrets = [key] if key else []
+    server_info = (server_info_fn or
+                   (lambda: fetch_server_info(endpoint, key)))()
+
+    def _call(job, rep):
+        rec = do_bx_cloud_call(job, model, endpoint, secrets, "",
+                               post_fn, sleep_fn, exec_fn, grade_fn,
+                               exam=exam, rep=rep,
+                               messages=ft_messages(job["text"]),
+                               arm_label=FTX_ARM)
+        return rec, list(rec.get("bx_rounds") or [])
+
+    pairs = [(job, rep) for job in jobs for rep in range(k)]
+    return run_pairs(pairs, _call, out_dir, FTX_ARM, exam, budget,
+                     gpu_start, workers, server_info, k)
+
+
 # ------------------------------------------------------- CLI
 
 
@@ -1281,6 +1320,11 @@ def main(argv=None):
                              "full-referee FAIL; signals (product mode, "
                              "dev/exam): retry only on crash, invalid "
                              "shape or solids != 1")
+    parser.add_argument("--bx-loop", action="store_true",
+                        help="second-look arm FTX: the trained model "
+                             "answers with the FT prompt, then gets the "
+                             "BX fix loop (needs exactly --arms FT; not "
+                             "with --fill-missing, --hints or --selffix)")
     args = parser.parse_args(argv)
     if args.workers is not None and args.workers < 1:
         parser.error("--workers must be >= 1")
@@ -1299,6 +1343,15 @@ def main(argv=None):
             parser.error("--fill-missing needs --arms BX")
         if args.workers is None:
             args.workers = 12
+    if args.bx_loop:
+        if arms != (FT_ARM,):
+            parser.error("--bx-loop needs exactly --arms FT")
+        if args.fill_missing is not None:
+            parser.error("--bx-loop cannot be used with --fill-missing")
+        if args.hints is not None:
+            parser.error("--bx-loop cannot be used with --hints")
+        if args.selffix is not None:
+            parser.error("--bx-loop cannot be used with --selffix")
     if args.workers is None:
         args.workers = 8
     if args.fill_missing is None and args.jobs is None \
@@ -1379,7 +1432,8 @@ def main(argv=None):
         run_key, run_model, run_arm = glimmer_key, A_MODEL, A_ARM
     else:
         endpoint = forge_url.rstrip("/") + "/v1/chat/completions"
-        run_key, run_model, run_arm = forge_key, FT_MODEL, FT_ARM
+        run_key, run_model = forge_key, FT_MODEL
+        run_arm = FTX_ARM if args.bx_loop else FT_ARM
     hints = load_hints_file(args.hints) if args.hints else {}
     selffix_jobs = {}
     if args.selffix:
@@ -1407,14 +1461,23 @@ def main(argv=None):
     post_fn = _real_post_fn(lambda _e: (endpoint, run_key))
     with cloud_cq.modal.enable_output():
         with cloud_cq._app.run():
-            _records, summary = run_ft_suite(
-                jobs, args.out, endpoint, run_model, run_key, exam,
-                post_fn=post_fn, sleep_fn=time.sleep,
-                exec_fn=lambda code: cloud_cq.run_answer_in_box(code),
-                grade_fn=grade_fn_for(jobs),
-                k=args.k, workers=args.workers, budget=args.budget,
-                gpu_start=args.gpu_start, arm=run_arm,
-                hints=hints, selffix_jobs=selffix_jobs)
+            if args.bx_loop:
+                _records, summary = run_ftx_suite(
+                    jobs, args.out, endpoint, run_model, run_key, exam,
+                    post_fn=post_fn, sleep_fn=time.sleep,
+                    exec_fn=lambda code: cloud_cq.run_answer_in_box(code),
+                    grade_fn=grade_fn_for(jobs),
+                    k=args.k, workers=args.workers, budget=args.budget,
+                    gpu_start=args.gpu_start)
+            else:
+                _records, summary = run_ft_suite(
+                    jobs, args.out, endpoint, run_model, run_key, exam,
+                    post_fn=post_fn, sleep_fn=time.sleep,
+                    exec_fn=lambda code: cloud_cq.run_answer_in_box(code),
+                    grade_fn=grade_fn_for(jobs),
+                    k=args.k, workers=args.workers, budget=args.budget,
+                    gpu_start=args.gpu_start, arm=run_arm,
+                    hints=hints, selffix_jobs=selffix_jobs)
     print("%s %s: %d answers, pass rate at 0.2%%: %s" % (
         run_arm, exam, summary.get("n", 0), summary.get("pass_rate")))
     if exam == "factory":

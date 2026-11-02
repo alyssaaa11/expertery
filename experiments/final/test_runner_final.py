@@ -719,3 +719,169 @@ def test_server_info_never_raises_and_reads_digest():
     assert runner_final.fetch_server_info("http://gpu/v1/chat/completions",
                                           "K", urlopen=_boom) == {
         "models": [], "image_digest": None}
+
+
+# ------------------------------------------------------- FTX second-look arm
+
+
+def test_ftx_arm_constant():
+    assert runner_final.FTX_ARM == "FTX"
+
+
+def test_bx_cloud_default_arm_label_is_bx():
+    """Without arm_label the loop records arm BX (today's behaviour)."""
+    job = {"id": "H2", "text": "make a part", "level": "hard"}
+    post = _post_scripted([_resp(CODE_A)] * 3)
+    rec = runner_final.do_bx_cloud_call(
+        job, "m", "http://x", [], "MAN", post, lambda s: None,
+        _box_exec_from([(False, None)] * 3), _grade_pass())
+    assert rec["arm"] == "BX" and rec["bx_final"] is True
+    assert all(r["arm"] == "BX" for r in rec["bx_rounds"])
+
+
+def test_ftx_loop_messages_crash_then_build_then_done(monkeypatch):
+    """FTX: round 1 sends exactly ft_messages; a crash appends the reply
+    + bx_error_message; a build appends bx_self_check_message; DONE (no
+    code fence) ends; arm FTX on rounds and final."""
+    monkeypatch.delenv("FORGE_RULE_CARD", raising=False)
+    job = {"id": "H9", "text": "make a part", "level": "hard"}
+    start = runner_final.ft_messages(job["text"])
+    owned = runner_final.ft_messages(job["text"])
+    replies = [_resp(CODE_A), _resp(CODE_B), _resp("DONE, looks right")]
+    script = [(False, None), (True, dict(MEAS)), (True, dict(MEAS))]
+    post = _post_scripted(list(replies))
+    rec = runner_final.do_bx_cloud_call(
+        job, runner_final.FT_MODEL, "http://x/v1/chat/completions", [],
+        "", post, lambda s: None, _box_exec_from(list(script)),
+        _grade_pass(), exam="first-test", rep=1, messages=owned,
+        arm_label=runner_final.FTX_ARM)
+    assert owned == start  # the caller's list is never mutated
+    assert len(post.sent) == 3  # crash, build, DONE: up to BX_MAX_CALLS
+    assert post.sent[0] == start
+    assert post.sent[1] == start + [
+        {"role": "assistant", "content": CODE_A},
+        {"role": "user",
+         "content": runner.bx_error_message("boom: no result")}]
+    assert post.sent[2] == post.sent[1] + [
+        {"role": "assistant", "content": CODE_B},
+        {"role": "user", "content": runner.bx_self_check_message(MEAS)}]
+    assert [r["event"] for r in rec["bx_rounds"]] == \
+        ["crash", "built", "DONE"]
+    assert all(r["arm"] == "FTX" for r in rec["bx_rounds"])
+    assert rec["arm"] == "FTX" and rec["bx_final"] is True
+    assert rec["outcome"] == "PASS" and rec["verdict"] == "PASS"
+    assert rec["rep"] == 1 and rec["model_calls"] == 3
+
+
+def test_ftx_loop_caps_at_three_calls(monkeypatch):
+    """FTX crashes every round: exactly BX_MAX_CALLS model calls."""
+    monkeypatch.delenv("FORGE_RULE_CARD", raising=False)
+    job = {"id": "H9", "text": "make a part", "level": "hard"}
+    post = _post_scripted([_resp(CODE_A)] * 5)
+    rec = runner_final.do_bx_cloud_call(
+        job, runner_final.FT_MODEL, "http://x", [], "", post,
+        lambda s: None, _box_exec_from([(False, None)] * 5),
+        _grade_pass(), messages=runner_final.ft_messages(job["text"]),
+        arm_label=runner_final.FTX_ARM)
+    assert len(post.sent) == runner.BX_MAX_CALLS == 3
+    assert rec["outcome"] == "FAIL" and rec["arm"] == "FTX"
+    assert rec["bx_final"] is True
+
+
+def test_bx_loop_rejects_other_arms_and_modes(tmp_path):
+    """--bx-loop needs exactly --arms FT, and refuses --hints, --selffix
+    and --fill-missing (parser.error -> SystemExit)."""
+    base = ["--jobs", "dry", "--out", str(tmp_path)]
+    with pytest.raises(SystemExit):
+        runner_final.main(base + ["--arms", "A", "--bx-loop"])
+    with pytest.raises(SystemExit):
+        runner_final.main(base + ["--arms", "FT,BX", "--bx-loop"])
+    with pytest.raises(SystemExit):
+        runner_final.main(base + ["--arms", "FT", "--bx-loop",
+                                  "--hints", "h.jsonl"])
+    with pytest.raises(SystemExit):
+        runner_final.main(base + ["--arms", "FT", "--bx-loop",
+                                  "--selffix", "s.jsonl"])
+    with pytest.raises(SystemExit):
+        runner_final.main(base + ["--arms", "FT", "--bx-loop",
+                                  "--fill-missing", str(tmp_path)])
+
+
+def test_main_bx_loop_routes_to_ftx_suite(monkeypatch, tmp_path):
+    """--arms FT --bx-loop runs the FTX suite on the forge endpoint with
+    the FT budget/workers/k/gpu-start handling, never the FT suite."""
+    monkeypatch.setenv("FORGE_URL", "http://forge")
+    monkeypatch.setenv("FORGE_KEY", "K")
+    seen = {}
+
+    def _suite(jobs, out, endpoint, model, key, exam, **kwargs):
+        seen.update(endpoint=endpoint, model=model, key=key, exam=exam,
+                    k=kwargs.get("k"), workers=kwargs.get("workers"),
+                    budget=kwargs.get("budget"),
+                    gpu_start=kwargs.get("gpu_start"))
+        return [], {"n": 0, "pass_rate": None}
+
+    def _boom_suite(*args, **kwargs):
+        raise AssertionError("the FT suite must not run with --bx-loop")
+
+    monkeypatch.setattr(runner_final, "run_ftx_suite", _suite)
+    monkeypatch.setattr(runner_final, "run_ft_suite", _boom_suite)
+    import types
+    fake_cq = types.SimpleNamespace(
+        modal=types.SimpleNamespace(enable_output=lambda: _Ctx()),
+        _app=types.SimpleNamespace(run=lambda: _Ctx()),
+        run_answer_in_box=lambda code: {}, grade=types.SimpleNamespace())
+    monkeypatch.setattr(runner_final, "cloud_cq", fake_cq)
+    assert runner_final.main(["--jobs", "dry", "--out", str(tmp_path),
+                              "--arms", "FT", "--bx-loop"]) == 0
+    assert seen["endpoint"] == "http://forge/v1/chat/completions"
+    assert seen["model"] == "forge" and seen["key"] == "K"
+    assert seen["exam"] == "first-test"
+    assert seen["k"] == 3 and seen["workers"] == 8
+    assert seen["budget"] == 5.0 and seen["gpu_start"] is None
+
+
+def test_run_ftx_suite_writes_ftx_finals_and_rounds(tmp_path,
+                                                    monkeypatch):
+    """run_ftx_suite: FTX finals (bx_final True) + rounds in calls.jsonl,
+    FTX summary arm, first message list exactly ft_messages."""
+    monkeypatch.delenv("FORGE_RULE_CARD", raising=False)
+    jobs = [{"id": "M1", "text": "make a box", "level": "medium"}]
+    post = _post_scripted([_resp(CODE_A), _resp("DONE")])
+    out = str(tmp_path / "ftx")
+    recs, summary = runner_final.run_ftx_suite(
+        jobs, out, "http://x/v1/chat/completions", runner_final.FT_MODEL,
+        "K", "first-test", post, lambda s: None,
+        _box_exec_from([(False, None), (False, None)]),
+        _grade_pass(), server_info_fn=lambda: {}, k=1, workers=1,
+        budget=5.0)
+    assert len(recs) == 1 and recs[0]["arm"] == "FTX"
+    assert recs[0]["bx_final"] is True
+    assert recs[0]["model"] == runner_final.FT_MODEL
+    assert post.sent[0] == runner_final.ft_messages("make a box")
+    assert summary["arm"] == "FTX"
+    calls = [json.loads(line) for line in
+             open(os.path.join(out, "calls.jsonl")) if line.strip()]
+    assert len(calls) == 3  # crash round, DONE round, final
+    assert calls[-1].get("bx_final") is True
+    assert all(c.get("arm") == "FTX" for c in calls)
+    assert json.load(
+        open(os.path.join(out, "summary.json")))["arm"] == "FTX"
+
+
+def test_ftx_prompt_has_no_card_text_without_env(monkeypatch):
+    """FORGE_RULE_CARD unset: the FTX start messages are exactly the FT
+    (arm A) messages, with no card text in the system message."""
+    monkeypatch.delenv("FORGE_RULE_CARD", raising=False)
+    assert runner_final.ft_messages("make a part") == \
+        runner.build_messages("A", "make a part", "")
+
+
+def test_ftx_finals_rule_matches_bx():
+    """FTX finals for finals_for-style consumers: arm FTX with bx_final
+    True (rounds carry False), the same rule as BX (compare.py
+    unchanged)."""
+    import compare
+    recs = [{"job": "M1", "arm": "FTX", "bx_final": True, "sample": 0},
+            {"job": "M1", "arm": "FTX", "bx_final": False, "sample": 0}]
+    assert compare.finals_for(recs, "FTX") == [recs[0]]
