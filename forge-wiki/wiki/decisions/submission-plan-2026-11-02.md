@@ -79,7 +79,8 @@ rubric Impact 30 / Meta tooling 25 / Depth 20 / Demo 25 (kickoff slide, see proj
 - verified: Muse P2 backend (2faf9d9, 62 calls). Claude fixes (disclosed): the loop continues after a build (FTX self-check round); phone CSS; static mount last.
 - verified: verifier NO-GO W1-W4 (report ~/agents/verifier/reports/forge-web-backend-2026-11-02.md): mount order, status probe boots the A100, uncharged failed builds, timeout leaves model running. Muse P2b fix round running (specs/MUSE_PRODUCT_P2B_PROMPT.md).
 - decision (user, 2026-11-02 ~21:15, supersedes the $20/day 'ok'): **$15 TOTAL** for the live demo (Modal; ~$72/$90 used per wiki count, recheck with `modal billing` before deploy); **1 free live try per visitor**, recorded demo always available; page shows '≈ N free live tries left' (Muse P2c). Earlier 'ok' (~21:00): DAILY_CAP_USD = 20 (superseded); run the high-vs-xhigh check (factory practice jobs, not the exam). Deploy starts with xhigh (the measured 92% setup) until the check says otherwise.
-- open: Modal billing alert at the cap (user's account), deploy GO from the verifier.
+- decision (user, 2026-11-02 ~21:40): 2 live tries per visitor IP; $15 TOTAL, no daily cap; NOT going live yet ("no go yet"). Verifier GO on 7cb32a2. Steps: docs/product/DEPLOY.md.
+- verified (modal billing summary, 2026-11-02): Oct $37.47 + Nov $34.49 ≈ $72 used, all credits, $0 billed.
 - lesson (how learned): `envsave get` needs the es_ opaque key; two Muse launches failed with "empty API key" until the help text showed it. Check: `envsave get <name>` returns empty.
 
 ## Item 9: Impact options (user has no engineer contact)
