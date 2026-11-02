@@ -110,3 +110,6 @@
 
 ## 2026-11-02 10:15
 - dev 2: r5f 96/100 (crashes 1, hint mentions 0) → pre-registered pick = r5f for the exam.
+
+## 2026-11-02 11:40
+- EXAM (one-shot): r5f 75/90 = 83.3%; A+card 85.6%; B2 87.8%; BX 94.4%; bars a,b FAIL, c,d PASS. Status NOW rewritten.

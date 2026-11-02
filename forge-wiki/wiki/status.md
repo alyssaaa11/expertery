@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-11-02 10:15 (r5f 96/100 → goes to the exam)
+**Last updated**: 2026-11-02 11:40 (exam done: 83.3%, claim does not hold; cheaper bars pass)
 
 ---
 
@@ -69,7 +69,18 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **NOW (2026-11-02 10:15): r5f (own work + Spark tutoring) = 96/100 on R5D, no card → passes ALL pre-registered
+- **NOW (2026-11-02 11:40): EXAM DONE (one-shot, 44911eb). Trained Glimmer r5f, no card: 75/90 = 83.3% on the 30
+  original exam jobs. Pre-registered full claim DOES NOT HOLD: (a) FAIL, (b) FAIL, (c) PASS, (d) PASS.**
+  - verified (results/exam-2026-11-02, compare_bars.json, compare_ft_acard.json): FT 83.3% (medium 93.3, hard 73.3),
+    7 crashes; A+card 85.6% (8 crashes); FT−A+card −2.2 [−12.2, +6.7] = equal; B2 (manual, 1 try) 87.8%; BX (all fair
+    fixes) 94.4%; FT−BX −11.1 [−24.4, +1.1]. Cost per correct: FT 3,352 tokens / 16.9 s / $0.0117 vs BX 21,823 / 43.8 s /
+    $0.0304 (6.5× fewer tokens, 2.6× faster). Plain Glimmer short prompt on this exam: 53% (first-test, k=1).
+  - Honest headline (hypothesis wording, user to approve): "from 53% to 83% with no manual and no card, at 1/6 of the
+    tokens of the best fix; still 11 points below the best fix on hard parts."
+  - Crash causes (7): BRep 'command not done' ×3, Workplane.rotate args ×2, "no solid on the stack" ×2.
+  - Next: user decides the story + optional product-mode demo (one self-fix on crash, labelled separately, ≈ $1);
+    then demo/app + video; submit by Nov 4 18:00.
+- (earlier) **2026-11-02 10:15: r5f (own work + Spark tutoring) = 96/100 on R5D, no card → passes ALL pre-registered
   conditions → r5f goes to the EXAM (run once, next). Then demo/app + video, submit by Nov 4 18:00.**
   - verified (results/r5f-dev-ft-2026-11-02, compare_dev.json): r5f 96/100, crashes 1, hint/tutor mentions 0/100,
     thinking 100%, 3,295 completion tokens per correct (A+card 3,580; ≈ 8% fewer, small). FT−A +34 [24, 44];
