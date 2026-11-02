@@ -223,10 +223,11 @@ footer{background:var(--frame);color:#7d868e;padding:28px max(64px,6vw)}
 /* narrow screens: stack the columns, hide the dark corner tabs */
 @media (max-width:700px){
   .frame{padding:16px 12px}
-  .card{grid-template-columns:1fr;padding:120px 24px 40px;min-height:0}
+  .card{grid-template-columns:1fr;padding:96px 24px 40px;min-height:0;margin-top:12px}
   .tab{display:none}
   .top{flex-wrap:wrap;height:auto;gap:8px}
-  .rightnav{flex-wrap:wrap;justify-content:flex-end;max-width:100%}
+  .rightnav{display:none}
+  .hero-left{padding-top:24px}
   .navslot{left:12px;right:12px;top:88px;max-width:calc(100vw - 24px);overflow-x:auto}
   .pillnav{width:max-content;max-width:none}
   .pillnav a{padding:8px 10px;font-size:13px;white-space:nowrap}
