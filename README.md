@@ -75,11 +75,11 @@ Status: proven on CAD only.
 
 ## Before Homegrown: HerdShot (Oct 26 - 28)
 The first two days went to an earlier idea, **HerdShot**: stop false facts from spreading inside teams of AI agents.
-Its code lives in a separate private repository (first commit Oct 26, 19:19); copies of its reports are in
+Its code lives in a separate private repository (first commit Oct 26, 19:19 CET = 14:19 ET, after the 12:00 ET kickoff); copies of its reports are in
 [`docs/herdshot/`](docs/herdshot/).
 | Date | What was built | Result |
 |---|---|---|
-| Oct 26 | Harness: seeded agent-team worlds, private ballots, cost limiter, verifier and "antibody" defences, Glimmer-on-Modal deploy, live replay viewer (built by a Claude Code swarm) | built and tested offline |
+| Oct 26 (after the kickoff) | Harness: seeded agent-team worlds, private ballots, cost limiter, verifier and "antibody" defences, Glimmer-on-Modal deploy, live replay viewer (built by a Claude Code swarm) | built and tested offline |
 | Oct 27 | **Test A** on Muse Spark 1.3: 70 team runs, 5 kinds of lies ([`testA.md`](docs/herdshot/testA.md)) | 0% of the other agents privately believed the lie in every family (needed ≥ 40% in 3 of 5) → **NO-GO** |
 | Oct 27 | **A2** groupthink test, 4 roles with a stale document ([`a2.md`](docs/herdshot/a2.md)) | 12.5% believed the stale value, also with 2 agents pushing it → groupthink **not shown** |
 | Oct 27 | **C1** two agents editing the same file in parallel, Haiku / Sonnet / Opus ([`c1.md`](docs/herdshot/c1.md)) | together 4-8/16 vs alone 13-16/16, but every failure was visible (git conflicts or failing tests) → no hidden problem to solve |
@@ -111,7 +111,7 @@ Meta credit (each round's cost is in its log in `results/`).
 
 ## Built during the hackathon
 Everything here was made during the hackathon; the first commit is Oct 28. `deploy/modal_glimmer.py` was adapted from
-our earlier hackathon project HerdShot (written Oct 26, kickoff day).
+our earlier hackathon project HerdShot (written Oct 26, after the 12:00 ET kickoff).
 | Date | What was built |
 |---|---|
 | Oct 28 | Setup; Glimmer on Modal; a fictional company tool "Keel" (Glimmer already 97.8%, dropped); the 30-part CAD exam |
