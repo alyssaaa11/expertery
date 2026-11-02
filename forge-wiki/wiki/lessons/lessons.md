@@ -206,3 +206,9 @@
 - **A stand-in verifier/superintel works when the agent is down** (Oct 31). How learned: `hivey msg send verifier/master`
   failed (no swarm); a subagent told to follow ~/agents/verifier/CLAUDE.md wrote reports in the same folder and caught
   ~15 bugs before any money was spent. Check: `hivey swarm list`; if absent, run the stand-in and say so to the user.
+
+- **Muse Code can only `git push` with `--disable-sandbox`** (2026-11-02). How learned: 4 tries of specs/MUSE_PUSH_2026-11-02.md:
+  (1) stopped on an unclean tree (its own --json log was written inside the repo → write logs outside the repo);
+  (2) envsave reveal needed the master password (user supplied the opaque ref); (3) sandboxed: `git fetch` →
+  "No user exists for uid 501 / Could not read from remote repository" (proxy-only network blocks SSH);
+  (4) `--disable-sandbox` → 116 commits pushed, HEAD == origin/main 79600d0, ≈ $0.1. Check: `git status -sb` shows no "ahead".
