@@ -80,8 +80,8 @@ Create `deploy/modal_web.py` (Modal app name `homegrown-web`, CPU only, `min_con
   `deploy/modal_forge.py` (served name `forge`; URL from env `FORGE_URL`; key from the existing Modal secret
   `forge-glimmer`, env `VLLM_API_KEY`). Messages start from `runner_final.ft_messages(job)`. Then up to 3 model calls:
   after a crash append the assistant reply and `runner.bx_error_message(error)`; after a build append
-  `runner.bx_self_check_message(measure)`; a reply without a code fence ("DONE") ends the loop. Same 16,000 max
-  tokens and temperature as the FTX arm. Import these helpers (`runner` is experiments/first-test/runner.py, imported by runner_final.py the same way); do not copy-paste them. If an import is impossible
+  `runner.bx_self_check_message(measure)`; a reply without a code fence ("DONE") ends the loop. Build every request body exactly as the FTX arm does (`runner.build_bx_body`: 16,000 max tokens, the same
+  temperature/top_p/top_k, and reasoning_strength "xhigh", which is what the 92% second look used; verifier F1). Import these helpers (`runner` is experiments/first-test/runner.py, imported by runner_final.py the same way); do not copy-paste them. If an import is impossible
   without side effects, stop and report it instead of rewriting them.
 - **The box:** each answer runs in `cloud_cq.run_answer_in_box(code)` (the locked Modal sandbox, app `forge-cq`).
   Measurements come from its measure output. The **verdict on the page is a no-reference self-check**, because a
