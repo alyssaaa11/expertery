@@ -29,7 +29,8 @@ def test_recorded_run_shape():
     assert plan[-1]["step"] == "done"
     assert plan[-1].get("recorded") is True
     assert plan[-1].get("verdict") == "PASS"
-    assert any("2 solids" in str(ev.get("detail", "")) for ev in plan)
+    # Real recorded run (live, 2026-11-02): every event is marked recorded.
+    assert all(ev.get("recorded") is True for ev in plan)
 
 
 def test_headline_and_no_mockup():
