@@ -1,0 +1,43 @@
+key generated (never printed)
+secret updated
+deploy start 14:03:46
+
+View Deployment: 
+https://modal.com/apps/my-workspace/main/deployed/forge-trained
+ready 14:07:50 (try 4)
+served model root: /vol/r5f/merged
+pilot start 14:07:50
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-RLHrJzLTzFbK7tVBdCtpVt
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-RLHrJzLTzFbK7tVBdCtpVt
+FTX first-test: 3 answers, pass rate at 0.2%: 1.0
+runner exit 0 14:12:58
+PILOT DONE: waiting for ~/projects/forge/results/exam2-ftx-2026-11-02/GO or ~/projects/forge/results/exam2-ftx-2026-11-02/STOP (20 min max)
+main start 14:13:18
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-ougai2X7jTcrgYmUUdRIhw
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-ougai2X7jTcrgYmUUdRIhw
+FTX first-test: 90 answers, pass rate at 0.2%: 0.9222222222222223
+runner exit 0 15:05:26
+done 15:05:26
+app stopped 15:05:27

@@ -116,3 +116,6 @@
 
 ## 2026-11-02 ~12:30
 - superintel advice (~/agents/superintel/reports/forge-product-mode-advice_2026-11-02.md): product mode as DEMO only (~3 h, $1-2; retry+picker tops at pass@3 27/30, A+card also 27); checker = deterministic checks + Glimmer judge (not Jev: non-Meta); framing 53% -> 83% no manual, 3.4k tok/17 s vs 21.8k/44 s; optional FT inside BX fix loop as labelled second look; spend rest on video/README/install. Awaiting user decision.
+
+## 2026-11-02 15:10
+- SECOND LOOK FTX (r5f + BX fix loop): 83/90 = 92.2%, ≈ BX (−2.2 [−11.1, +5.6]) PASS; 2.7× fewer tokens; same time per answer.

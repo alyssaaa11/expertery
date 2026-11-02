@@ -1,0 +1,52 @@
+{
+ "arm": "FTX",
+ "grader": "first-test",
+ "status": "COMPLETE",
+ "n": 90,
+ "PASS": 83,
+ "FAIL": 7,
+ "INVALID": 0,
+ "pass_rate": 0.9222222222222223,
+ "pass_rate_tight": 0.9222222222222223,
+ "pass_at_k": 0.9666666666666667,
+ "by_level": {
+  "hard": {
+   "n": 45,
+   "PASS": 41,
+   "pass_rate": 0.9111111111111111,
+   "pass_rate_tight": 0.9111111111111111,
+   "pass_at_k": 1.0
+  },
+  "medium": {
+   "n": 45,
+   "PASS": 42,
+   "pass_rate": 0.9333333333333333,
+   "pass_rate_tight": 0.9333333333333333,
+   "pass_at_k": 0.9333333333333333
+  }
+ },
+ "prompt_tokens": 75539,
+ "completion_tokens": 584011,
+ "total_tokens": 659550,
+ "tokens_per_correct": 7946.385542168675,
+ "prompt_per_correct": 910.1084337349398,
+ "completion_per_correct": 7036.277108433735,
+ "seconds_per_answer": {
+  "median": 168.70350000000002,
+  "mean": 265.5211444444444
+ },
+ "wall_seconds": 3121.885,
+ "cold_start_s": 576.044,
+ "dollars_per_correct": 0.0261201890896921,
+ "server": {
+  "models": [
+   "forge"
+  ],
+  "image_digest": null
+ },
+ "k": 3,
+ "workers": 8,
+ "budget": 4.5,
+ "budget_stopped": false,
+ "skipped": 0
+}

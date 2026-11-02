@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-11-02 11:40 (exam done: 83.3%, claim does not hold; cheaper bars pass)
+**Last updated**: 2026-11-02 15:10 (second look FTX 92.2% ≈ BX 94.4%)
 
 ---
 
@@ -69,7 +69,15 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **NOW (2026-11-02 11:40): EXAM DONE (one-shot, 44911eb). Trained Glimmer r5f, no card: 75/90 = 83.3% on the 30
+- **NOW (2026-11-02 15:10): SECOND LOOK done (labelled; exam headline stays 83.3%). Trained Glimmer r5f inside the
+  BX fix loop (FTX): 83/90 = 92.2% (hard 41/45 = BX's). Pre-registered "about as good as BX": PASS.**
+  - verified (results/exam2-ftx-2026-11-02/compare_ftx.json): FTX−BX −2.2 [−11.1, +5.6]; FTX−FT +8.9 [+1.1, +18.9]
+    (loop + xhigh together, F1). Tokens per correct 7,946 vs BX 21,823 (2.7× fewer); seconds per answer 266 vs 301
+    (about the same, NOT faster). Mean 2.16 rounds. Fails: M11 ×3, H7 ×2, H3, H8. Dry pilot D1-D3 3/3.
+  - Honest headline (to approve): "Exam: 53% → 83% with no manual. With the same fix loop as the best setup: 92% vs
+    94% (tie), using 2.7× fewer tokens and no manual."
+  - Next: demo (Forge box = FT + loop), README, video; submit by Nov 4 18:00.
+- (earlier) **2026-11-02 11:40: EXAM DONE (one-shot, 44911eb). Trained Glimmer r5f, no card: 75/90 = 83.3% on the 30
   original exam jobs. Pre-registered full claim DOES NOT HOLD: (a) FAIL, (b) FAIL, (c) PASS, (d) PASS on the token form only (wall-clock and $ forms fail, verifier E1).**
   - verified (results/exam-2026-11-02, compare_bars.json, compare_ft_acard.json): FT 83.3% (medium 93.3, hard 73.3),
     7 crashes; A+card 85.6% (8 crashes); FT−A+card −2.2 [−12.2, +6.7] = equal; B2 (manual, 1 try) 87.8%; BX (all fair

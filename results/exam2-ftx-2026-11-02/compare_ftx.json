@@ -1,0 +1,38 @@
+{
+ "n_jobs": 30,
+ "FTX": {
+  "n": 90,
+  "pass": 83,
+  "rate": 92.2,
+  "hard": "41/45",
+  "tokens_per_correct": 7946,
+  "seconds_per_answer_mean": 265.5
+ },
+ "BX": {
+  "n": 90,
+  "pass": 85,
+  "rate": 94.4,
+  "hard": "41/45",
+  "tokens_per_correct": 21823,
+  "seconds_per_answer_mean": 300.9
+ },
+ "FT": {
+  "n": 90,
+  "pass": 75,
+  "rate": 83.3,
+  "hard": "33/45",
+  "tokens_per_correct": 3352,
+  "seconds_per_answer_mean": 108.2
+ },
+ "FTX_minus_BX": [
+  -2.2,
+  -11.1,
+  5.6
+ ],
+ "FTX_minus_FT": [
+  8.9,
+  1.1,
+  18.9
+ ],
+ "about_as_good_as_BX": true
+}
