@@ -75,8 +75,8 @@ Status: proven on CAD only.
 
 ## Before Homegrown: HerdShot (Oct 26 - 28)
 The first two days went to an earlier idea, **HerdShot**: stop false facts from spreading inside teams of AI agents.
-Repository: [github.com/alyssaaa11/herdshot](https://github.com/alyssaaa11/herdshot) (first commit Oct 26, 19:19);
-copies of its reports are in [`docs/herdshot/`](docs/herdshot/).
+Its code lives in a separate private repository (first commit Oct 26, 19:19); copies of its reports are in
+[`docs/herdshot/`](docs/herdshot/).
 | Date | What was built | Result |
 |---|---|---|
 | Oct 26 | Harness: seeded agent-team worlds, private ballots, cost limiter, verifier and "antibody" defences, Glimmer-on-Modal deploy, live replay viewer (built by a Claude Code swarm) | built and tested offline |
