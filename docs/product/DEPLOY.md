@@ -22,7 +22,7 @@ To stop everything: modal app stop homegrown-web && modal app stop forge-trained
 - Model: `FORGE_MODEL_NAME=r5f modal deploy deploy/modal_forge.py` → <model URL from modal deploy>
 - Website engine: run the deploy with the project venv (`.venv/bin/python -m modal deploy deploy/modal_web.py`; the
   plain `modal` CLI lacks CadQuery) with the env above plus `ALLOWED_ORIGINS=https://homegrown-factory.vercel.app`.
-  Engine URL: https://homegrown-factory.vercel.app
+  Engine URL: <engine URL from modal deploy>
 - Public page (user: no Modal/Gmail name in the address): Vercel project `homegrown-factory` →
   **https://homegrown-factory.vercel.app**. Build: copy app/web/{index.html,styles.css,app.js,object.jpeg,
   recorded_run.json} to a folder named homegrown-factory, set `<meta name="hg-api" content="<engine URL>">` in
