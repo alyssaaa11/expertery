@@ -28,8 +28,13 @@ tutoring lessons in the final training r5f (running).
 - All 52 first PASSes cite the hint (~6× per answer) → M7 would drop all. decision (user): keep the hint in the lesson
   (tutoring rows). 46 kept after the card-naming filter.
 
-## 4. Final training r5f (running)
-- Mix 1,742 rows, sha fbd62681; est $9.71, 7,696 s. Pre-registered exam pick in experiments/r5/PLAN.md (end).
+## 4. Final training r5f (verified: results/train-r5f/train.json, merge.json, commit 96945e8)
+- Mix 1,742 rows, sha fbd62681; exam guard 1,742 kept / 0 refused (≈ 2.5 h of one-sandbox-per-row checks, before training).
+- Trained 1,722 rows (first 1,668, self-fix 12, tutoring 42; 20 dropped for length), 431 optimizer steps, loss 0.63 →
+  0.32, peak 76.5 GB, 6,993 s; merged /vol/r5f/merged (151 s). Cost ≈ $10-11 (estimate $9.71 + guard).
+- Pre-registered exam pick in experiments/r5/PLAN.md (end). Dev 2 not run yet (waits for the user's start).
+- Lesson (how learned): my 2-hour estimate ignored the exam guard; the verifier had flagged "≈ 2-3 h" (forge-r5-train-pre
+  N1). Check: read train.log for EXAM_GUARD before quoting an end time.
 
 ## Lessons (how learned)
 - A reasoning teacher needs a large max_tokens even for a 60-word reply; always store finish_reason (seen: 74/76 empty).

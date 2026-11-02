@@ -1,0 +1,38 @@
+{
+ "arm": "A",
+ "grader": "factory",
+ "status": "COMPLETE",
+ "n": 60,
+ "PASS": 41,
+ "FAIL": 19,
+ "INVALID": 0,
+ "pass_rate": 0.6833333333333333,
+ "pass_rate_tight": 0.6833333333333333,
+ "pass_at_k": 0.85,
+ "by_level": {},
+ "prompt_tokens": 51606,
+ "completion_tokens": 205850,
+ "total_tokens": 257456,
+ "tokens_per_correct": 6279.414634146341,
+ "prompt_per_correct": 1258.6829268292684,
+ "completion_per_correct": 5020.731707317073,
+ "seconds_per_answer": {
+  "median": 131.7265,
+  "mean": 142.64288333333334
+ },
+ "wall_seconds": 1190.651,
+ "cold_start_s": 270.481,
+ "dollars_per_correct": 0.020166852981029812,
+ "server": {
+  "models": [
+   "muse-glimmer"
+  ],
+  "image_digest": null
+ },
+ "k": 3,
+ "workers": 8,
+ "budget": 3.0,
+ "budget_stopped": false,
+ "skipped": 0,
+ "dev_gate": "STOP"
+}

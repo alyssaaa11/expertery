@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-11-01 18:30 (r5 dev 94/100, Spark hints 52/54, final training r5f running)
+**Last updated**: 2026-11-02 00:10 (r5f trained; dev 2 waits for the user's start)
 
 ---
 
@@ -69,8 +69,11 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **NOW (2026-11-01 18:30): FINAL training r5f RUNNING (Modal, est $9.71, ~2 h 10 min, ends ≈ 20:40); next = dev 2
-  test of r5f (no card, cap $3.50), then the pre-registered pick r5 vs r5f, then the exam once.**
+- **NOW (2026-11-02 00:10): FINAL model r5f TRAINED + merged (/vol/r5f/merged). Next = dev 2 test of r5f (no card,
+  cap $3.50) — waits for the user's "start"; then the pre-registered pick r5 vs r5f; then the exam once.**
+  - verified (96945e8, results/train-r5f/train.json): 1,722 rows trained (1,668 first + 12 self-fix + 42 tutoring; 20
+    dropped for length: 10/6/4), 431 steps, loss 0.63 → 0.32 (last-20 mean), no deadline stop, peak 76.5 GB, 6,993 s
+    train + 151 s merge. Exam guard: 1,742 checked, 0 refused (took ≈ 2.5 h BEFORE training — count it in estimates).
   Details: [[r5-own-answers-training-2026-11-01]], [[r5-final-spark-guided-2026-11-01]]; decisions: [[r5-decisions-2026-10-31]].
   - verified (49b69d8, compare_dev.py): **trained Glimmer r5, NO card: 94/100** on R5D vs plain 62 vs plain + card v2 96.
     FT−A +32 [22, 42]; FT−(A+card) −2 [−8, 3]; crashes 2 (A 12); thinking 100%. Pre-registered reading: beats plain,
@@ -84,7 +87,8 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
     verifier forge-r5f-train-pre PASS WITH ISSUES → T1-T3 done (030a3cc).
   - Pre-registered (PLAN, 030a3cc): r5f goes to the exam only if ≥ 94/100, crashes ≤ 2, hint/tutor mentions ≤ 2/100,
     thinking ≥ 90%; else r5. Expect noise (46 rows = 2.6%).
-  - Money: Modal ≈ $52.80 + ≈ $3 today (dev 1 + retries) + r5f ≈ $9.7 → ≈ $66 of $90; Baseten hints $3.05.
+  - Money: Modal ≈ $52.80 + ≈ $3 (dev 1 + retries) + r5f ≈ $10-11 incl. guard → ≈ $67 of $90 (estimate; check
+    `modal billing summary`); Baseten hints $3.05.
   - Open: Impact gap (no installer/app yet); "not cheaper" claim must not be made.
   - Working rules (user): Slack via `hivey msg send human`; announce each run and wait for OK; verifier (or stand-in)
     before every paid step; Muse writes big code, Claude only small disclosed fixes; never Claude inside the product;

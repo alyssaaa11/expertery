@@ -103,3 +103,7 @@
 ## 2026-11-01 18:30
 - r5 dev 94/100 (no card); Spark hints 54/76 usable, retries solved 52/54; r5f mix 1,742 (46 tutoring); r5f training started.
 - new: findings/r5-final-spark-guided-2026-11-01; status NOW rewritten.
+
+## 2026-11-02 00:10
+- r5f training done (1,722 rows incl. 42 tutoring, 431 steps, loss 0.32, merged /vol/r5f/merged); guard took 2.5 h.
+- saved older untracked records (Oct 29-30 checks, dashboards, watch script) to git.
