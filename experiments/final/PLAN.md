@@ -151,3 +151,18 @@ Old dev set (4th look, disclosed; the card was written from R3 dev crashes). Arm
 - Main signal = crashes (any non-empty run_error) of R3 + card: <= 8 → manual-gap diagnosis holds; 9-14 → unclear (say
   so); >= 15 → diagnosis wrong (the card must be trained in, not only served).
 - Pass rates within ±10 points = no clear difference (paired SE ≈ 6-9). A + card pass rate = expected generator yield.
+
+## Exam run sheet (2026-11-02, written BEFORE any exam call; verifier forge-exam-pre-2026-11-02 X1-X4, N1)
+- Model: r5f (pre-registered pick, experiments/r5/PLAN.md end; dev 2 = 96/100). Freeze: results/exam-2026-11-02/FREEZE.txt.
+- Order (sequential, shared forge-glimmer secret):
+  1. 6a BX finisher, 11 pairs (H12 r1-2, H13-H15 r0-2): `--fill-missing results/bmax-baseline-2026-10-29/main-B2BX`, 12 workers, cap $1.50.
+  2. A + card v2 (sha 9d0929b2), k = 3, 8 workers, cap $2.50.
+  3. FT r5f, no card, k = 3, 8 workers, cap $2.50.
+- **Scoring = FIRST TRY only** (X4 decision 2026-11-02): every baseline (B2, BX, BR) and A + card is scored on what the
+  model returns, so FT is too. Product mode (one signal-triggered self-fix) is NOT run on the exam; disclosed in the report.
+- Reading: compare.py (bars a-d vs B2/BX, with --bx-extra = 6a) and experiments/final/compare_ft_acard.py
+  (FT − A+card, paired bootstrap over the 30 jobs, k = 3, 10,000 resamples, seed 20261029; medium/hard split).
+  Equal = CI includes 0; "better" only if the CI is entirely above 0.
+- STOP rule: any arm with < 90 answers (budget stop or error) → STOP and ask the user; no re-run of a finished arm.
+- vLLM image digest (N1): muse-glimmer sha256:413c8fbecb1204a218117c77a4ea4b3a211d5686ff99c31d82ba6dd0cec8c5a6
+  (unchanged since 10-30); each session's vLLM start lines are kept in results/exam-2026-11-02/*.session.out.

@@ -36,3 +36,4 @@ r5f/merged/tokenizer.json
 r5f/merged/tokenizer_config.json
 # generation_config.json (r5f == r5): temperature 1.0, top_p 0.95, top_k 64, do_sample true
 519ca0cad3bf6cb10c4f74dfb64786f651533bae2f316c609d66e0bcf5adfde6
+# vLLM image digest (verifier evidence 04, 2026-11-02): muse-glimmer sha256:413c8fbecb1204a218117c77a4ea4b3a211d5686ff99c31d82ba6dd0cec8c5a6
