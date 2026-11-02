@@ -1,0 +1,26 @@
+key generated (never printed)
+secret updated
+deploy start 09:49:57
+
+View Deployment: 
+https://modal.com/apps/my-workspace/main/deployed/forge-trained
+ready 09:54:04 (try 4)
+served model root: /vol/r5f/merged
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-VAqePpPz92O1MjbUEoqfsq
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-VAqePpPz92O1MjbUEoqfsq
+FT factory: 100 answers, pass rate at 0.2%: 0.96
+DEV GATE (PLAN step 5): dev 96.0% at 0.2% -> GO
+runner exit 0 10:11:30
+done 10:11:30
+app stopped 10:11:31

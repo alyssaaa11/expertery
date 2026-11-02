@@ -41,3 +41,8 @@ tutoring lessons in the final training r5f (running).
 - Retry answers cite the help they got; plan the training format for that BEFORE paying (seen: M7 dropped 52/52).
   Check: grep the reasoning for the help's keywords on the first 3 retries.
 - Two Modal sessions that rewrite the same secret must not overlap (verifier, run_*_session.sh:72).
+
+## 5. Dev 2: r5f on R5D (verified: results/r5f-dev-ft-2026-11-02, 2026-11-02 10:11)
+- r5f no card **96/100**, 1 crash, 0/100 hint/tutor mentions, thinking 100%, 3,295 completion tokens/correct.
+- Pre-registered pick (PLAN end): all conditions hold → **r5f goes to the exam**.
+- Honest reading: r5f vs r5 +2 is noise (5 vs 3 discordant jobs); r5f = A+card (0 [−4, 4]) with no card in the prompt.

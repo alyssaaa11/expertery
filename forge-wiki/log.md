@@ -107,3 +107,6 @@
 ## 2026-11-02 00:10
 - r5f training done (1,722 rows incl. 42 tutoring, 431 steps, loss 0.32, merged /vol/r5f/merged); guard took 2.5 h.
 - saved older untracked records (Oct 29-30 checks, dashboards, watch script) to git.
+
+## 2026-11-02 10:15
+- dev 2: r5f 96/100 (crashes 1, hint mentions 0) → pre-registered pick = r5f for the exam.

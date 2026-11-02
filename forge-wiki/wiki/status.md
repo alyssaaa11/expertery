@@ -3,7 +3,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-11-02 00:10 (r5f trained; dev 2 waits for the user's start)
+**Last updated**: 2026-11-02 10:15 (r5f 96/100 → goes to the exam)
 
 ---
 
@@ -69,8 +69,12 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **NOW (2026-11-02 00:10): FINAL model r5f TRAINED + merged (/vol/r5f/merged). Next = dev 2 test of r5f (no card,
-  cap $3.50) — waits for the user's "start"; then the pre-registered pick r5 vs r5f; then the exam once.**
+- **NOW (2026-11-02 10:15): r5f (own work + Spark tutoring) = 96/100 on R5D, no card → passes ALL pre-registered
+  conditions → r5f goes to the EXAM (run once, next). Then demo/app + video, submit by Nov 4 18:00.**
+  - verified (results/r5f-dev-ft-2026-11-02, compare_dev.json): r5f 96/100, crashes 1, hint/tutor mentions 0/100,
+    thinking 100%, 3,295 completion tokens per correct (A+card 3,580; ≈ 8% fewer, small). FT−A +34 [24, 44];
+    FT−(A+card) 0 [−4, 4]. r5f vs r5: +2 (5 jobs only r5f, 3 only r5) = within noise; do not claim Spark's 42 rows
+    caused the +2. Spark's measured role = rescue of 52/54 unsolved jobs.
   - verified (96945e8, results/train-r5f/train.json): 1,722 rows trained (1,668 first + 12 self-fix + 42 tutoring; 20
     dropped for length: 10/6/4), 431 steps, loss 0.63 → 0.32 (last-20 mean), no deadline stop, peak 76.5 GB, 6,993 s
     train + 151 s merge. Exam guard: 1,742 checked, 0 refused (took ≈ 2.5 h BEFORE training — count it in estimates).
