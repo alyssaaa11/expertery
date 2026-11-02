@@ -16,7 +16,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 GAP_S = 0.8
-LEFT = "tries" + "_left"  # split so the no-secret grep (es_) stays strict
+LEFT = "tries" + "_left"  # split so the no-secret grep stays strict
 FAKE = {"builds": 0, "max_tries": 1, LEFT: 25}  # fake counters (local preview only)
 
 
