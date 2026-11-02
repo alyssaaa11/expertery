@@ -48,8 +48,30 @@ rubric Impact 30 / Meta tooling 25 / Depth 20 / Demo 25 (kickoff slide, see proj
 - Known weakness: cold start ~3-5 min after idle → page says "waking up the model"; wake it before recording.
 - Cost: build ≈ $3 Meta credit, 3-4 h; use ≈ $2.50 per GPU hour of builds. Modal ≈ $72 of $90 used → ≈ $18 left;
   above $90 needs the user's OK.
-- **Waiting for the user:** (a) open to anyone (best for Community Vote / X) or passcode (safest for money);
+- decision (user, 2026-11-02 evening): (a) **open to anyone who has the link**: no passcode, not listed or advertised beyond our own posts; the build limits and spending cap stay on.
+- **Waiting for the user:**
   (b) spending cap for Nov 5-9 (proposed $20).
+
+### Home page message (user, 2026-11-02 evening, dictated)
+- decision (user): the home page must make a company owner think "I want this factory for my company".
+- decision (user): the main selling point is **privacy**. A cloud assistant is very smart, but your company's private tools and data
+  go to the provider. Homegrown trains a private, autonomous assistant that lives inside your company.
+- decision (user): second point: the factory **keeps checking and improving itself**, so it doesn't decay over months.
+- hypothesis (Claude): honesty limits. (1) Don't claim that Anthropic or any provider trains on company data: business API
+  terms often say they don't. Say "your tools and data leave your building" instead. (2) "Improves by itself over months" is
+  not tested. Proven: one factory run (practice jobs → teacher → strict referee → training). Say "built to re-run and
+  re-check itself" and show the referee gate, not months of improvement.
+
+- decision (user, 2026-11-02 evening): brand colour = **steel** (a strong, industrial colour, like GoPro's style; the
+  dictation also said "teal"). The page must not look like generic AI ("this is not AI talking"): it must feel like a real
+  industrial product that companies want in order to become more powerful.
+- decision (user, 2026-11-02 later): brand colour = **teal** (main colour); steel/graphite only as the background and lines.
+- hypothesis (Claude, exact shades not yet approved): graphite #1C2126 background, steel #8A96A3 / light steel #C9D1D9 text and
+  lines, one teal accent #1FA39A for buttons and "PASS". No purple gradients, sparkles or glowing AI orbs. Use real
+  rendered parts and the measurements as the visuals, with plain industrial type.
+
+- decision (user, 2026-11-02 evening): page style = like the FYNSEC Dribbble shot (dark frame, light card, large refined type, 3D object), **with movement**; the logo must represent the product. Rejected: plain dark/steel v1 and cinematic factory-photo v2 ("too boring, too simple").
+- hypothesis (Claude): mockup v3 at ~/projects/forge/docs/product/mockup/index.html (v1, v2 kept beside it): Gemini 3D object (bracket on teal glass layers, an illustration, not a Homegrown output), logo = hex nut with a teal sprout. digital-marketer review: docs/product/home-page-review-digital-marketer-2026-11-02.md.
 
 ## Item 9: Impact options (user has no engineer contact)
 1. Hackathon Discord / community: post the live page, ask builders to try it (Claude drafts, user sends).

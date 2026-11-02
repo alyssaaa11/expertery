@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homegrown: the AI expert your company gets to keep (MOCKUP v3)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --outer:#e9e7e1; --card:#f2f1ec; --ink:#141619; --ink2:#4a4f55; --mute:#868b90;
+    --frame:#16191c; --frame2:#22272c; --line:#d9d6ce;
+    --teal:#1fa39a; --teal-d:#0f6f69; --teal-l:#d6efec;
+    --ease:cubic-bezier(.2,.8,.2,1);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--outer);color:var(--ink);font-family:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .mono{font-family:"JetBrains Mono",Menlo,monospace}
+  a{color:inherit}
+  .mock{background:#fff6c9;color:#6b5a00;text-align:center;font-size:12px;padding:6px}
+  .page{max-width:1440px;margin:0 auto;padding:28px}
+
+  /* ---------- framed hero (FYNSEC layout) ---------- */
+  .frame{background:var(--frame);border-radius:36px;padding:30px;position:relative;animation:rise 1s var(--ease) both}
+  .top{display:flex;justify-content:space-between;align-items:center;height:56px;padding:0 14px;position:relative;z-index:2}
+  .logo{display:flex;align-items:center;gap:12px;color:#fff;font-size:24px;font-weight:500}
+  .logo svg{width:40px;height:40px}
+  .mark .stem{stroke-dasharray:14;stroke-dashoffset:14;animation:draw 1s .6s var(--ease) forwards}
+  .mark .leaf{transform-box:fill-box;transform:scale(0);animation:leaf .7s var(--ease) forwards}
+  .mark .leaf.l{transform-origin:100% 100%;animation-delay:1.3s}.mark .leaf.r{transform-origin:0 100%;animation-delay:1.5s}
+  .logo:hover .leaf{animation:leaf .7s var(--ease) forwards, sway 1.6s ease-in-out infinite}
+  .pillnav{display:flex;border:1.5px solid var(--ink);border-radius:40px;padding:0 10px;height:46px;align-items:center;gap:6px}
+  .pillnav a{text-decoration:none;font-size:15px;padding:8px 16px;border-radius:30px;transition:.25s}
+  .pillnav a:hover{background:var(--ink);color:#fff}
+  .ghost{display:flex;align-items:center;gap:10px;color:#fff;border:1.5px solid #5a6168;border-radius:40px;
+    height:46px;padding:0 18px 0 8px;text-decoration:none;font-size:15px;transition:.25s}
+  .ghost .c{width:28px;height:28px;border-radius:50%;background:#fff;color:var(--frame);display:grid;place-items:center;font-size:14px;transition:.3s var(--ease)}
+  .ghost:hover{border-color:var(--teal)} .ghost:hover .c{background:var(--teal);transform:rotate(-45deg)}
+  .rightnav{display:flex;gap:12px}
+
+  .card{background:var(--card);border-radius:30px;position:relative;margin-top:-56px;padding:150px 64px 64px;
+    display:grid;grid-template-columns:1.05fr 1fr;gap:20px;min-height:740px;overflow:hidden}
+  .card::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(600px 400px at var(--mx,70%) var(--my,50%),rgba(31,163,154,.13),transparent 70%);transition:background .2s}
+  .tab{position:absolute;top:0;background:var(--frame);height:86px;z-index:1}
+  .tab.l{left:0;width:240px;border-bottom-right-radius:30px}
+  .tab.r{right:0;width:360px;border-bottom-left-radius:30px}
+  .tab::after,.tab::before{content:"";position:absolute;width:30px;height:30px}
+  .tab.l::after{left:240px;top:0;background:radial-gradient(circle at 100% 100%,transparent 29px,var(--frame) 30px)}
+  .tab.l::before{left:0;top:86px;background:radial-gradient(circle at 100% 100%,transparent 29px,var(--frame) 30px)}
+  .tab.r::after{right:360px;top:0;background:radial-gradient(circle at 0 100%,transparent 29px,var(--frame) 30px)}
+  .tab.r::before{right:0;top:86px;background:radial-gradient(circle at 0 100%,transparent 29px,var(--frame) 30px)}
+  .navslot{position:absolute;top:20px;left:280px;z-index:3;animation:fade .8s .5s both}
+  .tab.br{top:auto;bottom:0;right:0;width:300px;height:84px;border-radius:30px 0 0 0;
+    display:flex;align-items:center;justify-content:center;gap:12px;color:#c9cfd4;font-size:15px}
+  .tab.br::after{right:300px;bottom:0;top:auto;background:radial-gradient(circle at 0 0,transparent 29px,var(--frame) 30px)}
+  .tab.br::before{right:0;top:-30px;background:radial-gradient(circle at 0 0,transparent 29px,var(--frame) 30px)}
+  .toggle{display:flex;gap:4px;position:relative;border:1.5px solid #5a6168;border-radius:20px;padding:3px}
+  .toggle span{position:relative;z-index:1;border-radius:20px;padding:3px 13px;font-size:14px;cursor:pointer;transition:color .3s}
+  .toggle .knob{position:absolute;top:3px;bottom:3px;left:3px;width:46px;border-radius:20px;background:var(--teal);transition:transform .4s var(--ease)}
+  .toggle.off .knob{transform:translateX(47px);background:#d9734f}
+  .toggle span.act{color:#06201e;font-weight:600}
+
+  h1{font-size:96px;line-height:.98;font-weight:400;letter-spacing:-.035em;margin:0}
+  h1 .w{display:inline-block;overflow:hidden;vertical-align:bottom;padding-bottom:.06em}
+  h1 .w > span{display:inline-block;transform:translateY(110%);animation:wordup .9s var(--ease) forwards}
+  h1 .ico{display:inline-block;width:86px;height:70px;vertical-align:-6px;margin-right:6px}
+  h1 .ico .layer{animation:stack 3.2s ease-in-out infinite}
+  h1 .ico .l2{animation-delay:.15s} h1 .ico .l3{animation-delay:.3s}
+  h1 em{font-style:normal;color:var(--teal-d)}
+  .hero-left{align-self:end;position:relative;z-index:2}
+  .circle-link{display:inline-flex;align-items:center;gap:12px;margin-top:44px;font-size:18px;text-decoration:none;font-weight:500;animation:fade .8s 1.2s both}
+  .circle-link .c{width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:13px;transition:.3s var(--ease)}
+  .circle-link:hover .c{background:var(--teal);transform:translateX(4px)}
+  .rule{height:1px;background:var(--ink);opacity:.35;width:420px;margin:18px 0;transform-origin:left;animation:grow 1s 1.3s var(--ease) both}
+  .small{font-size:15px;color:var(--ink2);max-width:430px;line-height:1.5;animation:fade .8s 1.5s both}
+  .hero-obj{position:relative;align-self:center;perspective:1200px;animation:fade 1.2s .4s both}
+  .obj{transition:transform .25s ease-out;transform-style:preserve-3d}
+  .obj img{width:118%;margin-left:-6%;display:block;-webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 62%,transparent 100%);mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 62%,transparent 100%);animation:float 6s ease-in-out infinite}
+  .shadow{position:absolute;left:22%;right:22%;bottom:4%;height:30px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(0,0,0,.18),transparent);animation:shadow 6s ease-in-out infinite;filter:blur(2px)}
+  .tag{position:absolute;background:#fff;border-radius:30px;padding:8px 14px 8px 10px;font-size:13px;z-index:2;
+    display:flex;gap:8px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.08);animation:pop .7s var(--ease) both, bob 5s ease-in-out infinite}
+  .tag i{width:10px;height:10px;border-radius:50%;background:var(--teal);display:inline-block;animation:ping 1.8s infinite}
+  .tag.a{top:6%;right:4%;animation-delay:1.6s,0s} .tag.b{bottom:14%;left:2%;animation-delay:1.9s,1.2s}
+  .scan{position:absolute;left:8%;right:8%;height:2px;top:20%;background:linear-gradient(90deg,transparent,var(--teal),transparent);
+    opacity:.0;animation:scan 4.5s 2s ease-in-out infinite;z-index:1}
+
+  /* marquee */
+  .marquee{margin-top:28px;overflow:hidden;border-radius:999px;background:var(--frame);color:#c9cfd4;padding:16px 0;white-space:nowrap}
+  .marquee .track{display:inline-block;animation:slide 32s linear infinite}
+  .marquee span{margin:0 26px;font-size:15px} .marquee b{color:var(--teal);font-weight:500}
+
+  /* ---------- sections ---------- */
+  section{margin-top:28px}
+  .block{background:var(--card);border-radius:30px;padding:64px;position:relative;overflow:hidden}
+  .dark{background:var(--frame);color:#e9ecef}
+  .kicker{display:inline-flex;align-items:center;gap:10px;font-size:14px;color:var(--mute);margin-bottom:18px}
+  .kicker::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--teal);animation:ping 1.8s infinite}
+  h2{font-size:58px;line-height:1.02;font-weight:500;letter-spacing:-.03em;margin:0 0 18px}
+  h2 em{font-style:normal;color:var(--teal)}
+  .lead{font-size:19px;color:var(--ink2);max-width:640px;line-height:1.5}
+  .dark .lead{color:#a9b1b8}
+  .reveal{opacity:0;transform:translateY(40px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+  .reveal.in{opacity:1;transform:none}
+  .stagger > *{opacity:0;transform:translateY(30px);transition:.8s var(--ease)}
+  .in .stagger > *{opacity:1;transform:none}
+  .in .stagger > *:nth-child(2){transition-delay:.1s} .in .stagger > *:nth-child(3){transition-delay:.2s}
+  .in .stagger > *:nth-child(4){transition-delay:.3s} .in .stagger > *:nth-child(5){transition-delay:.4s}
+
+  .stats{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:28px;align-items:center}
+  .stat{border-left:1px solid #343b42;padding-left:24px;min-height:190px;display:flex;flex-direction:column;justify-content:center}
+  .stat b{display:flex;align-items:flex-start;white-space:nowrap;font-size:84px;font-weight:400;letter-spacing:-.04em;line-height:1;color:#fff}
+  .stat b sup{font-size:36px;letter-spacing:0;line-height:1.2;color:var(--teal);vertical-align:top;margin-left:4px}
+  .stat > span{color:#a9b1b8;font-size:15px;display:block;margin-top:10px;max-width:230px}
+
+  .demo{display:grid;grid-template-columns:1fr 1.1fr;gap:24px;margin-top:40px}
+  .panel{background:#fff;border-radius:24px;padding:26px}
+  textarea{width:100%;height:130px;border:1.5px solid var(--line);border-radius:16px;padding:16px;font:inherit;font-size:16px;resize:none;background:var(--card)}
+  textarea:focus{outline:none;border-color:var(--teal)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 20px}
+  .chips button{border:1.5px solid var(--line);background:#fff;border-radius:30px;padding:7px 14px;font:inherit;font-size:13px;cursor:pointer;transition:.2s}
+  .chips button:hover{border-color:var(--teal);transform:translateY(-2px)}
+  .run{display:inline-flex;align-items:center;gap:12px;background:var(--ink);color:#fff;border:0;border-radius:40px;
+    padding:8px 22px 8px 8px;font:inherit;font-size:16px;cursor:pointer;transition:.3s var(--ease)}
+  .run .c{width:34px;height:34px;border-radius:50%;background:var(--teal);color:#06201e;display:grid;place-items:center;transition:.3s var(--ease)}
+  .run:hover{padding-right:28px} .run:hover .c{transform:rotate(-45deg)}
+  .note{font-size:13px;color:var(--mute);margin-top:14px}
+  .steps{list-style:none;margin:0;padding:0}
+  .steps li{display:flex;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid #ece9e2;color:var(--mute);transition:.4s}
+  .steps .d{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:13px;flex:none;transition:.4s}
+  .steps small{display:block;font-size:13px;color:var(--mute)}
+  .steps li.on{color:var(--ink);transform:translateX(6px)} .steps li.on .d{border-color:var(--teal);color:var(--teal-d);animation:ring 1s infinite}
+  .steps li.done{color:var(--ink)} .steps li.done .d{background:var(--teal);border-color:var(--teal);color:#06201e}
+  .steps li.fix{color:var(--ink)} .steps li.fix .d{border-color:#d9734f;color:#d9734f;animation:spin 1s linear infinite}
+  .runhead{display:flex;justify-content:space-between;margin-bottom:6px}
+  .result{display:none;margin-top:18px;background:var(--card);border-radius:16px;padding:16px;align-items:center;justify-content:space-between}
+  .result.show{display:flex;animation:pop .6s var(--ease)}
+  .pass{background:var(--teal);color:#06201e;font-weight:600;border-radius:30px;padding:6px 14px;font-size:14px}
+  .dl span{border:1.5px solid var(--line);border-radius:30px;padding:5px 12px;font-size:13px;margin-left:6px;background:#fff}
+  .ask{display:none;margin-top:12px;border-radius:16px;padding:16px;background:var(--frame);color:#fff;justify-content:space-between;align-items:center}
+  .ask.show{display:flex;animation:pop .6s .2s var(--ease) both}
+  .ask a{color:var(--teal);text-decoration:none;font-weight:600}
+
+  .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:44px;position:relative}
+  .node{background:var(--frame2);border-radius:22px;padding:24px 20px;min-height:190px;display:flex;flex-direction:column;
+    justify-content:space-between;transition:background .5s,transform .5s var(--ease)}
+  .node .n{font-size:13px;color:#7d868e}
+  .node b{font-size:22px;font-weight:500;color:#fff;display:block}
+  .node span{font-size:14px;color:#a9b1b8}
+  .node.lit{background:#2c3a3c;transform:translateY(-8px)}
+  .node.ref{box-shadow:inset 0 0 0 1.5px var(--teal)}
+  .node.ref.lit{background:var(--teal)} .node.ref.lit b,.node.ref.lit span,.node.ref.lit .n{color:#06201e}
+  .loopline{margin-top:20px;display:flex;align-items:center;gap:12px;color:#a9b1b8;font-size:15px}
+  .loopline i{flex:1;height:1px;background:repeating-linear-gradient(90deg,#3d454c 0 8px,transparent 8px 14px);background-size:28px 1px;animation:dash 1.2s linear infinite}
+  .loopline .spin{display:inline-block;animation:spin 3s linear infinite;color:var(--teal)}
+
+  .needs{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:40px}
+  .need{background:#fff;border-radius:22px;padding:26px;min-height:200px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .4s var(--ease),box-shadow .4s}
+  .need:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(0,0,0,.06)}
+  .need .num{font-size:13px;color:var(--mute)}
+  .need b{font-size:22px;font-weight:500;display:block;margin-bottom:6px}
+  .need span{color:var(--ink2);font-size:15px}
+  .need.hl{background:var(--teal-l)}
+
+  .cta{display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:center}
+  .cta h2{font-size:64px}
+  .form{background:var(--frame2);border-radius:24px;padding:30px}
+  .form label{display:block;font-size:14px;color:#a9b1b8;margin:6px 0 8px}
+  .form input{width:100%;background:transparent;border:0;border-bottom:1.5px solid #4a535b;color:#fff;font:inherit;font-size:18px;padding:10px 0 12px;margin-bottom:18px;transition:border-color .3s}
+  .form input:focus{outline:none;border-color:var(--teal)}
+  .orb{position:absolute;width:520px;height:520px;border-radius:50%;right:-160px;top:-200px;
+    background:radial-gradient(closest-side,rgba(31,163,154,.25),transparent);animation:drift 12s ease-in-out infinite;pointer-events:none}
+  footer{display:flex;justify-content:space-between;padding:28px 16px;color:var(--mute);font-size:14px}
+
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes leaf{to{transform:scale(1)}}
+  @keyframes sway{0%,100%{rotate:0deg}50%{rotate:-8deg}}
+  @keyframes rise{from{opacity:0;transform:translateY(30px) scale(.98)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes wordup{to{transform:translateY(0)}}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-18px) rotate(-1.2deg)}}
+  @keyframes shadow{0%,100%{transform:scaleX(1);opacity:1}50%{transform:scaleX(.82);opacity:.6}}
+  @keyframes bob{0%,100%{translate:0 0}50%{translate:0 -8px}}
+  @keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
+  @keyframes ping{0%{box-shadow:0 0 0 0 rgba(31,163,154,.55)}100%{box-shadow:0 0 0 10px rgba(31,163,154,0)}}
+  @keyframes ring{0%{box-shadow:0 0 0 0 rgba(31,163,154,.45)}100%{box-shadow:0 0 0 12px rgba(31,163,154,0)}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(.7)}}
+  @keyframes stack{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  @keyframes scan{0%{top:15%;opacity:0}15%{opacity:.9}70%{opacity:.9}85%{top:78%;opacity:0}100%{top:78%;opacity:0}}
+  @keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes dash{to{background-position:28px 0}}
+  @keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(-80px,60px)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal,.stagger>*{opacity:1;transform:none}h1 .w>span{transform:none}}
+
+  /* full-screen layout (user: fill the whole browser window) */
+  .page{max-width:none;padding:0}
+  .frame{border-radius:0;min-height:100vh;display:flex;flex-direction:column;padding:24px 28px 28px}
+  .card{flex:1;min-height:0}
+  .marquee{margin-top:0;border-radius:0}
+  section{margin-top:0}
+  .block{border-radius:0;padding:110px max(64px,6vw)}
+  footer{background:var(--frame);color:#7d868e;padding:28px max(64px,6vw)}
+  .mock{position:fixed;left:16px;bottom:16px;z-index:50;border-radius:30px;padding:6px 14px;box-shadow:0 6px 20px rgba(0,0,0,.15)}
+</style>
+</head>
+<body>
+<div class="mock">MOCKUP v3 for review: not the product. The demo plays a fake recording; no model is called. The 3D object is an illustration.</div>
+<div class="page">
+
+<div class="frame">
+  <div class="top">
+    <div class="logo">
+      <svg viewBox="0 0 40 40" class="mark"><path d="M20 12.5 L29.5 18 L29.5 29 L20 34.5 L10.5 29 L10.5 18 Z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><circle cx="20" cy="23.5" r="3.6" fill="none" stroke="#fff" stroke-width="2"/><path class="stem" d="M20 19.9 V7" stroke="#1fa39a" stroke-width="2.2" stroke-linecap="round" fill="none"/><path class="leaf l" d="M20 11 C14 11 11.5 7.5 11.5 3.5 C17 3.5 20 6.5 20 11 Z" fill="#1fa39a"/><path class="leaf r" d="M20 9 C24.5 9 28.5 6.5 28.5 1.5 C23.5 1.5 20 4.5 20 9 Z" fill="#1fa39a"/></svg>
+      Homegrown</div>
+    <div class="rightnav">
+      <a class="ghost" href="#demo"><span class="c">›</span>Try it live</a>
+      <a class="ghost" href="#your-tool"><span class="c">›</span>Bring it to your company</a>
+    </div>
+  </div>
+  <div class="card" id="card">
+    <div class="tab l"></div><div class="tab r"></div>
+    <nav class="navslot pillnav"><a href="#demo">Live demo</a><a href="#proof">Proof</a><a href="#factory">Factory</a><a href="#your-tool">Your tool</a></nav>
+
+    <div class="hero-left">
+      <h1 id="h1"><span class="w"><span>The</span></span> <span class="w"><span>AI</span></span> <span class="w"><span>expert</span></span>
+        <span class="w"><span><svg class="ico" viewBox="0 0 86 70"><g fill="none" stroke="#141619" stroke-width="2">
+          <path class="layer l3" d="M43 40 L80 52 L43 66 L6 52 Z" fill="#f2f1ec"/>
+          <path class="layer l2" d="M43 26 L80 38 L43 52 L6 38 Z" fill="#1fa39a"/>
+          <path class="layer" d="M43 12 L80 24 L43 38 L6 24 Z" fill="#f2f1ec"/></g></svg></span></span><span class="w"><span>your</span></span>
+        <span class="w"><span>company</span></span> <span class="w"><span>gets</span></span> <span class="w"><span>to</span></span> <span class="w"><span><em>keep.</em></span></span></h1>
+      <a class="circle-link" href="#demo"><span class="c">›</span>Try it live</a>
+      <div class="rule"></div>
+      <p class="small">Homegrown trains Meta's open model on your tool. It learns only from answers a strict referee
+        proved correct, and the finished model runs privately.</p>
+    </div>
+    <div class="hero-obj">
+      <div class="obj" id="obj"><img src="object.jpeg" alt=""></div>
+      <div class="shadow"></div>
+      <div class="scan"></div>
+      <div class="tag a"><i></i>PASS · 80.0 mm · 1 solid</div>
+      <div class="tag b"><i></i>Learns only from checked work</div>
+    </div>
+
+    <div class="tab br">Runs privately:
+      <div class="toggle" id="toggle"><div class="knob"></div><span class="act">On</span><span>Off</span></div></div>
+  </div>
+</div>
+
+<div class="marquee"><div class="track" id="track">
+  <span>Built on <b>Muse Glimmer</b></span><span>Taught by <b>Muse Spark Open</b></span><span>Built with <b>Muse Code</b></span>
+  <span>Every answer <b>really run</b></span><span>Only <b>checked</b> work teaches</span><span>Runs <b>privately</b></span>
+  <span>Proven on <b>CAD</b></span><span><b>92%</b> on a hard exam</span>
+</div></div>
+
+<section id="proof" class="reveal"><div class="block dark">
+  <div class="stats stagger">
+    <div><div class="kicker">Proof</div><h2 style="font-size:44px">Measured on a hard exam it <em>never saw.</em></h2></div>
+    <div class="stat"><b><span class="count" data-to="92">0</span><sup>%</sup></b><span>on 30 hard CAD jobs with its self-check loop (best untrained setup: 94%)</span></div>
+    <div class="stat"><b><span class="count" data-to="2.7" data-dec="1">0</span><sup>×</sup></b><span>fewer tokens per correct part than that best setup</span></div>
+    <div class="stat"><b><span class="count" data-to="0">0</span><sup>pages</sup></b><span>of manual in the prompt: the know-how is inside the model</span></div>
+  </div>
+</div></section>
+
+<section id="demo" class="reveal"><div class="block">
+  <div class="kicker">Live demo</div>
+  <h2>Describe a part. Watch it build,<br>measure and <em>fix itself.</em></h2>
+  <p class="lead">The trained model writes the CAD code, a locked cloud box builds it, and the model measures the part
+    against your numbers. If something is off, it reads the error and tries again.</p>
+  <div class="demo">
+    <div class="panel">
+      <textarea id="job">An L-shaped mounting bracket: base 80 × 30 × 5 mm, upright wall 40 mm tall and 5 mm thick, two 6 mm holes in the base, 20 mm from each end.</textarea>
+      <div class="chips"><button>L-bracket with 2 holes</button><button>Flanged pipe adapter</button><button>Electronics box with lid lip</button></div>
+      <button class="run" id="run"><span class="c">›</span>Build it</button>
+      <div class="note">While the model wakes up (~1 min), a recorded run plays first, clearly labelled.</div>
+    </div>
+    <div class="panel">
+      <div class="runhead"><b>Run</b><span class="mono note" style="margin:0" id="timer">ready</span></div>
+      <ul class="steps" id="steps">
+        <li data-k="write"><span class="d">01</span><div>Write the code<small>trained Glimmer, private</small></div></li>
+        <li data-k="build"><span class="d">02</span><div>Build in the locked box<small>isolated cloud sandbox</small></div></li>
+        <li data-k="measure"><span class="d">03</span><div>Measure against your numbers<small>size, holes, one solid piece</small></div></li>
+        <li data-k="fix"><span class="d">↻</span><div>Fix if needed<small id="fixnote">up to 3 rounds</small></div></li>
+        <li data-k="done"><span class="d">✓</span><div>Hand it over<small>3D view, measurements, code, STEP/STL</small></div></li>
+      </ul>
+      <div class="result" id="result"><span class="pass">PASS ✓ · 1 fix round</span>
+        <span class="dl"><span>STEP ↓</span><span>STL ↓</span><span>code ↓</span></span></div>
+      <div class="ask" id="ask"><span>Want this for <b>your</b> tool?</span><a href="#your-tool">Bring it to my company ›</a></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="factory" class="reveal"><div class="block dark">
+  <div class="kicker">The factory</div>
+  <h2>Wrong answers <em>never teach.</em></h2>
+  <p class="lead">Homegrown builds its own training data. A strict referee checks every example before your model learns from it.</p>
+  <div class="flow stagger" id="flow">
+    <div class="node"><span class="n">01</span><div><b>Practice jobs</b><span>written for your tool</span></div></div>
+    <div class="node"><span class="n">02</span><div><b>Teacher</b><span>Muse Spark Open solves them</span></div></div>
+    <div class="node"><span class="n">03</span><div><b>Locked box</b><span>every answer is really run</span></div></div>
+    <div class="node ref"><span class="n">04</span><div><b>Strict referee</b><span>keeps only correct work</span></div></div>
+    <div class="node"><span class="n">05</span><div><b>Your model</b><span>Glimmer learns, runs privately</span></div></div>
+  </div>
+  <div class="loopline"><span class="spin">↻</span><i></i> built to re-run and re-check itself <i></i></div>
+</div></section>
+
+<section id="your-tool" class="reveal"><div class="block">
+  <div class="kicker">Your tool next</div>
+  <h2>What it takes to bring Homegrown<br>to <em>your company.</em></h2>
+  <div class="needs stagger">
+    <div class="need"><span class="num">01</span><div><b>A job generator</b><span>practice tasks in your tool's language</span></div></div>
+    <div class="need"><span class="num">02</span><div><b>A sandbox</b><span>a safe place where answers really run</span></div></div>
+    <div class="need"><span class="num">03</span><div><b>A referee</b><span>a check that says right or wrong</span></div></div>
+    <div class="need hl"><span class="num">04</span><div><b>Proof before you trust it</b><span>we test your AI on your own past work and show you the score</span></div></div>
+  </div>
+  <p class="note" style="font-size:14px">Proven on CAD so far. Final training run: about 2 hours and about $10 of GPU time.</p>
+</div></section>
+
+<section class="reveal"><div class="block dark cta">
+  <div class="orb"></div>
+  <div><div class="kicker">Get started</div>
+    <h2>Your company's AI is waiting for <em>your tool.</em></h2>
+    <p class="lead">Tell us which tool. We read every answer.</p></div>
+  <div class="form">
+    <label>Which tool should your AI master?</label><input placeholder="e.g. our CAD scripts, SQL, PLC code…">
+    <label>Work email</label><input placeholder="you@company.com">
+    <button class="run"><span class="c">›</span>Send</button>
+  </div>
+</div></section>
+
+<footer><span>Homegrown · Meta hackathon 2026 · built with Muse Code, Spark Open, Glimmer · Modal · Baseten</span>
+  <span><a href="#">GitHub</a> · <a href="#">3-min video</a></span></footer>
+</div>
+
+<script>
+  // headline words rise one by one
+  document.querySelectorAll('#h1 .w > span').forEach((s,i)=>s.style.animationDelay=(0.25+i*0.08)+'s');
+
+  // marquee: duplicate content for a seamless loop
+  const tr_=document.getElementById('track'); tr_.innerHTML+=tr_.innerHTML;
+
+  // 3D object follows the mouse, teal light follows the cursor
+  const card=document.getElementById('card'), obj=document.getElementById('obj');
+  card.addEventListener('mousemove',e=>{
+    const r=card.getBoundingClientRect(), x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
+    obj.style.transform=`rotateY(${(x-.5)*16}deg) rotateX(${(.5-y)*10}deg) translateZ(20px)`;
+    card.style.setProperty('--mx',x*100+'%'); card.style.setProperty('--my',y*100+'%');
+  });
+  card.addEventListener('mouseleave',()=>obj.style.transform='');
+
+  // "Runs privately" toggle
+  const tg=document.getElementById('toggle');
+  tg.onclick=()=>{tg.classList.toggle('off');const s=tg.querySelectorAll('span');s[0].classList.toggle('act');s[1].classList.toggle('act');};
+
+  // scroll reveal + count-up + factory light
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(!e.isIntersecting)return; e.target.classList.add('in'); io.unobserve(e.target);
+    e.target.querySelectorAll('.count').forEach(c=>{
+      const to=+c.dataset.to, dec=+(c.dataset.dec||0), t0=performance.now();
+      const f=t=>{const p=Math.min((t-t0)/1400,1), v=to*(1-Math.pow(1-p,3)); c.textContent=v.toFixed(dec); if(p<1)requestAnimationFrame(f)};
+      requestAnimationFrame(f);
+    });
+    if(e.target.id==='factory'){
+      const nodes=[...document.querySelectorAll('#flow .node')]; let i=0;
+      setInterval(()=>{nodes.forEach(n=>n.classList.remove('lit')); nodes[i%nodes.length].classList.add('lit'); i++;},900);
+    }
+  }),{threshold:.2});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  // recorded demo run
+  const steps=[...document.querySelectorAll('#steps li')], timer=document.getElementById('timer');
+  const seq=[['write',1100],['build',1100],['measure',1100],['fix',1300],['write',800],['build',800],['measure',800],['done',600]];
+  document.getElementById('run').onclick=()=>{
+    steps.forEach(s=>s.className='');
+    ['result','ask'].forEach(id=>document.getElementById(id).classList.remove('show'));
+    let t=0,round=0;const start=Date.now();
+    const tick=setInterval(()=>timer.textContent='recorded run · '+((Date.now()-start)/1000).toFixed(0)+' s',200);
+    seq.forEach(([k,d])=>{t+=d;setTimeout(()=>{
+      const li=steps.find(s=>s.dataset.k===k);
+      steps.forEach(s=>{if(s.classList.contains('on'))s.classList.replace('on','done')});
+      if(k==='fix'){round++;li.className='fix';document.getElementById('fixnote').textContent='measured 2 solids, expected 1 → fixing (round '+round+' of 3)';steps.slice(0,3).forEach(s=>s.className='');}
+      else li.className='on';
+      if(k==='done'){li.className='done';clearInterval(tick);timer.textContent='PASS ✓ · recorded run';
+        ['result','ask'].forEach(id=>document.getElementById(id).classList.add('show'));}
+    },t)});
+  };
+  document.querySelectorAll('.chips button').forEach(b=>b.onclick=()=>document.getElementById('job').value=b.textContent+'…');
+</script>
+</body>
+</html>

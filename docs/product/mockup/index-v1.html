@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homegrown: the AI expert your company gets to keep (MOCKUP)</title>
+<style>
+  :root{
+    --bg:#15191d; --panel:#1c2126; --panel2:#232a31; --line:#2e3740;
+    --steel:#8a96a3; --text:#c9d1d9; --white:#eef2f5;
+    --teal:#1fa39a; --teal-dim:#13625d; --red:#d96b5f;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"Inter","Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.5}
+  .mono{font-family:"JetBrains Mono","SF Mono",Menlo,monospace}
+  a{color:var(--teal)}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 32px}
+  .mock-banner{background:#2a2f14;color:#e5d98a;text-align:center;font-size:13px;padding:6px}
+
+  /* nav */
+  nav{border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.04em;color:var(--white);font-size:18px}
+  .logo i{width:22px;height:22px;background:var(--teal);display:inline-block;
+    clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+  nav ul{display:flex;gap:28px;list-style:none;margin:0;padding:0;font-size:14px}
+  nav ul a{color:var(--steel);text-decoration:none}
+  nav ul a:hover{color:var(--white)}
+
+  .btn{display:inline-block;background:var(--teal);color:#0f1417;font-weight:700;
+    padding:14px 22px;border-radius:4px;text-decoration:none;border:0;cursor:pointer;font-size:15px}
+  .btn:hover{background:#27b8ad}
+  .link{color:var(--text);text-decoration:none;border-bottom:1px solid var(--steel);padding-bottom:2px;font-size:15px}
+
+  /* hero */
+  .hero{padding:72px 0 64px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#1a1f24 0%,var(--bg) 100%)}
+  .hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+  .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700}
+  h1{font-size:56px;line-height:1.04;margin:14px 0 20px;color:var(--white);letter-spacing:-.02em;font-weight:800}
+  .sub{font-size:19px;color:var(--text);max-width:540px}
+  .sub b{color:var(--white)}
+  .cta-row{display:flex;gap:26px;align-items:center;margin-top:30px}
+  .byline{margin-top:34px;font-size:13px;color:var(--steel);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .chip{border:1px solid var(--line);padding:4px 10px;border-radius:3px;color:var(--text)}
+
+  .part-card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:20px;position:relative}
+  .part-card .hdr{display:flex;justify-content:space-between;font-size:12px;color:var(--steel)}
+  .stamp{position:absolute;right:22px;top:60px;border:3px solid var(--teal);color:var(--teal);
+    font-weight:900;font-size:26px;padding:4px 14px;transform:rotate(-8deg);letter-spacing:.08em;border-radius:4px;
+    background:rgba(21,25,29,.75)}
+  .meas{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .meas div{background:var(--panel2);padding:8px 10px;border-radius:3px;font-size:12px}
+  .meas b{display:block;color:var(--white);font-size:14px}
+  .ok{color:var(--teal)}
+
+  section{padding:80px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:36px;color:var(--white);margin:8px 0 12px;letter-spacing:-.01em}
+  .lead{color:var(--steel);max-width:640px;font-size:17px}
+
+  /* demo */
+  .demo{display:grid;grid-template-columns:.9fr 1.1fr;gap:28px;margin-top:36px}
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:22px}
+  textarea{width:100%;height:120px;background:var(--bg);color:var(--white);border:1px solid var(--line);
+    border-radius:4px;padding:12px;font-size:15px;resize:none;font-family:inherit}
+  .examples{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}
+  .examples button{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:3px;
+    padding:6px 10px;font-size:12px;cursor:pointer}
+  .examples button:hover{border-color:var(--teal)}
+  .recorded{font-size:12px;color:var(--steel);margin-top:12px}
+  .steps{list-style:none;margin:0;padding:0}
+  .steps li{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px dashed var(--line);
+    color:var(--steel);transition:color .3s}
+  .steps li .dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex:none;margin-top:1px;
+    display:flex;align-items:center;justify-content:center;font-size:12px}
+  .steps li.on{color:var(--white)} .steps li.on .dot{border-color:var(--teal);color:var(--teal)}
+  .steps li.done .dot{background:var(--teal);border-color:var(--teal);color:#0f1417}
+  .steps li.fix .dot{border-color:var(--red);color:var(--red)}
+  .steps small{display:block;color:var(--steel);font-size:12px}
+  .result{display:none;margin-top:16px;gap:16px;grid-template-columns:1fr 1fr}
+  .result.show{display:grid}
+  .dl{display:flex;gap:8px;margin-top:10px}
+  .dl span{font-size:12px;border:1px solid var(--line);padding:5px 9px;border-radius:3px}
+  .after{display:none;margin-top:18px;padding:16px;border:1px solid var(--teal-dim);border-radius:4px;background:#17302e}
+  .after.show{display:flex;justify-content:space-between;align-items:center}
+  .timer{font-size:12px;color:var(--steel)}
+
+  /* proof */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:36px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--teal);padding:24px;border-radius:4px}
+  .stat .n{font-size:52px;font-weight:800;color:var(--white);letter-spacing:-.02em}
+  .stat .n small{font-size:20px;color:var(--steel);font-weight:600}
+  .stat p{margin:6px 0 0;color:var(--steel);font-size:14px}
+  .honest{margin-top:22px;font-size:14px;color:var(--steel)}
+
+  /* factory */
+  .flow{display:flex;align-items:stretch;gap:0;margin-top:40px;position:relative}
+  .node{flex:1;background:var(--panel);border:1px solid var(--line);padding:18px 14px;border-radius:4px;text-align:center}
+  .node b{display:block;color:var(--white);font-size:15px;margin-bottom:4px}
+  .node span{font-size:12px;color:var(--steel)}
+  .node.ref{border-color:var(--teal)}
+  .arrow{width:34px;display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:20px}
+  .loop{margin-top:14px;text-align:center;font-size:13px;color:var(--teal)}
+
+  /* your tool */
+  .needs{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:36px}
+  .need{border-left:2px solid var(--teal);padding:4px 0 4px 16px}
+  .need b{color:var(--white);display:block}
+  .need span{font-size:14px;color:var(--steel)}
+
+  /* form */
+  .form{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+  .form label{display:block;font-size:13px;color:var(--steel);margin:14px 0 6px}
+  .form input,.form select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--white);
+    padding:12px;border-radius:4px;font-size:15px}
+
+  footer{padding:36px 0;font-size:13px;color:var(--steel)}
+  footer .wrap{display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="mock-banner">MOCKUP for review: not the product. The demo plays a fake recording; no model is called.</div>
+
+<nav><div class="wrap">
+  <div class="logo"><i></i>HOMEGROWN</div>
+  <ul><li><a href="#demo">Live demo</a></li><li><a href="#proof">Proof</a></li>
+    <li><a href="#factory">The factory</a></li><li><a href="#your-tool">Your tool</a></li>
+    <li><a href="#">GitHub</a></li></ul>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div>
+    <div class="eyebrow">Private AI, trained on your tool</div>
+    <h1>The AI expert your company gets to keep.</h1>
+    <p class="sub">Homegrown trains an open Meta model on <b>your tool</b>. It learns only from answers a strict referee
+      proved correct, and the finished model <b>runs privately</b>.<br>
+      Proven on CAD: <b>92%</b> on a hard exam with its self-check loop.</p>
+    <div class="cta-row">
+      <a class="btn" href="#demo">Try it live →</a>
+      <a class="link" href="#factory">See how the factory works</a>
+    </div>
+    <div class="byline">Built on Meta's open models:
+      <span class="chip">Muse Glimmer</span><span class="chip">Muse Spark Open</span><span class="chip">Muse Code</span></div>
+  </div>
+
+  <div class="part-card">
+    <div class="hdr mono"><span>EXAMPLE · L-bracket, 2 holes</span><span>CadQuery</span></div>
+    <svg viewBox="0 0 420 270" width="100%" aria-label="rendered bracket">
+      <defs>
+        <linearGradient id="top" x1="0" x2="1"><stop offset="0" stop-color="#9aa6b2"/><stop offset="1" stop-color="#c2cbd4"/></linearGradient>
+        <linearGradient id="side" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#6b7682"/><stop offset="1" stop-color="#4b545e"/></linearGradient>
+        <linearGradient id="front" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7f8a96"/><stop offset="1" stop-color="#5d6772"/></linearGradient>
+      </defs>
+      <!-- base plate -->
+      <polygon points="70,170 250,120 360,160 180,210" fill="url(#top)"/>
+      <polygon points="70,170 180,210 180,226 70,186" fill="url(#front)"/>
+      <polygon points="180,210 360,160 360,176 180,226" fill="url(#side)"/>
+      <!-- upright wall -->
+      <polygon points="70,170 250,120 250,40 70,90" fill="url(#front)"/>
+      <polygon points="70,90 250,40 262,44 82,94" fill="#c9d1d9"/>
+      <polygon points="250,40 262,44 262,124 250,120" fill="#4b545e"/>
+      <!-- holes -->
+      <ellipse cx="225" cy="168" rx="17" ry="8" fill="#15191d"/>
+      <ellipse cx="295" cy="150" rx="17" ry="8" fill="#15191d"/>
+      <!-- dimension lines -->
+      <g stroke="#1fa39a" stroke-width="1.2" fill="none">
+        <line x1="180" y1="240" x2="360" y2="190"/><line x1="180" y1="232" x2="180" y2="246"/><line x1="360" y1="182" x2="360" y2="196"/>
+        <line x1="50" y1="92" x2="50" y2="172"/><line x1="44" y1="92" x2="56" y2="92"/><line x1="44" y1="172" x2="56" y2="172"/>
+      </g>
+      <text x="282" y="232" fill="#1fa39a" font-size="12" font-family="Menlo">80.0 mm</text>
+      <text x="8" y="136" fill="#1fa39a" font-size="12" font-family="Menlo">40.0</text>
+    </svg>
+    <div class="stamp">PASS ✓</div>
+    <div class="meas mono">
+      <div>width<b>80.0 mm</b><span class="ok">target 80 ✓</span></div>
+      <div>height<b>40.0 mm</b><span class="ok">target 40 ✓</span></div>
+      <div>solids<b>1</b><span class="ok">one piece ✓</span></div>
+    </div>
+  </div>
+</div></header>
+
+<section id="demo"><div class="wrap">
+  <div class="eyebrow">Live demo</div>
+  <h2>Describe a part. Watch it build, measure and fix itself.</h2>
+  <p class="lead">The trained model writes CadQuery code, a locked cloud box builds it, and the model measures the result
+    against your numbers. If something is off, it reads the error and tries again (up to 3 rounds).</p>
+  <div class="demo">
+    <div class="box">
+      <textarea id="job">An L-shaped mounting bracket: base 80 × 30 × 5 mm, upright wall 40 mm tall and 5 mm thick, two 6 mm holes in the base, 20 mm from each end.</textarea>
+      <div class="examples">
+        <button>L-bracket with 2 holes</button><button>Flanged pipe adapter</button><button>Electronics box with lid lip</button>
+      </div>
+      <button class="btn" id="run">Build it →</button>
+      <div class="recorded">While the model wakes up (~1 min), a <b>recorded</b> run plays first, clearly labelled.</div>
+    </div>
+    <div class="box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <b style="color:var(--white)">Run</b><span class="timer mono" id="timer">ready</span></div>
+      <ul class="steps" id="steps">
+        <li data-k="write"><span class="dot">1</span><div>Write the code<small>trained Glimmer, private</small></div></li>
+        <li data-k="build"><span class="dot">2</span><div>Build in the locked box<small>CadQuery runs in an isolated cloud sandbox</small></div></li>
+        <li data-k="measure"><span class="dot">3</span><div>Measure against your numbers<small>size, holes, one solid piece</small></div></li>
+        <li data-k="fix"><span class="dot">↻</span><div>Fix if needed<small id="fixnote">round 1 of 3</small></div></li>
+        <li data-k="done"><span class="dot">✓</span><div>Hand it over<small>3D view, measurements, code, STEP/STL</small></div></li>
+      </ul>
+      <div class="result" id="result">
+        <div class="mono" style="font-size:12px;background:var(--bg);padding:10px;border-radius:4px;color:var(--steel)">
+          base = cq.Workplane("XY").box(80, 30, 5)<br>wall = (cq.Workplane("XY")<br>&nbsp;&nbsp;.box(80, 5, 40)...)<br>part = base.union(wall)...</div>
+        <div><b class="ok">PASS ✓ · 1 fix round</b><div class="dl"><span>STEP ↓</span><span>STL ↓</span><span>code ↓</span></div></div>
+      </div>
+      <div class="after" id="after"><span>Want this for <b>your</b> tool?</span><a class="btn" href="#your-tool">Bring it to my tool</a></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="proof"><div class="wrap">
+  <div class="eyebrow">Proof</div>
+  <h2>Measured on a hard exam it never saw.</h2>
+  <p class="lead">30 hand-made CAD jobs, 3 tries each, graded by a strict referee to 0.2%.</p>
+  <div class="stats">
+    <div class="stat"><div class="n">92<small>%</small></div><p>trained model with its self-check loop.<br>The best untrained setup scores 94%.</p></div>
+    <div class="stat"><div class="n">2.7<small>×</small></div><p>fewer tokens per correct part than that best setup.</p></div>
+    <div class="stat"><div class="n">0<small> pages</small></div><p>no 5,700-word manual in the prompt: the knowledge is inside the model.</p></div>
+  </div>
+  <p class="honest">We also publish what didn't hold → <a href="#">"What did not hold" in the README</a></p>
+</div></section>
+
+<section id="factory"><div class="wrap">
+  <div class="eyebrow">The factory</div>
+  <h2>Wrong answers never teach.</h2>
+  <p class="lead">Homegrown builds its own training data, and a referee checks every example before the model learns from it.</p>
+  <div class="flow">
+    <div class="node"><b>Practice jobs</b><span>written for your tool</span></div><div class="arrow">→</div>
+    <div class="node"><b>Teacher</b><span>Muse Spark Open solves them</span></div><div class="arrow">→</div>
+    <div class="node"><b>Locked box</b><span>every answer is really run</span></div><div class="arrow">→</div>
+    <div class="node ref"><b>Strict referee</b><span>keeps only correct work</span></div><div class="arrow">→</div>
+    <div class="node"><b>Your model</b><span>Glimmer learns, runs privately</span></div>
+  </div>
+  <div class="loop">↺ built to re-run and re-check itself</div>
+</div></section>
+
+<section id="your-tool"><div class="wrap">
+  <div class="eyebrow">Your tool next</div>
+  <h2>What it takes to bring Homegrown to your company.</h2>
+  <div class="needs">
+    <div class="need"><b>A job generator</b><span>practice tasks in your tool's language</span></div>
+    <div class="need"><b>A sandbox</b><span>a safe place where answers really run</span></div>
+    <div class="need"><b>A referee</b><span>a check that says right or wrong</span></div>
+    <div class="need"><b>30–100 past jobs</b><span>with known correct results, kept as the exam</span></div>
+  </div>
+  <p class="honest">Proven on CAD so far. Final training run: about 2 hours and about $10 of GPU time.</p>
+
+  <div class="form" style="margin-top:56px">
+    <div><h2 style="font-size:30px">Bring Homegrown to your tool.</h2>
+      <p class="lead">Tell us which tool. We read every answer.</p></div>
+    <div class="box">
+      <label>Which tool should your AI master?</label><input placeholder="e.g. our internal CAD scripts, SQL, PLC code…">
+      <label>Do you have ~30 past jobs with known correct results?</label>
+      <select><option>Yes</option><option>No</option><option>Not sure</option></select>
+      <label>Work email</label><input placeholder="you@company.com">
+      <div style="margin-top:18px"><button class="btn">Send →</button></div>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <span>Homegrown · Meta hackathon 2026 · built with Muse Code, Modal, Baseten</span>
+  <span><a href="#">GitHub</a> · <a href="#">3-min video</a></span>
+</div></footer>
+
+<script>
+  const steps=[...document.querySelectorAll('#steps li')];
+  const timer=document.getElementById('timer');
+  const seq=[['write',1200],['build',1200],['measure',1200],['fix',1400],['write',900],['build',900],['measure',900],['done',600]];
+  document.getElementById('run').onclick=()=>{
+    steps.forEach(s=>s.className='');
+    document.getElementById('result').classList.remove('show');
+    document.getElementById('after').classList.remove('show');
+    let t=0,round=0,start=Date.now();
+    const tick=setInterval(()=>timer.textContent='recorded run · '+((Date.now()-start)/1000).toFixed(0)+' s',200);
+    seq.forEach(([k,d],i)=>{
+      t+=d;
+      setTimeout(()=>{
+        const li=steps.find(s=>s.dataset.k===k);
+        steps.forEach(s=>{if(s.classList.contains('on'))s.classList.replace('on','done')});
+        if(k==='fix'){round++;li.className='fix on';
+          document.getElementById('fixnote').textContent='measured 2 solids, expected 1 → fixing (round '+round+' of 3)';
+          steps.slice(0,3).forEach(s=>s.className='');}
+        else li.className='on';
+        if(k==='done'){li.className='done';clearInterval(tick);timer.textContent='PASS ✓ · recorded run';
+          document.getElementById('result').classList.add('show');document.getElementById('after').classList.add('show');}
+      },t);
+    });
+  };
+  document.querySelectorAll('.examples button').forEach(b=>b.onclick=()=>document.getElementById('job').value=b.textContent+'…');
+</script>
+</body>
+</html>
