@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homegrown: the AI expert your company gets to keep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<!-- Headline: The AI expert your company gets to keep. -->
+<div class="page">
+
+<div class="frame">
+  <div class="top">
+    <div class="logo">
+      <svg viewBox="0 0 40 40" class="mark"><path d="M20 12.5 L29.5 18 L29.5 29 L20 34.5 L10.5 29 L10.5 18 Z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><circle cx="20" cy="23.5" r="3.6" fill="none" stroke="#fff" stroke-width="2"/><path class="stem" d="M20 19.9 V7" stroke="#1fa39a" stroke-width="2.2" stroke-linecap="round" fill="none"/><path class="leaf l" d="M20 11 C14 11 11.5 7.5 11.5 3.5 C17 3.5 20 6.5 20 11 Z" fill="#1fa39a"/><path class="leaf r" d="M20 9 C24.5 9 28.5 6.5 28.5 1.5 C23.5 1.5 20 4.5 20 9 Z" fill="#1fa39a"/></svg>
+      Homegrown</div>
+    <div class="rightnav">
+      <a class="ghost" href="#demo"><span class="c">›</span>Try it live</a>
+      <a class="ghost" href="#your-tool"><span class="c">›</span>Bring it to your company</a>
+    </div>
+  </div>
+  <div class="card" id="card">
+    <div class="tab l"></div><div class="tab r"></div>
+    <nav class="navslot pillnav"><a href="#demo">Live demo</a><a href="#proof">Proof</a><a href="#factory">Factory</a><a href="#your-tool">Your tool</a></nav>
+
+    <div class="hero-left">
+      <h1 id="h1"><span class="w"><span>The</span></span> <span class="w"><span>AI</span></span> <span class="w"><span>expert</span></span>
+        <span class="w"><span><svg class="ico" viewBox="0 0 86 70"><g fill="none" stroke="#141619" stroke-width="2">
+          <path class="layer l3" d="M43 40 L80 52 L43 66 L6 52 Z" fill="#f2f1ec"/>
+          <path class="layer l2" d="M43 26 L80 38 L43 52 L6 38 Z" fill="#1fa39a"/>
+          <path class="layer" d="M43 12 L80 24 L43 38 L6 24 Z" fill="#f2f1ec"/></g></svg></span></span><span class="w"><span>your</span></span>
+        <span class="w"><span>company</span></span> <span class="w"><span>gets</span></span> <span class="w"><span>to</span></span> <span class="w"><span><em>keep.</em></span></span></h1>
+      <a class="circle-link" href="#demo"><span class="c">›</span>Try it live</a>
+      <div class="rule"></div>
+      <p class="small">Homegrown trains Meta's open model on your tool. It learns only from answers a strict referee
+        proved correct, and the finished model runs privately. It scored 92% with its self-check loop on a hard CAD exam.</p>
+    </div>
+    <div class="hero-obj">
+      <div class="obj" id="obj"><img src="object.jpeg" alt="Illustration of a machined part"></div>
+      <div class="objcap">Illustration</div>
+      <div class="shadow"></div>
+      <div class="scan"></div>
+      <div class="tag a"><i></i>PASS · 80.0 mm · 1 solid</div>
+      <div class="tag b"><i></i>Learns only from checked work</div>
+    </div>
+
+    <div class="tab br">Runs privately:
+      <div class="toggle" id="toggle"><div class="knob"></div><span class="act">On</span><span>Off</span></div></div>
+  </div>
+</div>
+
+<div class="marquee"><div class="track" id="track">
+  <span>Built on <b>Muse Glimmer</b></span><span>Taught by <b>Muse Spark Open</b></span><span>Built with <b>Muse Code</b></span>
+  <span>Every answer <b>really run</b></span><span>Only <b>checked</b> work teaches</span><span>Runs <b>privately</b></span>
+  <span>Proven on <b>CAD</b></span><span><b>92% with its self-check loop</b> on a hard exam</span>
+</div></div>
+
+<section id="proof" class="reveal"><div class="block dark">
+  <div class="stats stagger">
+    <div><div class="kicker">Proof</div><h2 style="font-size:44px">Measured on a hard exam it <em>never saw.</em></h2></div>
+    <div class="stat"><b><span class="count" data-to="92">0</span><sup>%</sup></b><span>on a 30-part CAD exam (15 hard), with its self-check loop (second look; one try: 83.3%). Best untrained setup: 94%.</span></div>
+    <div class="stat"><b><span class="count" data-to="2.7" data-dec="1">0</span><sup>×</sup></b><span>fewer tokens per correct part than that best setup</span></div>
+    <div class="stat"><b><span class="count" data-to="0">0</span><sup>pages</sup></b><span>of manual in the prompt: the know-how is inside the model</span></div>
+  </div>
+</div></section>
+
+<section id="demo" class="reveal"><div class="block">
+  <div class="kicker">Live demo</div>
+  <h2>Describe a part. Watch it build,<br>measure and <em>fix itself.</em></h2>
+  <p class="lead">The trained model writes the CAD code, a locked cloud box builds it, and the model measures the part
+    against your numbers. If something is off, it reads the error and tries again.</p>
+  <div class="demo">
+    <div class="panel">
+      <textarea id="job" maxlength="600">An L-shaped mounting bracket: base 80 × 30 × 5 mm, upright wall 40 mm tall and 5 mm thick, two 6 mm holes in the base, 20 mm from each end.</textarea>
+      <div class="charrow"><span class="note" style="margin:0">600 characters max</span><span class="counter" id="counter">0 / 600</span></div>
+      <div class="chips"><button type="button">L-bracket with 2 holes</button><button type="button">Flanged pipe adapter</button><button type="button">Electronics box with lid lip</button></div>
+      <button class="run" id="run"><span class="c">›</span>Build it</button>
+      <div class="note">While the model wakes up (a few minutes), a recorded run plays first, clearly labelled.</div>
+      <div class="apimsg" id="apimsg"></div>
+    </div>
+    <div class="panel">
+      <div class="runhead"><b>Run</b><span class="mono note" style="margin:0" id="timer">ready</span></div>
+      <ul class="steps" id="steps">
+        <li data-k="write"><span class="d">01</span><div>Write the code<small>trained Glimmer, private</small></div></li>
+        <li data-k="build"><span class="d">02</span><div>Build in the locked box<small>isolated cloud sandbox</small></div></li>
+        <li data-k="measure"><span class="d">03</span><div>Measure against your numbers<small>size, holes, one solid piece</small></div></li>
+        <li data-k="fix"><span class="d">↻</span><div>Fix if needed<small id="fixnote">up to 3 rounds</small></div></li>
+        <li data-k="done"><span class="d">✓</span><div>Hand it over<small>3D view, measurements, code, STEP/STL</small></div></li>
+      </ul>
+      <div class="result" id="result"></div>
+      <div class="golinks" id="golinks"><a id="githublink" href="https://github.com/alyssaaa11/expertery">GitHub</a><a id="videolink" href="#video">3-min video</a></div>
+      <div class="ask" id="ask"><span>Want this for <b>your</b> tool?</span><a href="#your-tool">Bring it to my company ›</a></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="factory" class="reveal"><div class="block dark">
+  <div class="kicker">The factory</div>
+  <h2>Wrong answers <em>never teach.</em></h2>
+  <p class="lead">Homegrown builds its own training data. A strict referee checks every example before your model learns from it.</p>
+  <div class="flow stagger" id="flow">
+    <div class="node"><span class="n">01</span><div><b>Practice jobs</b><span>written for your tool</span></div></div>
+    <div class="node"><span class="n">02</span><div><b>Teacher</b><span>Muse Spark Open solves them</span></div></div>
+    <div class="node"><span class="n">03</span><div><b>Locked box</b><span>every answer is really run</span></div></div>
+    <div class="node ref"><span class="n">04</span><div><b>Strict referee</b><span>keeps only correct work</span></div></div>
+    <div class="node"><span class="n">05</span><div><b>Your model</b><span>Glimmer learns, runs privately</span></div></div>
+  </div>
+  <div class="loopline"><span class="spin">↻</span><i></i> built to re-run and re-check itself <i></i></div>
+</div></section>
+
+<section id="your-tool" class="reveal"><div class="block">
+  <div class="kicker">Your tool next</div>
+  <h2>What it takes to bring Homegrown<br>to <em>your company.</em></h2>
+  <div class="needs stagger">
+    <div class="need"><span class="num">01</span><div><b>A job generator</b><span>practice tasks in your tool's language</span></div></div>
+    <div class="need"><span class="num">02</span><div><b>A sandbox</b><span>a safe place where answers really run</span></div></div>
+    <div class="need"><span class="num">03</span><div><b>A referee</b><span>a check that says right or wrong</span></div></div>
+    <div class="need hl"><span class="num">04</span><div><b>Proof before you trust it</b><span>we test your AI on your own past work and show you the score</span></div></div>
+  </div>
+  <p class="note" style="font-size:14px">Proven on CAD so far. Final training run: about 2 hours and about $10 of GPU time.</p>
+</div></section>
+
+<section class="reveal"><div class="block dark cta">
+  <div class="orb"></div>
+  <div><div class="kicker">Get started</div>
+    <h2>Your company's AI is waiting for <em>your tool.</em></h2>
+    <p class="lead">Tell us which tool. We read every answer.</p></div>
+  <div class="form" id="leadform">
+    <label for="tool">Which tool should your AI master?</label><input id="tool" placeholder="e.g. our CAD scripts, SQL, PLC code…">
+    <label for="email">Work email</label><input id="email" placeholder="you@company.com">
+    <button class="run" id="leadsend"><span class="c">›</span>Send</button>
+    <p class="privacy">We only use your email to reply about Homegrown. To delete it, email us or send the form again with 'delete' as the tool.</p>
+  </div>
+</div></section>
+
+<footer><span>Homegrown · Meta hackathon 2026 · built with Muse Code, Spark Open, Glimmer · Modal · Baseten</span>
+  <span><a href="https://github.com/alyssaaa11/expertery">GitHub</a> · <a href="#video">3-min video</a></span></footer>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
