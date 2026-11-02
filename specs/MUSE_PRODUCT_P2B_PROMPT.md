@@ -4,7 +4,7 @@ then app/backend/*, deploy/modal_web.py, app/tests/*. Repo: ~/projects/forge. W1
 already fixed by Claude in deploy/modal_web.py: keep it (mount "/" LAST).
 
 Fix, each with tests:
-W1-test: install nothing; if `fastapi` is importable, add FastAPI TestClient tests of the real ASGI app built by a
+W1-test: fastapi 0.115.6 + httpx are now installed in .venv (by Claude). Install nothing else. add FastAPI TestClient tests of the real ASGI app built by a
   factory function you extract from modal_web.web() (e.g. `app/backend/webapp.py: make_app(deps)`, with model, box,
   Dicts and clock injected; modal_web.web() just calls it). Tests: GET / 200 (the page), GET /api/status 200 JSON,
   POST /api/build streams SSE, POST /api/lead 200, /files 404 for unknown ids, GET /dev_server.py 404. If fastapi is
