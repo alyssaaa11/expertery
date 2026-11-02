@@ -1,0 +1,54 @@
+{
+ "arm": "BX",
+ "grader": "first-test",
+ "status": "COMPLETE",
+ "n": 20,
+ "PASS": 19,
+ "FAIL": 0,
+ "INVALID": 1,
+ "pass_rate": 1.0,
+ "pass_rate_tight": 1.0,
+ "pass_at_k": 1.0,
+ "by_level": {
+  "dry": {
+   "n": 9,
+   "PASS": 9,
+   "pass_rate": 1.0,
+   "pass_rate_tight": 1.0,
+   "pass_at_k": 1.0
+  },
+  "hard": {
+   "n": 11,
+   "PASS": 10,
+   "pass_rate": 1.0,
+   "pass_rate_tight": 1.0,
+   "pass_at_k": 1.0
+  }
+ },
+ "prompt_tokens": 261576,
+ "completion_tokens": 141273,
+ "total_tokens": 402849,
+ "tokens_per_correct": 21202.57894736842,
+ "prompt_per_correct": 13767.157894736842,
+ "completion_per_correct": 7435.421052631579,
+ "seconds_per_answer": {
+  "median": 230.6565,
+  "mean": 312.0025
+ },
+ "wall_seconds": 848.691,
+ "cold_start_s": 172.03,
+ "dollars_per_correct": 0.031019407894736842,
+ "server": {
+  "models": [
+   "muse-glimmer"
+  ],
+  "image_digest": null
+ },
+ "k": 3,
+ "workers": 12,
+ "budget": 1.5,
+ "budget_stopped": false,
+ "skipped": 0,
+ "fill_missing_from": "~/projects/forge/results/bmax-baseline-2026-10-29/main-B2BX",
+ "n_missing": 20
+}

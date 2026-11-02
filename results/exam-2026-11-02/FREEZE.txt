@@ -40,3 +40,5 @@ r5f/merged/tokenizer_config.json
 # vLLM image digest (verifier evidence 04, 2026-11-02): muse-glimmer sha256:413c8fbecb1204a218117c77a4ea4b3a211d5686ff99c31d82ba6dd0cec8c5a6
 4f010de62708fbc78d60a73a21d5170a2021cfc51dda30a2395b8db2585a5dd6  experiments/final/compare_ft_acard.py
 # Re-hash note: PLAN.md re-hashed and compare_ft_acard.py added at 10:39, after session 6a had started; both files' content is the one committed in e2efdb1 BEFORE 6a started (verifier follow-up m…390).
+
+- 6a note (10:44): the BX finisher filled the 11 exam pairs (H12 r1-2, H13-H15 r0-2: 10 PASS, 1 INVALID) and ALSO the 9 dry-run pairs D1-D3 (not exam jobs; absent from main-B2BX). Scoring uses the 30 exam jobs only; disclosed.
