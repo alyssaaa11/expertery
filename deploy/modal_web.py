@@ -75,9 +75,22 @@ def _web_image():
                      "fastapi==0.115.6")
         .env({"PYTHONPATH": "/pkg"})  # remote imports of app.backend.*
     )
+    # Bake the deploy-time settings INTO the container (Claude fix,
+    # disclosed): Modal re-imports this module inside the container, where
+    # the deploy shell's env is not set (same trap as modal_forge.py).
+    baked = {k: os.environ[k] for k in _BAKED_ENV if os.environ.get(k)}
+    if baked:
+        img = img.env(baked)
     for rel in image_files_mod.WEB_IMAGE_FILES:
         img = img.add_local_file(rel, "/pkg/" + rel)
     return img
+
+
+_BAKED_ENV = ("FORGE_URL", "REASONING_STRENGTH", "DAILY_CAP_USD",
+              "MAX_JOB_CHARS", "MAX_BUILDS_PER_IP_HOUR",
+              "MAX_CONCURRENT_BUILDS", "MAX_LEADS_PER_IP_HOUR",
+              "GPU_USD_PER_S", "SANDBOX_USD_PER_BUILD", "IDLE_TAIL_USD",
+              "WAKE_USD", "SCALE_DOWN_S")
 
 
 leads_dict = modal.Dict.from_name("homegrown-leads", create_if_missing=True)
