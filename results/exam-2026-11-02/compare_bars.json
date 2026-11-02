@@ -1,0 +1,16 @@
+Final comparison: FT (trained, k=3) vs B2/BR/BX
+Jobs: 30; bootstrap: 10000 resamples, seed 20261029
+(a) as good as B-max: FT-BX -11.1 points, 95% CI [-24.4, +1.1] (need >= -5 and lower >= -15): FAIL
+(b) beats the one-try arm: FT-B2 -4.4 points, 95% CI [-21.1, +11.1] (need CI entirely above 0): FAIL
+(c) about the same cost as B2: FT 3352 tokens/correct (prompt 215 + completion 3136) <= 1.5 x B2 10662 (<= 15993): PASS
+(d) much cheaper than B-max (wall-clock and $ first): FT 16.9s and $0.0117 per correct vs BX 43.8s and $0.0304 (need <= BX/3: 14.6s, $0.0101): PASS(tokens)
+    tokens split: FT 3352 (prompt 215 + completion 3136) vs BX 21823 (prompt 14151 + completion 7671) over all 90 answers (need <= BX/3 = 7274): PASS
+    disclosure: BX baseline-only (79 answers) was 21314 tokens/correct, 40.7s wall per correct; the bar above uses all 90 answers.
+
+Pass rates (all / medium / hard):
+  FT: all 83.3% (90 answers), medium 93.3% (45), hard 73.3% (45)
+  B2: all 87.8% (90 answers), medium 100.0% (45), hard 75.6% (45)
+  BX: all 94.4% (90 answers), medium 97.8% (45), hard 91.1% (45)
+  BR: all 86.7% (30 answers), medium 86.7% (15), hard 86.7% (15)
+
+CLAIM DOES NOT HOLD
