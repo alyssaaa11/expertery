@@ -42,3 +42,8 @@ r5f/merged/tokenizer_config.json
 # Re-hash note: PLAN.md re-hashed and compare_ft_acard.py added at 10:39, after session 6a had started; both files' content is the one committed in e2efdb1 BEFORE 6a started (verifier follow-up m…390).
 
 - 6a note (10:44): the BX finisher filled the 11 exam pairs (H12 r1-2, H13-H15 r0-2: 10 PASS, 1 INVALID) and ALSO the 9 dry-run pairs D1-D3 (not exam jobs; absent from main-B2BX). Scoring uses the 30 exam jobs only; disclosed.
+
+# Post-exam note (2026-11-02 18:10): `shasum -c` now FAILS for 2 files on purpose. runner_final.py (Muse FTX arm,
+# f637eff 13:13) and PLAN.md (second-look sections, d4ae468/8b0601c) were changed AFTER the exam finished (44911eb,
+# 11:35) for the labelled second look. The exam ran on the frozen versions: both files at freeze commit 143dfca hash
+# exactly to the values above (runner_final 7cd95633…, PLAN 3615b817…). Check: `git show 143dfca:<file> | shasum -a 256`.
