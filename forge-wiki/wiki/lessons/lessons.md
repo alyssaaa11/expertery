@@ -212,3 +212,17 @@
   (2) envsave reveal needed the master password (user supplied the opaque ref); (3) sandboxed: `git fetch` →
   "No user exists for uid 501 / Could not read from remote repository" (proxy-only network blocks SSH);
   (4) `--disable-sandbox` → 116 commits pushed, HEAD == origin/main 79600d0, ≈ $0.1. Check: `git status -sb` shows no "ahead".
+
+- **A self-check loop is worth more than its cost on hard parts** (2026-11-02). How learned: same 30 exam jobs, same
+  trained model, one try 83.3% vs with the BX loop 92.2% (+8.9 [+1.1, +18.9]); 12 answers passed only after a fix round
+  (4 crash, 8 measurement mismatch). Check: results/exam2-ftx-2026-11-02/compare_ftx.json + round events in calls.jsonl.
+- **A test made by the same generator as the lessons overstates the gain** (2026-11-02). How learned: r5f 96/100 on the
+  generator's secret jobs vs 83.3% on the hand-made exam. Check: always keep one exam written outside the factory.
+- **Freeze proof breaks when you keep working in the same files** (2026-11-02). How learned: `shasum -c` failed on
+  runner_final.py + PLAN.md after the second-look edits; fixed by verifying the frozen versions with
+  `git show <freeze-commit>:<file> | shasum -a 256`. Check: note post-exam edits in FREEZE.txt right away.
+- **Count the exam guard in time estimates** (2026-11-01). How learned: training was promised for ~20:40 but the guard
+  (one sandbox per lesson) took 2.5 h first. Check: look for EXAM_GUARD in train.log before quoting an end time.
+- **Uncommitted experiment work is invisible proof** (2026-11-02). How learned: HerdShot's Oct 27 A2/C1/C2 code and
+  reports were never committed; found while writing the README. Check: `git status --short` (full list, not `head`)
+  in every project repo before a public deadline.

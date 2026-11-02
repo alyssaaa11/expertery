@@ -127,3 +127,4 @@
 
 ## 2026-11-02 20:00
 - new: decisions/submission-plan-2026-11-02 (all open items: product page plan, model access, video, bonus prizes, Impact options, form). Status TODO points to it.
+- lessons +5 (loop value, generator-made test overstates, freeze vs later edits, guard time, uncommitted proof).
