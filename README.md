@@ -4,15 +4,33 @@
 > the frozen exam files keep the old `forge` names on purpose, so nothing breaks and the exam evidence stays valid.
 
 **Homegrown turns a small open model into a private expert on your tool, learning only from answers a referee proved
-correct.** Proven on CAD: Meta's open Muse Glimmer 30B went from **53% to 83%** on a hand-made exam with no manual, and to
-**92%** with a self-check loop, tying the best setup (94%) that needs a 5,700-word manual, with 2.7× fewer tokens.
+correct.** Proven on CAD: Meta's open Muse Glimmer 30B went from **53% (an earlier session, one try) to 83%** on a hand-made exam with no manual, and to
+**92%** with a self-check loop, about as good as the best setup (94%) that needs a 5,700-word manual, with 2.7× fewer tokens.
 Built with Muse Spark Open.
+
+**▶ Try it live: https://homegrown-factory.vercel.app** (one free live try per visitor; the
+recorded demo is always there)
 
 Meta Global AI Developer Hackathon 2026 · Indie track, Push the Frontier · build period Oct 27 - Nov 4.
 
 ![Homegrown factory](docs/video/homegrown-factory-diagram.png)
 
 Interactive diagram: [`docs/video/homegrown-factory.html`](docs/video/homegrown-factory.html)
+
+## Live demo
+Describe a part; the trained Glimmer (r5f, served from Modal) writes CadQuery code, a locked Modal sandbox builds it,
+and the model checks its own measurements and fixes the part (up to 3 rounds, the same loop as the 92% second look).
+You get a 3D view, the measurements, the code and STEP/STL files.
+- **The badge is a self-check, not the exam referee:** a visitor's part has no reference answer, so "Self-check PASS"
+  means it built as one solid and its overall size matches the numbers you typed (±0.5%). Otherwise it says "Built
+  (size not checked)" or "Checks failed".
+- **Limits:** $15 total for the whole demo, one free live try per visitor, 600 characters per job. When the money is
+  used up the page pauses and plays a recorded real run. A cold model takes several minutes to wake up (14 min on the
+  first start), so the page plays the recorded run meanwhile.
+- **First real live run (2026-11-02):** L-bracket 80 × 30 × 45 mm with two 6 mm holes → Self-check PASS in 120 s,
+  volume 27,717 mm³ (exactly base + wall − holes). It is the page's recorded run (`app/web/recorded_run.json`).
+- Code: page `app/web/`, backend `app/backend/`, Modal app `deploy/modal_web.py`, 106 tests in `app/tests/`. Specs:
+  `specs/MUSE_PRODUCT_*.md`. Steps: `docs/product/DEPLOY.md`.
 
 ## The problem
 Companies want AI that is good at their own tools, but big models are expensive, private designs often may not leave
@@ -53,7 +71,7 @@ TOOL: locked cloud box runs the code and measures the part (size, volume, number
   trained model from 83.3% to 92.2% (labelled second look). Mean 2.16 rounds per part.
 - Code: `do_bx_cloud_call` with `--bx-loop` in [`experiments/final/runner_final.py`](experiments/final/runner_final.py).
 
-## Results (rules written down before every test; the exam ran once)
+## Results (rules written down before every test; the exam ran once, plus one labelled second look)
 **Exam: 30 hand-made CAD parts** (15 medium, 15 hard), written before any training and never used to build anything;
 3 tries each, scored at 0.2%. Plan: [`experiments/final/PLAN.md`](experiments/final/PLAN.md); freeze:
 [`results/exam-2026-11-02/FREEZE.txt`](results/exam-2026-11-02/FREEZE.txt).
@@ -189,6 +207,13 @@ as proof of when each part was built.
   and `experiments/final/compare_ftx.py` (pre-registered readings, reuse compare.py); data prep of
   `results/r5-hints-2026-11-01/hint_input.jsonl`. **Muse Code** built the FTX second-look arm (`--bx-loop`) from
   `specs/MUSE_FTX_2026-11-02.md` and pushed the repo to GitHub.
+- **The live demo (Nov 2):** page, backend and Modal web app written by **Muse Code** in 4 rounds from
+  `specs/MUSE_PRODUCT_2026-11-02.md` (logs `results/muse-product-p*.jsonl`); the page design (mockup in
+  `docs/product/mockup/`) by Claude with Alyssa. **Small fixes by Claude (disclosed):** `app/backend/loop.py` (after a
+  build the model sees its own measurements and may fix, the FTX rule; + 2 tests); `deploy/modal_web.py` (static page
+  mounted after the API routes; deploy settings baked into the image; FORGE_URL startup check); phone CSS in
+  `app/web/styles.css`; wording ("strict" removed), footer links and the real recorded run in `app/web/`;
+  `app/web/dev_server.py` fake counters (local preview only, not deployed).
 - **Review:** a separate Claude verifier agent reviewed every step before money was spent.
 - **Published by Alyssa** (all commits are hers; most carry a "Co-Authored-By: Claude" line).
 
