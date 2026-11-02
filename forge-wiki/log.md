@@ -124,3 +124,6 @@
 - decision (user): project renamed **Homegrown** (was Forge). Visible text (README title + note, wiki status/index note,
   video explainer source, factory diagram) renamed; internal code, Modal apps/volumes/secrets, env vars, file names and
   frozen exam files keep `forge` on purpose (no breakage; exam sha256 evidence valid). README full rewrite still to do.
+
+## 2026-11-02 20:00
+- new: decisions/submission-plan-2026-11-02 (all open items: product page plan, model access, video, bonus prizes, Impact options, form). Status TODO points to it.
