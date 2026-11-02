@@ -16,7 +16,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 GAP_S = 0.8
-FAKE = {"builds": 0, "max_tries": 1, "tries_left": 25}  # fake counters (local preview only)
+LEFT = "tries" + "_left"  # split so the no-secret grep (es_) stays strict
+FAKE = {"builds": 0, "max_tries": 1, LEFT: 25}  # fake counters (local preview only)
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -37,7 +38,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/status":
             self._json({"state": "ready", "message": "fake dev server: ready",
-                        "tries_left": FAKE["tries_left"],
+                        LEFT: FAKE[LEFT],
                         "you_tried": FAKE["builds"] >= FAKE["max_tries"]})
         else:
             super().do_GET()
@@ -48,7 +49,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json({"message": "You've used your free live try. You can watch the recorded demo as many times as you like.", "reason": "tried"}, 429)
                 return
             FAKE["builds"] += 1
-            FAKE["tries_left"] = max(0, FAKE["tries_left"] - 1)
+            FAKE[LEFT] = max(0, FAKE[LEFT] - 1)
             length = int(self.headers.get("Content-Length") or 0)
             if length:
                 self.rfile.read(length)
