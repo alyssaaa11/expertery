@@ -45,8 +45,11 @@ def test_headline_and_no_mockup():
 
 def test_copy_fixes():
     html = (WEB / "index.html").read_text()
-    assert "30-part CAD exam (15 hard)" in html
-    assert "second look; one try: 83.3%" in html
+    # Proof card (user, 2026-11-02): one claim + "How we measured" link; the
+    # full numbers (one try 83.3%, best setup 94%) stay in the README.
+    assert "How we measured" in html and "#results" in html
+    readme = (WEB.parents[1] / "README.md").read_text()
+    assert "83%" in readme and "94%" in readme
     assert "92% with its self-check loop" in html
     assert "~1 min" not in html
     assert "a few minutes" in html

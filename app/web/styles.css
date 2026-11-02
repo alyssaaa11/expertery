@@ -247,3 +247,4 @@ footer{background:var(--frame);color:#7d868e;padding:28px max(64px,6vw)}
   .rule{width:100%}
   .obj img{width:100%;margin-left:0}
 }
+.howlink{color:var(--teal);text-decoration:none;white-space:nowrap}.howlink:hover{text-decoration:underline}
