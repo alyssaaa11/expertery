@@ -225,10 +225,14 @@ footer{background:var(--frame);color:#7d868e;padding:28px max(64px,6vw)}
   .frame{padding:16px 12px}
   .card{grid-template-columns:1fr;padding:120px 24px 40px;min-height:0}
   .tab{display:none}
-  .navslot{left:12px;top:88px}
-  .pillnav a{padding:8px 10px;font-size:13px}
-  .rightnav .ghost{font-size:13px;padding:0 12px 0 6px}
-  h1{font-size:52px}
+  .top{flex-wrap:wrap;height:auto;gap:8px}
+  .rightnav{flex-wrap:wrap;justify-content:flex-end;max-width:100%}
+  .navslot{left:12px;right:12px;top:88px;max-width:calc(100vw - 24px);overflow-x:auto}
+  .pillnav{width:max-content;max-width:none}
+  .pillnav a{padding:8px 10px;font-size:13px;white-space:nowrap}
+  .rightnav .ghost{font-size:13px;padding:0 12px 0 6px;white-space:nowrap}
+  h1{font-size:clamp(36px,11vw,52px);overflow-wrap:break-word}
+  .page{overflow-x:hidden}
   h2{font-size:36px}
   .cta h2{font-size:40px}
   .block{padding:64px 24px}

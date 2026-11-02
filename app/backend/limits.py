@@ -1,0 +1,109 @@
+"""Visitor protection limits (pure part of verifier S3).
+
+The Modal web function keeps ONE process (``max_containers=1``) and holds
+these counters in that process behind an asyncio lock (Modal Dict has no
+atomic counter; the Dict is only persistence across restarts). This module
+holds the pure rules so tests can drive them with a fake clock; the lock
+itself lives in ``deploy/modal_web.py``.
+"""
+
+import time
+import uuid
+
+from . import config
+
+
+def new_run_id():
+    """A run id: 32 hex chars (uuid4)."""
+    return uuid.uuid4().hex
+
+
+def client_ip(x_forwarded_for, peer):
+    """The client IP for limits.
+
+    Takes the LAST hop added by Modal's proxy, never the first
+    X-Forwarded-For entry (which a visitor can spoof). Falls back to the
+    connection peer when no forwarding header is present.
+    """
+    hops = [h.strip() for h in str(x_forwarded_for or "").split(",")
+            if h.strip()]
+    if hops:
+        return hops[-1]
+    return peer or ""
+
+
+def check_job(job_text):
+    """None when the job may run, else (413, message)."""
+    if job_text is None:
+        return 413, "Send a job description first"
+    if len(job_text) > config.MAX_JOB_CHARS:
+        return (413, "That job is %d characters; the limit is %d"
+                % (len(job_text), config.MAX_JOB_CHARS))
+    if not str(job_text).strip():
+        return 413, "Send a job description first"
+    return None
+
+
+def check_lead(tool, email):
+    """None when the lead may be stored, else (400, message).
+
+    Never logs or prints the email; the caller stores only the record.
+    """
+    tool = "" if tool is None else str(tool)
+    email = "" if email is None else str(email)
+    if len(email) > config.LEAD_EMAIL_MAX:
+        return 400, "That email is too long"
+    if len(tool) > config.LEAD_TOOL_MAX:
+        return 400, "That answer is too long"
+    if not email.strip() or "@" not in email:
+        return 400, "Send a valid email"
+    return None
+
+
+def lead_record(tool, email, ts=None):
+    """The stored lead dict (no logging here; the caller must not print it)."""
+    if ts is None:
+        ts = time.time()
+    return {"tool": str(tool or ""), "email": str(email or ""),
+            "ts": ts}
+
+
+class RateState:
+    """Per-IP hourly builds and global concurrency (one web process)."""
+
+    def __init__(self, now=None):
+        self._now = now or time.time
+        self._ip_hits = {}  # ip -> [unix seconds of accepted builds]
+        self._active = 0
+
+    def _prune(self, ip, t):
+        recent = [h for h in self._ip_hits.get(ip, []) if t - h < 3600.0]
+        self._ip_hits[ip] = recent
+        return recent
+
+    def check_ip(self, ip):
+        """None when this IP may start a build, else (429, message)."""
+        recent = self._prune(ip, self._now())
+        if len(recent) >= config.MAX_BUILDS_PER_IP_HOUR:
+            return 429, config.RATE_MESSAGE
+        return None
+
+    def note_build(self, ip):
+        """Record an accepted build for the IP hourly count."""
+        self._ip_hits.setdefault(ip, []).append(self._now())
+
+    def try_acquire(self):
+        """A concurrency slot, or (429, message) when full."""
+        if self._active >= config.MAX_CONCURRENT_BUILDS:
+            return 429, config.BUSY_MESSAGE
+        self._active += 1
+        return None
+
+    def release(self):
+        """Give a concurrency slot back (never below zero)."""
+        self._active = max(0, self._active - 1)
+
+    @property
+    def active(self):
+        """Currently held concurrency slots (for tests)."""
+        return self._active

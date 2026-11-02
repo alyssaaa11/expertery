@@ -167,6 +167,7 @@ function chipText(measure) {
 }
 function showDone(ev, recorded) {
   rowList.forEach((s) => { if (s.classList.contains("on")) s.classList.replace("on", "done"); });
+  if (rowByKey.fix.className === "fix") rowByKey.fix.className = "done";
   rowByKey.done.className = "done";
   timerEl.textContent = ev.verdict === "PASS" ? "PASS ✓ · " + recorded : ev.verdict + " · " + recorded;
 
