@@ -1,0 +1,38 @@
+# Exam freeze (PLAN step 6 'Freeze'), recorded 2026-11-02 10:22 CET at commit e3d795a, BEFORE any exam call
+7cd95633a7c5e13d3ca97f45d2b641833196aeeed9d814b0cc4cf2d1ac0e3553  experiments/final/runner_final.py
+32fa9b477b007ef74e68f9330acc6de5e0acaf403aea893ee1e457743e83269a  experiments/final/cloud_cq.py
+d7b2f3790ac334a10f25a99759d319d0527941e1143d9e976fa0b13569f06319  experiments/final/run_cq_box.py
+3fc69f4baa0649d20210dc03e3a3143fa6f0bc28f15619d311e4f29c94e51c2a  experiments/first-test/checks.py
+37f1b69fa1b7e949ac77f37ba2e3d8bfb161b5646fe272ddbd88a8b1b51bd533  experiments/first-test/runner.py
+7745fac5c63787ebb9c0df91f09262a07de5a6b0d9afd6200a04c949b436ef2b  experiments/first-test/jobs.py
+7f63fcc1eac6757a284b23124e24388404c2c2874e201c81672186cd0dc0d87d  deploy/modal_forge.py
+e1f88e6da0ca53bc3ff1754881da70f9c5a465dfdd83a7673d197e637947bd49  deploy/modal_glimmer.py
+5b19b3bd12885e9106a77e82d7bbe2e8a03f98c55c1fa2c02bb0e52f1cdeb7fd  experiments/final/PLAN.md
+464ef0f9d80c5e1992b51b6120f3acae00b91e961593da5d0782e5d60029a7e7  experiments/r5/PLAN.md
+9d0929b235888958c70a4e7528fc99f5f30f303f99293aa534c633c5cd5729c7  experiments/final/RULE_CARD.md
+9c39e09accca3fd5d35c5482cd957d997e30a409ab6c30906e3d2f5cb21f3cd1  experiments/final/compare.py
+07acac1a028bdb2c49db9e3a68dcff16dfa9987a601940f17fe09b7b943cd369  experiments/final/run_final_session.sh
+2e8218ca47445fd5343e46b17da3e299c8a5cbc91fb8b8641ec3e9ab65b41f6c  experiments/final/run_base_session.sh
+# served model: /vol/r5f/merged (pre-registered pick, experiments/r5/PLAN.md end; dev 2 = 96/100)
+r5f/merged/chat_template.jinja
+r5f/merged/config.json
+r5f/merged/generation_config.json
+r5f/merged/model-00001-of-00013.safetensors
+r5f/merged/model-00002-of-00013.safetensors
+r5f/merged/model-00003-of-00013.safetensors
+r5f/merged/model-00004-of-00013.safetensors
+r5f/merged/model-00005-of-00013.safetensors
+r5f/merged/model-00006-of-00013.safetensors
+r5f/merged/model-00007-of-00013.safetensors
+r5f/merged/model-00008-of-00013.safetensors
+r5f/merged/model-00009-of-00013.safetensors
+r5f/merged/model-00010-of-00013.safetensors
+r5f/merged/model-00011-of-00013.safetensors
+r5f/merged/model-00012-of-00013.safetensors
+r5f/merged/model-00013-of-00013.safetensors
+r5f/merged/model.safetensors.index.json
+r5f/merged/processor_config.json
+r5f/merged/tokenizer.json
+r5f/merged/tokenizer_config.json
+# generation_config.json (r5f == r5): temperature 1.0, top_p 0.95, top_k 64, do_sample true
+519ca0cad3bf6cb10c4f74dfb64786f651533bae2f316c609d66e0bcf5adfde6
