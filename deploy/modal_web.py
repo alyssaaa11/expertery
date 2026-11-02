@@ -214,8 +214,6 @@ def web():
     import cloud_cq  # noqa: E402 -- locked sandbox runner only
 
     api = fastapi.FastAPI()
-    api.mount("/", StaticFiles(directory=REMOTE_PKG + "/app/web",
-                               html=True), name="web")
 
     # One process (max_containers=1): counters live here behind this lock;
     # the Modal Dicts are only persistence across restarts.
@@ -375,6 +373,10 @@ def web():
             data = data.encode("utf-8")
         return Response(bytes(data), media_type=ctype)
 
+    # Static page LAST, so it doesn't swallow /api/* and /files (verifier
+    # blocker 2026-11-02; Claude fix, disclosed).
+    api.mount("/", StaticFiles(directory=REMOTE_PKG + "/app/web",
+                               html=True), name="web")
     return api
 
 
