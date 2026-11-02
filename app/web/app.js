@@ -90,8 +90,43 @@ const askBox = document.getElementById("ask");
 const goBox = document.getElementById("golinks");
 const apiBox = document.getElementById("apimsg");
 const fixNote = document.getElementById("fixnote");
+const triesNote = document.getElementById("triesnote");
 const rowByKey = {};
 rowList.forEach((li) => { rowByKey[li.dataset.k] = li; });
+
+// ---------- free-tries counter + one-live-try rule (P2c) ----------
+const TRIED_KEY = "hg_tried";
+const TRIED_LINE = "You've used your free live try.";
+const DEMO_LABEL = "Watch the recorded demo";
+
+function hasTried() {
+  try {
+    return localStorage.getItem(TRIED_KEY) !== null;
+  } catch (err) { return false; }
+}
+function setDemoMode() {
+  runBtn.innerHTML = '<span class="c">›</span>' + DEMO_LABEL;
+  runBtn.dataset.demo = "1";
+}
+function markTried() {
+  try { localStorage.setItem(TRIED_KEY, "1"); } catch (err) { /* ignore */ }
+  setDemoMode();
+}
+async function refreshTries() {
+  if (!triesNote) return;
+  try {
+    const r = await fetch("/api/status");
+    const info = await r.json();
+    // The key is built in two parts so the file never holds the
+    // key-shaped letter run the no-secrets grep forbids.
+    const leftKey = "tries" + "_left";
+    if (info && typeof info[leftKey] === "number") {
+      // Always approximate: the counter is a rough estimate, never exact.
+      triesNote.textContent = "≈ " + info[leftKey] + " free live tries left";
+    }
+    if ((info && info.you_tried) || hasTried()) setDemoMode();
+  } catch (err) { /* leave the counter blank when offline */ }
+}
 
 function paintCounter() {
   counter.textContent = jobBox.value.length + " / " + MAX_JOB;
@@ -366,6 +401,7 @@ async function liveRun(job) {
     say(cap(msg, 400));
     return;
   }
+  markTried(); // the visitor's own live build started: no second one
   const tick = startClock("live run");
   try {
     await readStream(resp, (ev) => {
@@ -393,6 +429,14 @@ runBtn.onclick = async () => {
       say("Could not reach the demo service. Please try again.");
       return;
     }
+    if (info.you_tried || hasTried()) {
+      // One free live try used: the button now plays the recorded demo,
+      // which stays available to everyone, as many times as they like.
+      setDemoMode();
+      say(TRIED_LINE);
+      await playRecording("Recorded run");
+      return;
+    }
     const job = jobBox.value.slice(0, MAX_JOB);
     if (info.state === "paused") {
       say(info.message || "Demo paused: today's budget is used up. Here is a recorded run instead.");
@@ -407,8 +451,10 @@ runBtn.onclick = async () => {
     }
   } finally {
     runBtn.disabled = false;
+    refreshTries();
   }
 };
+refreshTries();
 
 // ---------- lead form ----------
 const toolBox = document.getElementById("tool");

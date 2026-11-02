@@ -17,9 +17,14 @@ positive container count (Modal ``get_current_stats``, best effort) as warm.
 Tests drive this with a fake clock; ``deploy/modal_web.py`` mirrors the
 numbers into a Modal Dict for persistence across restarts. The web layer
 calls mutating methods from a worker thread, so they are lock-guarded.
+
+Round P2c adds an ALL-TIME cap (``TOTAL_CAP_USD``, default $15): total
+spend is the sum over every day bucket, and at or over the cap the API
+reports paused and refuses builds. The daily cap stays as an extra guard.
 """
 
 import datetime
+import math
 import threading
 import time
 
@@ -51,9 +56,51 @@ class Budget:
         with self._mu:
             return self._spend.get(day_key(self._now()), 0.0)
 
+    def total_spent(self):
+        """Dollars charged over ALL days (the P2c total cap base)."""
+        with self._mu:
+            return sum(self._spend.values())
+
+    def tries_left(self):
+        """Rough free live tries left under the total cap (P2c counter).
+
+        ``max(0, floor((TOTAL_CAP_USD - total) / EST_TRY_USD))``; always
+        an int, never exact -- the page shows it with an "about" mark.
+        """
+        with self._mu:
+            total = sum(self._spend.values())
+        try:
+            est = float(config.EST_TRY_USD)
+        except (TypeError, ValueError):
+            est = 0.0
+        if est <= 0:
+            return 0
+        return max(0, math.floor((config.TOTAL_CAP_USD - total) / est))
+
+    def snapshot(self):
+        """A copy of the day -> dollars ledger (for Dict persistence)."""
+        with self._mu:
+            return dict(self._spend)
+
+    def restore(self, spend):
+        """Merge persisted day buckets in, keeping the larger per day."""
+        try:
+            items = dict(spend).items()
+        except (TypeError, ValueError, AttributeError):
+            return
+        with self._mu:
+            for key, value in items:
+                try:
+                    value = float(value)
+                except (TypeError, ValueError):
+                    continue
+                if value > self._spend.get(key, 0.0):
+                    self._spend[key] = value
+
     def is_capped(self):
-        """True once today's spend is at or over the daily cap."""
-        return self.spent_today() >= config.DAILY_CAP_USD
+        """True once the daily OR the all-time cap is reached."""
+        return self.spent_today() >= config.DAILY_CAP_USD or \
+            self.total_spent() >= config.TOTAL_CAP_USD
 
     def _add(self, dollars):
         key = day_key(self._now())

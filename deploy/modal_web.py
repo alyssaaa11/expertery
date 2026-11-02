@@ -43,7 +43,10 @@ MAX_JOB_CHARS = int(os.environ.get("MAX_JOB_CHARS", "600"))
 MAX_BUILDS_PER_IP_HOUR = int(os.environ.get("MAX_BUILDS_PER_IP_HOUR", "4"))
 MAX_CONCURRENT_BUILDS = int(os.environ.get("MAX_CONCURRENT_BUILDS", "2"))
 MAX_LEADS_PER_IP_HOUR = int(os.environ.get("MAX_LEADS_PER_IP_HOUR", "5"))
-DAILY_CAP_USD = float(os.environ.get("DAILY_CAP_USD", "20"))
+DAILY_CAP_USD = float(os.environ.get("DAILY_CAP_USD", "15"))
+TOTAL_CAP_USD = float(os.environ.get("TOTAL_CAP_USD", "15"))
+EST_TRY_USD = float(os.environ.get("EST_TRY_USD", "0.30"))
+MAX_LIVE_TRIES_PER_VISITOR = int(os.environ.get("MAX_LIVE_TRIES_PER_VISITOR", "1"))
 GPU_USD_PER_S = float(os.environ.get("GPU_USD_PER_S", "0.000694"))
 SANDBOX_USD_PER_BUILD = float(os.environ.get("SANDBOX_USD_PER_BUILD", "0.002"))
 IDLE_TAIL_USD = float(os.environ.get("IDLE_TAIL_USD", "0.21"))
@@ -87,6 +90,7 @@ def _web_image():
 
 
 _BAKED_ENV = ("FORGE_URL", "REASONING_STRENGTH", "DAILY_CAP_USD",
+              "TOTAL_CAP_USD", "EST_TRY_USD", "MAX_LIVE_TRIES_PER_VISITOR",
               "MAX_JOB_CHARS", "MAX_BUILDS_PER_IP_HOUR",
               "MAX_CONCURRENT_BUILDS", "MAX_LEADS_PER_IP_HOUR",
               "GPU_USD_PER_S", "SANDBOX_USD_PER_BUILD", "IDLE_TAIL_USD",
@@ -96,6 +100,7 @@ _BAKED_ENV = ("FORGE_URL", "REASONING_STRENGTH", "DAILY_CAP_USD",
 leads_dict = modal.Dict.from_name("homegrown-leads", create_if_missing=True)
 files_dict = modal.Dict.from_name("homegrown-files", create_if_missing=True)
 spend_dict = modal.Dict.from_name("homegrown-spend", create_if_missing=True)
+tries_dict = modal.Dict.from_name("homegrown-tries", create_if_missing=True)
 
 REMOTE_PKG = "/pkg"
 
@@ -150,19 +155,29 @@ def convert_brep(brep_bytes):
 
 
 def _reconcile_spend(mny):
-    """Mirror today's Dict spend into the in-process ledger (restarts)."""
+    """Mirror EVERY Dict day bucket into the in-process ledger (restarts).
+
+    The total cap sums all days, so a restart must reload all of them,
+    not just today's bucket. Falls back to today's bucket only when the
+    Dict cannot be listed.
+    """
+    try:
+        mny.restore(dict(list(spend_dict.items())))
+        return
+    except Exception:  # noqa: BLE001 -- try the today-only fallback
+        pass
     try:
         today = budget_mod.day_key()
         kept = spend_dict.get(today) or 0.0
-        if kept > mny.spent_today():
-            mny._spend[today] = float(kept)  # noqa: SLF001 -- same process
+        mny.restore({today: kept})
     except Exception:  # noqa: BLE001 -- Dict is best-effort persistence
         pass
 
 
 def _mirror_spend(mny):
     try:
-        spend_dict[budget_mod.day_key()] = mny.spent_today()
+        for key, value in mny.snapshot().items():
+            spend_dict[key] = value
     except Exception:  # noqa: BLE001 -- best effort only
         pass
 
@@ -253,6 +268,7 @@ def web():
         "containers": _container_count,
         "leads": leads_dict,
         "files": files_dict,
+        "tries": tries_dict,
         "money": money,
         "rates": rates,
         "lead_rates": lead_rates,

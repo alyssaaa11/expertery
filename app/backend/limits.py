@@ -120,6 +120,51 @@ class RateState:
             return self._active
 
 
+class TryState:
+    """Per-IP successful live-build STARTS (one web process; P2c).
+
+    At most MAX_LIVE_TRIES_PER_VISITOR starts per visitor IP (default 1:
+    one free live try); further starts are rejected with 429. Counts live
+    behind the web layer's lock; the ``homegrown-tries`` Modal Dict is
+    only persistence across restarts (the web layer restores each IP's
+    persisted count into this copy before checking).
+    """
+
+    def __init__(self):
+        self._mu = threading.Lock()
+        self._tries = {}  # ip -> successful build starts
+
+    def count(self, ip):
+        """Successful live-build starts recorded for this IP."""
+        with self._mu:
+            return self._tries.get(ip, 0)
+
+    def restore(self, ip, n):
+        """Merge a persisted count in, keeping the larger value."""
+        try:
+            n = int(n)
+        except (TypeError, ValueError):
+            return
+        if n <= 0:
+            return
+        with self._mu:
+            if n > self._tries.get(ip, 0):
+                self._tries[ip] = n
+
+    def check(self, ip):
+        """None when this IP may start a live build, else (429, message)."""
+        with self._mu:
+            if self._tries.get(ip, 0) >= \
+                    config.MAX_LIVE_TRIES_PER_VISITOR:
+                return 429, config.TRIED_MESSAGE
+            return None
+
+    def note(self, ip):
+        """Record a successful live-build start for this IP."""
+        with self._mu:
+            self._tries[ip] = self._tries.get(ip, 0) + 1
+
+
 class LeadRate:
     """Per-IP lead posts (one web process; verifier privacy fix).
 

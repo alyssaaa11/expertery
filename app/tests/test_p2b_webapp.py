@@ -237,7 +237,11 @@ def test_cold_build_charged_wake_exactly_once():
         assert money.spent_today() == pytest.approx(
             7.0 * config.GPU_USD_PER_S + config.SANDBOX_USD_PER_BUILD
             + config.IDLE_TAIL_USD + config.WAKE_USD)
-        client.post("/api/build", json={"job": JOB})  # warm, same burst
+        # A second IP (P2c: one free live try per visitor IP): the model
+        # is still warm in the same burst, so no second wake-up is charged.
+        other = {"x-forwarded-for": "9.9.9.9"}
+        client.post("/api/build", json={"job": JOB},
+                    headers=other)  # warm, same burst
         assert money.spent_today() == pytest.approx(
             14.0 * config.GPU_USD_PER_S + 2 * config.SANDBOX_USD_PER_BUILD
             + config.IDLE_TAIL_USD + config.WAKE_USD)

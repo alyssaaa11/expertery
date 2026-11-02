@@ -37,7 +37,10 @@ MAX_BUILDS_PER_IP_HOUR = _env_int("MAX_BUILDS_PER_IP_HOUR", 4)  # 5th -> 429
 MAX_CONCURRENT_BUILDS = _env_int("MAX_CONCURRENT_BUILDS", 2)  # 3rd -> 429
 
 # --- money ---------------------------------------------------------------
-DAILY_CAP_USD = _env_float("DAILY_CAP_USD", 20)
+DAILY_CAP_USD = _env_float("DAILY_CAP_USD", 15)
+TOTAL_CAP_USD = _env_float("TOTAL_CAP_USD", 15)  # all-time spend; binds first
+EST_TRY_USD = _env_float("EST_TRY_USD", 0.30)  # rough cost of one live try
+MAX_LIVE_TRIES_PER_VISITOR = _env_int("MAX_LIVE_TRIES_PER_VISITOR", 1)
 GPU_USD_PER_S = _env_float("GPU_USD_PER_S", 0.000694)  # A100-80GB ~ $2.50/h
 SANDBOX_USD_PER_BUILD = _env_float("SANDBOX_USD_PER_BUILD", 0.002)
 IDLE_TAIL_USD = _env_float("IDLE_TAIL_USD", 0.21)  # 300 s scale-down, once/burst
@@ -75,5 +78,7 @@ FILE_TTL_S = 24 * 3600.0  # run files kept for 24 h
 
 BUILD_TIMEOUT_MESSAGE = "This part took too long; try a simpler one"
 PAUSED_MESSAGE = "Demo paused: today's budget is used up. Here is a recorded run instead."
+TRIED_MESSAGE = ("You've used your free live try. You can watch the recorded "
+                 "demo as many times as you like.")
 BUSY_MESSAGE = "Busy, try again in a minute"
 RATE_MESSAGE = "Please wait a bit before building again"

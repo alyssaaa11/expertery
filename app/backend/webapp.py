@@ -20,8 +20,11 @@ the box, the stores and the clocks all arrive via ``deps``.
   means unknown. Never required.
 - ``leads`` / ``files``: Modal-Dict-like stores (``get``/``[]``/``del``).
   Plain dicts work in tests.
+- ``tries``: Modal-Dict-like store (``get``/``[]``) of per-IP successful
+  live-build starts, persisted in the ``homegrown-tries`` Modal Dict.
+  Plain dicts work in tests.
 - ``money``: ``budget.Budget``. ``rates``: ``limits.RateState``.
-  ``lead_rates``: ``limits.LeadRate``.
+  ``lead_rates``: ``limits.LeadRate``. ``try_state``: ``limits.TryState``.
 - ``now``: wall-clock callable (for money/rates/file timestamps).
   ``monotonic``: steady-clock callable (for deadlines).
 - ``build_limit_s``, ``file_ttl_s``, ``web_dir``.
@@ -106,6 +109,10 @@ def make_app(deps=None):
     money = deps.get("money") or budget_mod.Budget(now=wall)
     rates = deps.get("rates") or limits_mod.RateState(now=wall)
     lead_rates = deps.get("lead_rates") or limits_mod.LeadRate(now=wall)
+    tries_state = deps.get("try_state") or limits_mod.TryState()
+    tries_store = deps.get("tries")
+    if tries_store is None:
+        tries_store = {}
     model = deps.get("model")
     box = deps.get("box")
     convert = deps.get("convert")
@@ -139,15 +146,39 @@ def make_app(deps=None):
 
     api = fastapi.FastAPI()
 
+    def _tries_restore(ip):
+        """Merge this IP's persisted try count into the in-process copy."""
+        kept = _store_get(tries_store, ip, 0)
+        try:
+            kept = int(float(kept))
+        except (TypeError, ValueError):
+            kept = 0
+        tries_state.restore(ip, kept)
+
+    def _you_tried(ip):
+        """True once this IP has used its free live try (or tries)."""
+        _tries_restore(ip)
+        return tries_state.count(ip) >= \
+            config.MAX_LIVE_TRIES_PER_VISITOR
+
+    def _tries_note(ip):
+        """Record a successful live-build start, in-process + persisted."""
+        _tries_restore(ip)
+        tries_state.note(ip)
+        _store_set(tries_store, ip, tries_state.count(ip))
+
     @api.get("/api/status")
     async def status(request: fastapi.Request):
         ip = request_ip(request)
         fire = False
         async with state_lock:
             reconcile(money)
+            tried = _you_tried(ip)
             if money.is_capped():
                 return {"state": "paused",
-                        "message": config.PAUSED_MESSAGE}
+                        "message": config.PAUSED_MESSAGE,
+                        "tries_left": money.tries_left(),
+                        "you_tried": tried}
             # No model request here, ever (verifier W2): warmth comes from
             # the last real response, or the container count.
             state, message = money.warm_status(_containers_warm())
@@ -158,7 +189,9 @@ def make_app(deps=None):
                 except Exception:  # noqa: BLE001
                     pass
                 fire = True
-            payload = {"state": state, "message": message}
+            payload = {"state": state, "message": message,
+                       "tries_left": money.tries_left(),
+                       "you_tried": tried}
         if fire:
             try:
                 warmer(ip)
@@ -186,6 +219,12 @@ def make_app(deps=None):
             if money.is_capped():
                 return JSONResponse({"message": config.PAUSED_MESSAGE},
                                     status_code=429)
+            _tries_restore(ip)
+            denied = tries_state.check(ip)
+            if denied:
+                return JSONResponse({"message": denied[1],
+                                     "reason": "tried"},
+                                    status_code=denied[0])
             denied = rates.check_ip(ip)
             if denied:
                 return JSONResponse({"message": denied[1]},
@@ -195,6 +234,7 @@ def make_app(deps=None):
                 return JSONResponse({"message": denied[1]},
                                     status_code=denied[0])
             rates.note_build(ip)
+            _tries_note(ip)
             # A build that starts while not warm boots the model: charge
             # WAKE_USD once (verifier W2). No request is sent to learn
             # this; warmth is in-process state plus container count.
