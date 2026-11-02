@@ -70,7 +70,7 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
 - **NOW (2026-11-02 11:40): EXAM DONE (one-shot, 44911eb). Trained Glimmer r5f, no card: 75/90 = 83.3% on the 30
-  original exam jobs. Pre-registered full claim DOES NOT HOLD: (a) FAIL, (b) FAIL, (c) PASS, (d) PASS.**
+  original exam jobs. Pre-registered full claim DOES NOT HOLD: (a) FAIL, (b) FAIL, (c) PASS, (d) PASS on the token form only (wall-clock and $ forms fail, verifier E1).**
   - verified (results/exam-2026-11-02, compare_bars.json, compare_ft_acard.json): FT 83.3% (medium 93.3, hard 73.3),
     7 crashes; A+card 85.6% (8 crashes); FT−A+card −2.2 [−12.2, +6.7] = equal; B2 (manual, 1 try) 87.8%; BX (all fair
     fixes) 94.4%; FT−BX −11.1 [−24.4, +1.1]. Cost per correct: FT 3,352 tokens / 16.9 s / $0.0117 vs BX 21,823 / 43.8 s /

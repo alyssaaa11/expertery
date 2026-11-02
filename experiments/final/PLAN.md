@@ -175,3 +175,10 @@ Old dev set (4th look, disclosed; the card was written from R3 dev crashes). Arm
   (bar a). Also reported: FTX − FT, tokens and seconds per correct part vs BX, hard-job split, crashes. Equal = CI
   includes 0; never called "better" unless the CI is entirely above 0.
 - STOP rule: FTX < 90 finals → STOP and ask. Run once; no re-run.
+- Verifier forge-exam-result-ftx-pre (F1, F2), decided before any FTX call: (F1) every loop round keeps BX's body
+  (reasoning strength "xhigh", runner.build_bx_body), so the loop matches BX exactly; FT's exam and r5f's training used
+  "high". Therefore FTX − FT = fix loop + xhigh together (disclosed); FTX − BX is the pre-registered comparison.
+  (F2) cap $4.50 (expected ≈ $2.8); first a pilot on the 3 dry jobs D1-D3 (k = 1, not scored) to see whether r5f ever
+  says DONE; GO only if the pilot answers are complete (no INVALID from the loop itself).
+- Exam wording (verifier E1): bar (d) PASSES ON THE TOKEN FORM ONLY (3,352 ≤ 7,274); wall-clock 16.9 s > 14.6 s and
+  $0.0117 > $0.0101 fail. E2: 6a also ran 9 dry D pairs (unscored, disclosed).
