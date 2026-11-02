@@ -21,13 +21,16 @@ Create `app/web/` with:
   real recorded run.
 
 Changes from the mockup:
+0. Copy fixes (verifier S6): the proof card text becomes "on a 30-part CAD exam (15 hard), with its self-check loop
+   (second look; one try: 83.3%). Best untrained setup: 94%." The hero subline and marquee "92%" items say
+   "92% with its self-check loop". Every "~1 min" wake text becomes "a few minutes".
 1. Remove the yellow "MOCKUP" pill.
 2. The 3D object keeps a small caption under it: "Illustration".
 3. The demo panel calls the real API:
    - On "Build it": first `GET /api/status` → `{"state": "ready"|"waking"|"paused", "message": str}`.
      - `paused`: show the message ("Demo paused: today's budget is used up…"), then play `recorded_run.json`
        labelled "Recorded run". Show the GitHub and video links and the form.
-     - `waking`: show "Waking up the model (about 1–3 min). Here is a recorded run meanwhile." Play the recorded run,
+     - `waking`: show "Waking up the model (this takes a few minutes). Here is a recorded run meanwhile." Play the recorded run,
        then start the live run when it finishes.
      - `ready`: start the live run.
    - Live run: `POST /api/build` with JSON `{"job": text}`. The response is Server-Sent Events, one JSON object per
@@ -37,8 +40,11 @@ Changes from the mockup:
      "stl_url":str, "step_url":str, "rounds":int, "seconds":float}`.
      Map the events onto the 5 existing step rows (same CSS classes as the mockup: on/done/fix). The timer shows
      "live run · N s", or "recorded run · N s" for the recording.
-   - `done`: show the result row (PASS badge only when verdict is PASS; otherwise a neutral "Checks failed: see
-     measurements" badge, never a fake PASS). Show the measurements as small chips, the code in a collapsible `<pre>`,
+   - `done`: show the result row Three verdicts, three badges (verifier S1):
+     `PASS` → teal badge "Self-check PASS" plus one line listing what was checked (e.g. "built · 1 solid · 80 × 30 × 45 mm
+     matches your numbers"), and a small note "self-check, not the exam referee";
+     `BUILT` → neutral badge "Built (size not checked)" with the reason;
+     `CHECK FAILED` → neutral badge "Checks failed: see measurements". Never show PASS for anything else. Show the measurements as small chips, the code in a collapsible `<pre>`,
      and STL/STEP/code download links. Show a 3D view of the STL with three.js r160 from a pinned CDN URL
      (OrbitControls, steel material, slow auto-rotate, teal edges). If WebGL fails, hide the viewer.
    - `error` (HTTP 429/413/5xx or an error event): show the message from the server in the panel, never a stack trace.
@@ -46,7 +52,9 @@ Changes from the mockup:
    (write 3 realistic CadQuery jobs: L-bracket with 2 holes, flanged pipe adapter, electronics box with lid lip, each
    with all dimensions in mm).
 5. Form: submits `POST /api/lead` with `{"tool":str,"email":str}`, then shows "Thanks, we read every answer." No
-   other tracking, no cookies, no analytics.
+   other tracking, no cookies, no analytics. Under the form, one privacy line (verifier S7): "We only use your email to
+   reply about Homegrown. To delete it, email us or send the form again with 'delete' as the tool." Contact address
+   placeholder `CONTACT_EMAIL` in one place in app.js (Claude fills it in).
 6. Links: GitHub = https://github.com/alyssaaa11/expertery ; the video link stays `#video` (filled in later).
 7. `prefers-reduced-motion` keeps working. The page must also work at 390 px width (stack the columns; hide the
    dark corner tabs on mobile).
@@ -88,9 +96,13 @@ Create `deploy/modal_web.py` (Modal app name `homegrown-web`, CPU only, `min_con
   without side effects, stop and report it instead of rewriting them.
 - **The box:** each answer runs in `cloud_cq.run_answer_in_box(code)` (the locked Modal sandbox, app `forge-cq`).
   Measurements come from its measure output. The **verdict on the page is a no-reference self-check**, because a
-  visitor's job has no reference part: PASS only if the part built, `solids == 1`, and the bounding-box extents
-  match every dimension that the job text states explicitly as overall size, within 0.5%. Otherwise "CHECK FAILED"
-  with the reasons. The function is `app/backend/selfcheck.py:self_check(job_text, measurements) -> (verdict, reasons)`.
+  visitor's job has no reference part: Three verdicts (verifier S1):
+  `PASS` only if the part built, `solids == 1`, AND the job states an overall size that matches the bounding-box
+  extents within 0.5% per axis; `BUILT` if it built with 1 solid but no overall size could be parsed (reason "size not
+  checked"); `CHECK FAILED` otherwise, with reasons. "Overall size" is parsed ONLY from explicit patterns, written as a
+  documented list of regexes, e.g. "overall (size|dimensions) A × B × C mm", "A x B x C mm box/plate/block",
+  "base A × B × C mm" (+ "wall … N mm tall" adding height only when the job says so). Compare sorted extents to
+  sorted stated numbers (axis order is not guaranteed). When unsure, return BUILT, never PASS. The function is `app/backend/selfcheck.py:self_check(job_text, measurements) -> (verdict, reasons)`.
   Keep it simple and conservative, and test it.
 - **Files:** convert the built BREP to STL (tolerance 0.1 mm) and STEP inside the CPU web container (CadQuery 2.8.0,
   same pins as `cloud_cq.pip_spec()`). Never execute visitor-supplied or model code in the web container: only the
@@ -99,21 +111,39 @@ Create `deploy/modal_web.py` (Modal app name `homegrown-web`, CPU only, `min_con
   - `MAX_JOB_CHARS=600` → 413.
   - Per IP: `MAX_BUILDS_PER_IP_HOUR=4` → 429 with "Please wait a bit…".
   - Global: `MAX_CONCURRENT_BUILDS=2` → 429 "Busy, try again in a minute".
+  - (verifier S3) The web function runs with `max_containers=1`, and counters/limits live in that one process behind an
+    asyncio lock (Modal Dict has no atomic counter; the Dict is only for persistence across restarts). The client IP
+    comes from the connection peer / the LAST hop added by Modal's proxy, never the first X-Forwarded-For entry. Run
+    ids are `uuid4().hex`.
   - **Daily budget:** `DAILY_CAP_USD=20` (the user's number; Claude may change it at deploy). Cost estimate per build
-    = model GPU seconds × `GPU_USD_PER_S=0.000694` (A100-80GB ≈ $2.50/h) + `SANDBOX_USD_PER_BUILD=0.002`, plus a
-    `WAKE_USD=0.25` charge each time the status probe finds the model cold. The spend is kept in a Modal Dict keyed by
+    = model GPU seconds × `GPU_USD_PER_S=0.000694` (A100-80GB ≈ $2.50/h) + `SANDBOX_USD_PER_BUILD=0.002`, plus
+    (verifier S4) the idle tail after the last build of a burst: `IDLE_TAIL_USD=0.21` (300 s scale-down) charged once
+    per burst, and `WAKE_USD=0.45` charged each time a warm-up is actually fired. Warm-ups are throttled: at most one per
+    10 minutes globally and one per hour per IP; `/api/status` otherwise only reports the state and never wakes the
+    model. The spend is kept in a Modal Dict keyed by
     UTC date. At or over the cap, `/api/status` returns `paused` and `/api/build` returns 429 with the paused message.
-  - A whole build has a 240 s wall-clock limit → error event "This part took too long; try a simpler one".
+  - (verifier S5) A whole build has a `BUILD_LIMIT_S=600` wall-clock limit → error event "This part took too long;
+    try a simpler one". Send the first SSE event immediately and a heartbeat comment at least every 15 s. The web
+    function timeout is larger than the limit (≥ 660 s).
   - Model output and errors shown to visitors are capped at 4,000 characters and HTML-escaped by the page.
+- **What goes into the web image (verifier S2):** an explicit file list only: `app/web/*`, `app/backend/*`,
+  `experiments/final/runner_final.py`, `experiments/final/cloud_cq.py`, `experiments/final/run_cq_box.py`,
+  `experiments/first-test/runner.py` and the minimum they import (list each file). Never `experiments/first-test/
+  expected.json`, `jobs.py`, any `results/` or exam file. Use only `cloud_cq.run_answer_in_box`; do not use or deploy
+  the grader app. Test: build the file list and assert the forbidden files are absent.
 - No Claude, no other model, no analytics, no third-party calls except the three.js CDN in the page.
 
 Tests (`app/tests/`, pytest, all with fakes; no Modal, no network):
 - the loop with a fake model + fake box: crash → fix → build → PASS gives event order write, build, fix, write, build,
   measure, done; messages match the FTX rules exactly (round 1 == ft_messages(job)); max 3 model calls;
-- `self_check`: correct box passes; 2 solids fail; wrong extent fails; a job with no stated overall size passes only
-  on built + 1 solid, with reason "no overall size stated";
+- `self_check`: correct box → PASS; 2 solids → CHECK FAILED; wrong extent → CHECK FAILED; a job with no stated
+  overall size → BUILT ("size not checked"), never PASS; ambiguous text → BUILT; each regex pattern has a test;
 - limits: 601 chars → 413; 5th build from one IP in an hour → 429; a third concurrent build → 429; spend at the cap
   → status paused and build 429; the wake charge is added once per cold probe;
+- the cost model: one build in a burst charges GPU seconds + sandbox + one idle tail; a fired warm-up charges WAKE_USD;
+  a second warm-up within 10 min is not fired; status calls never wake the model by themselves;
+- the IP used for limits ignores a spoofed first X-Forwarded-For hop; run ids are 32-hex uuid4;
+- the SSE stream sends its first event before the first model call and a heartbeat during a slow fake model;
 - `/api/lead` rejects a 201-char email; the lead is not printed to stdout;
 - no secret value in any HTML/JS/JSON under app/web (grep for VLLM_API_KEY's env name and "es_").
 
