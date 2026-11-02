@@ -166,3 +166,12 @@ Old dev set (4th look, disclosed; the card was written from R3 dev crashes). Arm
 - STOP rule: any arm with < 90 answers (budget stop or error) → STOP and ask the user; no re-run of a finished arm.
 - vLLM image digest (N1): muse-glimmer sha256:413c8fbecb1204a218117c77a4ea4b3a211d5686ff99c31d82ba6dd0cec8c5a6
   (unchanged since 10-30); each session's vLLM start lines are kept in results/exam-2026-11-02/*.session.out.
+
+## Second look: FTX (written 2026-11-02 after the exam, BEFORE any FTX call; user ok; superintel advice)
+- What: the trained model r5f with its short prompt (no manual, no card) inside the SAME fix loop as BX
+  (runner_final --arms FT --bx-loop; Muse commit after spec specs/MUSE_FTX_2026-11-02.md). 30 exam jobs, k = 3,
+  8 workers, cap $3. Labelled everywhere as a SECOND LOOK at the exam (the exam result 83.3% stays the headline score).
+- Reading (compare_ftx.py, pre-registered): "about as good as BX" iff FTX − BX ≥ −5 points AND 95% CI lower ≥ −15
+  (bar a). Also reported: FTX − FT, tokens and seconds per correct part vs BX, hard-job split, crashes. Equal = CI
+  includes 0; never called "better" unless the CI is entirely above 0.
+- STOP rule: FTX < 90 finals → STOP and ask. Run once; no re-run.
