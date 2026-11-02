@@ -29,6 +29,8 @@ You get a 3D view, the measurements, the code and STEP/STL files.
   first start), so the page plays the recorded run meanwhile.
 - **First real live run (2026-11-02):** L-bracket 80 × 30 × 45 mm with two 6 mm holes → Self-check PASS in 120 s,
   volume 27,717 mm³ (exactly base + wall − holes). It is the page's recorded run (`app/web/recorded_run.json`).
+- Hosting: the page is on Vercel (`homegrown-factory.vercel.app`) and calls the Modal backend directly from the
+  visitor's browser (CORS), so the one-try limit sees each visitor's own address.
 - Code: page `app/web/`, backend `app/backend/`, Modal app `deploy/modal_web.py`, 106 tests in `app/tests/`. Specs:
   `specs/MUSE_PRODUCT_*.md`. Steps: `docs/product/DEPLOY.md`.
 

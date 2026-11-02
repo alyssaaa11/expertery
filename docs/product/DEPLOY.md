@@ -17,3 +17,15 @@ Each step needs the user's yes right before it.
 3. One real test build by Claude (counts inside the $15); check verdict badge, 3D view, downloads, counter.
 4. Give the user the link. Check `modal billing summary` daily during judging (Nov 5-9).
 To stop everything: modal app stop homegrown-web && modal app stop forge-trained
+
+## Done 2026-11-02 (~22:45)
+- Model: `FORGE_MODEL_NAME=r5f modal deploy deploy/modal_forge.py` → <model URL from modal deploy>
+- Website engine: run the deploy with the project venv (`.venv/bin/python -m modal deploy deploy/modal_web.py`; the
+  plain `modal` CLI lacks CadQuery) with the env above plus `ALLOWED_ORIGINS=https://homegrown-factory.vercel.app`.
+  Engine URL: https://homegrown-factory.vercel.app
+- Public page (user: no Modal/Gmail name in the address): Vercel project `homegrown-factory` →
+  **https://homegrown-factory.vercel.app**. Build: copy app/web/{index.html,styles.css,app.js,object.jpeg,
+  recorded_run.json} to a folder named homegrown-factory, set `<meta name="hg-api" content="<engine URL>">` in
+  index.html, then `vercel deploy --prod --yes` there.
+- First real build: PASS 80 × 30 × 45 mm in 120 s; cold start 14 min. Re-deploying the engine keeps the counters
+  (Modal Dicts).
