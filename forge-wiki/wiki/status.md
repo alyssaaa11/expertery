@@ -79,6 +79,13 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
   pre-registered: experiments/brackets/PLAN.md, commit 567b24d). verified: references selftest 20/20 (jobs_brackets.py
   --selftest). Muse Code done (eadaf89, pytest 87). verified: FTX 34/60 = 57% usable (pass@3 80%), $3.65 (results/brackets-2026-11-03/REPORT.md).
   decision (user, ~13:30, after seeing FTX): AX not run → claim X untested; no training-vs-card claim from this test.
+- verified (2026-11-03 ~19:30): **Expertery v0 installer** (pyproject + install.sh + `expertery` CLI, Muse Code adf0af9,
+  fixes 7440614 + cadquery-pin round) installed on this Mac with `sh install.sh`; `expertery init` OK. Real exam-agent
+  demo on examples/past-work-brackets (results/expertery-exam-brackets-2026-11-03b/report.md): 10 READY, 8 FLAGGED,
+  2 DEFERRED (cap), est. $1.57 vs cap $1.50. B16 flagged with the right cause (sides' start height). B2 READY 2/2:
+  Spark Open read "80 long" correctly, so B2 was Glimmer's error, not ambiguous wording (corrects the bracket REPORT
+  hypothesis). hypothesis: several 1/2 flags are reader mistakes, not wording (B4 is a CadQuery error) → v0.2: flag
+  only when both readers fail or disagree, and let the explainer answer "no ambiguity".
 - **TODO to submission: see [[submission-plan-2026-11-02]].** Left: page copy (user deciding), high-vs-xhigh check,
   push, 3-min video (wake the model ~15 min before), X post (approval), Impact testers, form (deadline Nov 5 03:00 CET).
 - **NOW (2026-11-02 15:10): SECOND LOOK done (labelled; exam headline stays 83.3%). Trained Glimmer r5f inside the
