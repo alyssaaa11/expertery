@@ -1,9 +1,10 @@
-# Homegrown
+# Experty
 
-> **Name change (2026-11-02):** the project was called "Forge" until Nov 2. Internal code, cloud apps, file names and
-> the frozen exam files keep the old `forge` names on purpose, so nothing breaks and the exam evidence stays valid.
+> **Name changes:** the project was called "Forge" until Nov 2, then "Homegrown" until Nov 3, and is now **Experty**.
+> Internal code, cloud apps, file names, the live demo page and its address and the frozen exam files keep the older
+> `forge` / `homegrown` names on purpose, so nothing breaks and the exam evidence stays valid.
 
-**Homegrown turns a small open model into a private expert on your tool, learning only from answers a referee proved
+**Experty turns a small open model into a private expert on your tool, learning only from answers a referee proved
 correct.** Proven on CAD: Meta's open Muse Glimmer 30B went from **53% (an earlier session, one try) to 83%** on a hand-made exam with no manual, and to
 **92%** with a self-check loop, about as good as the best setup (94%) that needs a 5,700-word manual, with 2.7× fewer tokens.
 Built with Muse Spark Open.
@@ -13,7 +14,7 @@ recorded demo is always there)
 
 Meta Global AI Developer Hackathon 2026 · Indie track, Push the Frontier · build period Oct 27 - Nov 4.
 
-![Homegrown factory](docs/video/homegrown-factory-diagram.png)
+![Experty factory](docs/video/homegrown-factory-diagram.png)
 
 Interactive diagram: [`docs/video/homegrown-factory.html`](docs/video/homegrown-factory.html)
 
@@ -38,7 +39,7 @@ You get a 3D view, the measurements, the code and STEP/STL files.
 Companies want AI that is good at their own tools, but big models are expensive, private designs often may not leave
 the company, and the usual fix is a long manual pasted into every prompt. Can a small open model learn the skill itself?
 
-## How the Homegrown factory works
+## How the Experty factory works
 1. **Job generator** (built by Muse Code): 2,000 practice CAD jobs in 10 part families, each with a hidden correct part.
    100 more jobs are locked away as a secret test.
 2. **First try:** Glimmer (with a one-page rule card) writes CadQuery code. A locked cloud box runs it, and a strict
@@ -49,11 +50,11 @@ the company, and the usual fix is a long manual pasted into every prompt. Can a 
 5. **Lessons:** only referee-approved answers, with Glimmer's own reasoning, become lessons (1,742). A guard confirmed
    no lesson touches the exam. **Wrong answers never teach.**
 6. **Training:** LoRA on Glimmer 30B (Modal H200, ~2 h, ~$10). The trained model needs no manual and no card.
-7. **The Homegrown box (the product):** the trained Glimmer writes the part, the box builds and measures it, and
+7. **The Experty box (the product):** the trained Glimmer writes the part, the box builds and measures it, and
    Glimmer fixes crashes or mismatches itself (up to 3 rounds) before delivering a checked part.
 
-## The Homegrown agent (self-check loop)
-The Homegrown box is an agent: the trained Glimmer acts, observes the real result with a tool, and decides what to do
+## The Experty agent (self-check loop)
+The Experty box is an agent: the trained Glimmer acts, observes the real result with a tool, and decides what to do
 next, without ever seeing the correct answer.
 ```
 describe a part
@@ -81,20 +82,20 @@ TOOL: locked cloud box runs the code and measures the part (size, volume, number
 | Setup | Score | Hard | Tokens per correct part |
 |---|---|---|---|
 | Plain Glimmer, short prompt (Oct 28, 1 try, earlier session) | 53% | | |
-| **Homegrown Glimmer, one try (official exam)** | **83.3%** | 73% | 3,352 |
+| **Experty Glimmer, one try (official exam)** | **83.3%** | 73% | 3,352 |
 | Plain Glimmer + rule card | 85.6% | 84% | 4,145 |
 | Plain Glimmer + 5,700-word manual, one try (B2) | 87.8% | 76% | 10,662 |
-| **Homegrown Glimmer + self-check loop (second look)** | **92.2%** | 91% | 7,946 |
+| **Experty Glimmer + self-check loop (second look)** | **92.2%** | 91% | 7,946 |
 | Plain Glimmer + manual + the same loop (best setup, BX) | 94.4% | 91% | 21,823 |
 
-- Homegrown + loop vs best setup: **−2.2 points, 95% CI [−11.1, +5.6]**: about as good (pre-registered bar), with no
+- Experty + loop vs best setup: **−2.2 points, 95% CI [−11.1, +5.6]**: about as good (pre-registered bar), with no
   manual and 2.7× fewer tokens; not faster per answer (266 s vs 301 s).
-- Homegrown one try vs rule card: −2.2 [−12.2, +6.7], a tie. The loop added +8.9 [+1.1, +18.9] points (the loop also
+- Experty one try vs rule card: −2.2 [−12.2, +6.7], a tie. The loop added +8.9 [+1.1, +18.9] points (the loop also
   uses "xhigh" reasoning, so both changes are counted together).
 - **What did not hold:** the original pre-registered claim ("as good as the best setup on one try" and "clearly beats the
   manual") **failed**: −11.1 [−24.4, +1.1] and −4.4 [−21.1, +11.1]. The cost bars passed on the token form only.
   The 92% is a labelled second look at the same exam, run once with rules written first.
-- Secret practice-style test (100 jobs from the generator, never trained on): plain 62, plain + card 96, Homegrown 96.
+- Secret practice-style test (100 jobs from the generator, never trained on): plain 62, plain + card 96, Experty 96.
   The hand-made exam is the harder and more reliable test.
 
 Readings: [`results/exam-2026-11-02/`](results/exam-2026-11-02/) (`compare_bars.json`, `compare_ft_acard.json`) and
@@ -114,7 +115,7 @@ right or wrong automatically. The rest (Glimmer, Spark tutor, self-fix, lessons,
 same. Best exam for a company: 30-100 of its own past jobs with known correct results, never shown to the factory.
 Status: proven on CAD only.
 
-## Before Homegrown: HerdShot (Oct 26 - 28)
+## Before Experty: HerdShot (Oct 26 - 28)
 The first two days went to an earlier idea, **HerdShot**: stop false facts from spreading inside teams of AI agents.
 Its code lives in a separate private repository (first commit Oct 26, 19:19 CET = 14:19 ET, after the 12:00 ET kickoff); copies of its reports are in
 [`docs/herdshot/`](docs/herdshot/).
@@ -125,7 +126,7 @@ Its code lives in a separate private repository (first commit Oct 26, 19:19 CET 
 | Oct 27 | **A2** groupthink test, 4 roles with a stale document ([`a2.md`](docs/herdshot/a2.md)) | 12.5% believed the stale value, also with 2 agents pushing it → groupthink **not shown** |
 | Oct 27 | **C1** two agents editing the same file in parallel, Haiku / Sonnet / Opus ([`c1.md`](docs/herdshot/c1.md)) | together 4-8/16 vs alone 13-16/16, but every failure was visible (git conflicts or failing tests) → no hidden problem to solve |
 | Oct 27 | **C2** a lead agent writes a shared plan first ([`c2.md`](docs/herdshot/c2.md)) | 7/16 vs 4/16, below the pre-set bar of 12 |
-| Oct 28 | Direction research (new ideas scored; Homegrown, then called Forge, ranked first) | HerdShot paused; Homegrown started at 12:45 |
+| Oct 28 | Direction research (new ideas scored; Experty, then called Forge, ranked first) | HerdShot paused; Experty started at 12:45 |
 
 **Conclusion** ([`2026-10-27-day-conclusion.md`](docs/herdshot/2026-10-27-day-conclusion.md)): today's agents read the
 project files and reject false facts, and a simple verifier agent already solves what HerdShot set out to do. Rather
@@ -147,7 +148,7 @@ All cloud work ran on hackathon credits; every paid script has a money cap.
 | **Meta API** (Muse Spark 1.3) | HerdShot test A, 70 agent-team runs ($22.92) | Oct 27 |
 | **Meta API** (Muse Code) | Every build round of the factory, runners, training pipeline, second-look arm, and the GitHub pushes | Oct 28 - Nov 2 |
 
-Money: about $72 of Modal credit and about $13 of Baseten credit over the whole Homegrown project, plus Muse Code on
+Money: about $72 of Modal credit and about $13 of Baseten credit over the whole Experty project, plus Muse Code on
 Meta credit (each round's cost is in its log in `results/`).
 
 ## Built during the hackathon
@@ -222,7 +223,7 @@ as proof of when each part was built.
 ## Run it
 Needs macOS or Linux, Python 3.12, and for cloud steps a Modal account (and Baseten for the teacher).
 ```bash
-git clone https://github.com/alyssaaa11/expertery.git homegrown && cd homegrown
+git clone https://github.com/alyssaaa11/expertery.git experty && cd experty
 python3.12 -m venv .venv && .venv/bin/pip install cadquery==2.8.0 cadquery-ocp==7.9.3.1 modal==1.6.3 pytest
 .venv/bin/python -I scripts/check_cadquery.py          # expect: size mm 20.0 20.0 20.0, volume 7607.3
 .venv/bin/python -m pytest -q experiments/final experiments/factory experiments/freecad experiments/train experiments/common
