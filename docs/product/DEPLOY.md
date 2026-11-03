@@ -21,11 +21,16 @@ To stop everything: modal app stop homegrown-web && modal app stop forge-trained
 ## Done 2026-11-02 (~22:45)
 - Model: `FORGE_MODEL_NAME=r5f modal deploy deploy/modal_forge.py` → <model URL from modal deploy>
 - Website engine: run the deploy with the project venv (`.venv/bin/python -m modal deploy deploy/modal_web.py`; the
-  plain `modal` CLI lacks CadQuery) with the env above plus `ALLOWED_ORIGINS=https://homegrown-factory.vercel.app`.
+  plain `modal` CLI lacks CadQuery) with the env above plus `ALLOWED_ORIGINS=https://expertery.vercel.app`.
   Engine URL: <engine URL from modal deploy>
 - Public page (user: no Modal/Gmail name in the address): Vercel project `homegrown-factory` →
-  **https://homegrown-factory.vercel.app**. Build: copy app/web/{index.html,styles.css,app.js,object.jpeg,
+  **https://expertery.vercel.app**. Build: copy app/web/{index.html,styles.css,app.js,object.jpeg,
   recorded_run.json} to a folder named homegrown-factory, set `<meta name="hg-api" content="<engine URL>">` in
   index.html, then `vercel deploy --prod --yes` there.
 - First real build: PASS 80 × 30 × 45 mm in 120 s; cold start 14 min. Re-deploying the engine keeps the counters
   (Modal Dicts).
+
+## Renamed 2026-11-03 (~12:50): address https://expertery.vercel.app
+- Vercel project is still named `homegrown-factory` (internal); domain `expertery.vercel.app` added, the old
+  `homegrown-factory.vercel.app` domain removed (user: don't keep the old one). Engine redeployed with the same baked
+  settings and `ALLOWED_ORIGINS=https://expertery.vercel.app` (preflight: new origin 200, old origin 400).

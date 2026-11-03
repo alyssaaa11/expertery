@@ -1,4 +1,4 @@
-// Homegrown product page. No tracking, no cookies, no analytics.
+// Expertery product page. No tracking, no cookies, no analytics.
 // Engine address: empty = same site; the Vercel copy sets <meta name="hg-api">.
 const API = ((document.querySelector('meta[name="hg-api"]') || {}).content || "").replace(/\/$/, "");
 const apiUrl = (u) => (u && u.startsWith("/") ? API + u : u);

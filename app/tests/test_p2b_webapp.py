@@ -123,7 +123,7 @@ def test_get_root_serves_page():
     with TestClient(webapp.make_app(deps)) as client:
         resp = client.get("/")
         assert resp.status_code == 200
-        assert "The AI expert" in resp.text
+        assert "<em>tool.</em>" in resp.text
 
 
 @needs_fastapi
@@ -424,7 +424,7 @@ def test_image_serves_only_the_five_page_files():
 
 def test_privacy_line_and_no_contact_placeholder():
     html = (ROOT / "app" / "web" / "index.html").read_text()
-    assert "We only use your email to reply about Homegrown. " \
+    assert "We only use your email to reply about Expertery. " \
         "To delete it, send the form again with the same email and " \
         "the word delete as the tool." in html
     js = (ROOT / "app" / "web" / "app.js").read_text()
@@ -432,7 +432,7 @@ def test_privacy_line_and_no_contact_placeholder():
 
 
 # ------------------------------------------------- CORS for the Vercel page
-VERCEL = "https://homegrown-factory.vercel.app"
+VERCEL = "https://expertery.vercel.app"
 
 
 @needs_fastapi

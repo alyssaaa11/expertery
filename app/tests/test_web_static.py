@@ -38,9 +38,7 @@ def test_headline_and_no_mockup():
     assert "MOCKUP" not in html
     text = re.sub(r"<[^>]+>", " ", html)
     text = re.sub(r"\s+", " ", text)
-    assert "The AI expert" in text
-    assert "your company gets to" in text
-    assert "keep." in text
+    assert "AI that" in text and "knows your tool." in text
 
 
 def test_copy_fixes():

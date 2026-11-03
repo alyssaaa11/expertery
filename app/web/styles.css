@@ -17,10 +17,11 @@ a{color:inherit}
 .top{display:flex;justify-content:space-between;align-items:center;height:56px;padding:0 14px;position:relative;z-index:2}
 .logo{display:flex;align-items:center;gap:12px;color:#fff;font-size:24px;font-weight:500}
 .logo svg{width:40px;height:40px}
-.mark .stem{stroke-dasharray:14;stroke-dashoffset:14;animation:draw 1s .6s var(--ease) forwards}
-.mark .leaf{transform-box:fill-box;transform:scale(0);animation:leaf .7s var(--ease) forwards}
-.mark .leaf.l{transform-origin:100% 100%;animation-delay:1.3s}.mark .leaf.r{transform-origin:0 100%;animation-delay:1.5s}
-.logo:hover .leaf{animation:leaf .7s var(--ease) forwards, sway 1.6s ease-in-out infinite}
+.brand{display:flex;flex-direction:column;line-height:1.1}
+.tagline{font-size:12.5px;font-weight:400;opacity:.65;letter-spacing:.02em;margin-top:4px;white-space:nowrap}
+.mark .roof{stroke-dasharray:90;stroke-dashoffset:90;animation:draw .8s var(--ease) forwards}
+.mark .check{stroke-dasharray:26;stroke-dashoffset:26;animation:draw .4s .9s var(--ease) forwards}
+.logo:hover .mark .check{animation:draw .4s var(--ease)}
 .pillnav{display:flex;border:1.5px solid var(--ink);border-radius:40px;padding:0 10px;height:46px;align-items:center;gap:6px}
 .pillnav a{text-decoration:none;font-size:15px;padding:8px 16px;border-radius:30px;transition:.25s}
 .pillnav a:hover{background:var(--ink);color:#fff}
@@ -190,8 +191,6 @@ details.codebox pre{overflow:auto;max-height:320px;font-size:12px;line-height:1.
 footer{display:flex;justify-content:space-between;padding:28px 16px;color:var(--mute);font-size:14px}
 
 @keyframes draw{to{stroke-dashoffset:0}}
-@keyframes leaf{to{transform:scale(1)}}
-@keyframes sway{0%,100%{rotate:0deg}50%{rotate:-8deg}}
 @keyframes rise{from{opacity:0;transform:translateY(30px) scale(.98)}to{opacity:1;transform:none}}
 @keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @keyframes wordup{to{transform:translateY(0)}}
@@ -209,7 +208,7 @@ footer{display:flex;justify-content:space-between;padding:28px 16px;color:var(--
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes dash{to{background-position:28px 0}}
 @keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(-80px,60px)}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal,.stagger>*{opacity:1;transform:none}h1 .w>span{transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal,.stagger>*{opacity:1;transform:none}h1 .w>span{transform:none}.mark .roof,.mark .check{stroke-dashoffset:0}}
 
 /* full-screen layout (fill the whole browser window) */
 .page{max-width:none;padding:0}
@@ -226,6 +225,7 @@ footer{background:var(--frame);color:#7d868e;padding:28px max(64px,6vw)}
   .card{grid-template-columns:1fr;padding:96px 24px 40px;min-height:0;margin-top:12px}
   .tab{display:none}
   .top{flex-wrap:wrap;height:auto;gap:8px}
+  .tagline{display:none}
   .rightnav{display:none}
   .hero-left{padding-top:24px}
   .navslot{left:12px;right:12px;top:88px;max-width:calc(100vw - 24px);overflow-x:auto}
