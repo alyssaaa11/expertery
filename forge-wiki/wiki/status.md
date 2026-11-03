@@ -74,6 +74,10 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 - **NOW (2026-11-02 night): LIVE DEMO LAUNCHED → https://homegrown-factory.vercel.app** (details, settings, first
   real build, money: [[live-demo-2026-11-02]]). $15 total cap, 1 free live try per visitor, xhigh. Pushed to GitHub
   up to 0af129e; later page-copy commits are local.
+- decision (user, 2026-11-03): impact test "bracket workflow" — 20 employee-style bracket jobs, Homegrown + loop (FTX) vs
+  untrained Glimmer + rule card + same loop (AX); claim X = lower cost per usable part with no quality loss (rules
+  pre-registered: experiments/brackets/PLAN.md, commit 567b24d). verified: references selftest 20/20 (jobs_brackets.py
+  --selftest). Next: user yes for Muse Code (specs/MUSE_BRACKETS_2026-11-03.md, cap $1.50), then runs (Modal cap $6).
 - **TODO to submission: see [[submission-plan-2026-11-02]].** Left: page copy (user deciding), high-vs-xhigh check,
   push, 3-min video (wake the model ~15 min before), X post (approval), Impact testers, form (deadline Nov 5 03:00 CET).
 - **NOW (2026-11-02 15:10): SECOND LOOK done (labelled; exam headline stays 83.3%). Trained Glimmer r5f inside the
