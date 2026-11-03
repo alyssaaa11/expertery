@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "~/projects/forge/docs/diagrams/expertery-install/candidate.json",
+    "sha256": "77e22b4e05472f6d07e71d7c3be5f69ad042c095c61aace0f2e5b1e4f5b34c29",
+    "bytes": 4695
+  },
+  "artifact": {
+    "path": "~/projects/forge/docs/diagrams/expertery-install/expertery-install.html",
+    "sha256": "6b53d5af64e67e7957bca04e49b6f23cb1e0019e22f27ae7f8b2e373fd1d1033",
+    "bytes": 773491
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "~/projects/forge/docs/diagrams/expertery-install/expertery-install.finalize.json",
+    "summaryReceipt": "~/projects/forge/docs/diagrams/expertery-install/expertery-install.finalize-summary.json",
+    "browserCheckReceipt": "~/projects/forge/docs/diagrams/expertery-install/expertery-install.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 4930,
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "routesOverSuggestedBends": 1
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [],
+      "detours": [
+        {
+          "relationship": {
+            "id": "cli-spark",
+            "from": "cli",
+            "to": "spark",
+            "label": "request",
+            "collectionIndex": 1,
+            "artifactIndex": 2
+          },
+          "bends": 3,
+          "stretch": 1
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "cli → spark needs 3 bends: move node cli or spark so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

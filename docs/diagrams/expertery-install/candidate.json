@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Expertery v0: a private factory in your own cloud account",
+    "output": "docs/diagrams/expertery-install/expertery-install.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "spark", "type": "cloud", "label": "Muse Spark Open", "sublabel": "Meta model, reads request only", "tag": "exam reader", "pos": [520, 60], "size": [170, 64] },
+    { "id": "past", "type": "external", "label": "Past work folder", "sublabel": "request.txt + finished part", "pos": [40, 240], "size": [170, 64] },
+    { "id": "cli", "type": "frontend", "label": "expertery CLI", "sublabel": "installed: sh install.sh", "pos": [290, 240], "size": [150, 64] },
+    { "id": "box", "type": "backend", "label": "Locked CAD box", "sublabel": "runs code, measures", "pos": [520, 240], "size": [170, 64] },
+    { "id": "referee", "type": "security", "label": "Referee", "sublabel": "same part? within 0.2%", "pos": [770, 240], "size": [150, 64] },
+    { "id": "review", "type": "external", "label": "Person reviews", "sublabel": "18 ready, 2 to decide", "pos": [1000, 240], "size": [150, 64] },
+    { "id": "lock", "type": "database", "label": "Locked exam", "sublabel": "exam.jsonl + fingerprint", "pos": [1000, 420], "size": [150, 64] },
+    { "id": "glimmer", "type": "cloud", "label": "Muse Glimmer 30B", "sublabel": "Meta open weights", "tag": "the student", "pos": [40, 600], "size": [170, 64] },
+    { "id": "training", "type": "backend", "label": "Training job", "sublabel": "LoRA ~2 h, rented GPU", "pos": [290, 600], "size": [150, 64] },
+    { "id": "trained", "type": "backend", "label": "Your expert model", "sublabel": "trained Glimmer, 1 GPU", "pos": [520, 600], "size": [170, 64] },
+    { "id": "part", "type": "frontend", "label": "Checked part", "sublabel": "code + measures + STEP", "pos": [770, 600], "size": [150, 64] },
+    { "id": "practice", "type": "database", "label": "Practice jobs", "sublabel": "referee-approved answers", "pos": [290, 780], "size": [150, 64] },
+    { "id": "employee", "type": "external", "label": "Employee", "sublabel": "describes a part", "pos": [520, 780], "size": [170, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Company laptop", "wraps": ["past", "cli"] },
+    { "kind": "region", "label": "Your Modal account: box + referee", "wraps": ["box", "referee"] },
+    { "kind": "region", "label": "Your Modal account: training + expert", "wraps": ["training", "trained", "part"] }
+  ],
+  "connections": [
+    { "id": "past-cli", "from": "past", "to": "cli", "label": "past jobs", "variant": "emphasis" },
+    { "id": "cli-spark", "from": "cli", "to": "spark", "label": "request", "fromSide": "top", "toSide": "left" },
+    { "id": "spark-box", "from": "spark", "to": "box", "label": "code", "fromSide": "bottom", "toSide": "top" },
+    { "id": "cli-box", "from": "cli", "to": "box", "label": "part.py", "variant": "dashed" },
+    { "id": "box-referee", "from": "box", "to": "referee", "label": "parts", "variant": "emphasis" },
+    { "id": "referee-review", "from": "referee", "to": "review", "label": "report", "variant": "emphasis" },
+    { "id": "review-lock", "from": "review", "to": "lock", "label": "approved", "fromSide": "bottom", "toSide": "top" },
+    { "id": "lock-trained", "from": "lock", "to": "trained", "label": "score it", "variant": "security", "fromSide": "left", "toSide": "top" },
+    { "id": "glimmer-training", "from": "glimmer", "to": "training", "label": "base" },
+    { "id": "practice-training", "from": "practice", "to": "training", "label": "lessons", "fromSide": "top", "toSide": "bottom" },
+    { "id": "training-trained", "from": "training", "to": "trained", "label": "adapter", "variant": "emphasis" },
+    { "id": "employee-trained", "from": "employee", "to": "trained", "label": "asks", "fromSide": "top", "toSide": "bottom" },
+    { "id": "trained-part", "from": "trained", "to": "part", "label": "delivers", "variant": "emphasis" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Private by design", "items": ["Past work, exams and the trained model stay in your own Modal account", "Model-written code only runs inside the locked cloud box", "Spark Open can also run on your own server"] },
+    { "dot": "cyan", "title": "Commands", "items": ["init: connect your Modal account", "exam build / review / lock: past work to a locked exam", "test · train · serve: score, train and deploy your expert"] },
+    { "dot": "amber", "title": "v0 limits and next", "items": ["CadQuery CAD only", "Practice jobs still come from the factory scripts", "Next: an MCP server so any AI assistant can use your expert"] }
+  ]
+}
