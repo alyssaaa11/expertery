@@ -107,8 +107,13 @@ def test_ready_when_all_readers_pass(tmp_path):
     assert all("prompt_tokens" in c for c in calls)
     assert result["spent_estimate"] > 0
     report = open(os.path.join(out, "report.md")).read()
-    assert "READY" in report and "spent_estimate" in report
-    assert exam_agent.FLAGGED_LINE in report
+    assert report.splitlines()[0] == (
+        "**1 ready · 0 need your decision · 0 not checked (money cap)**")
+    assert "## Need your decision" in report
+    assert "## Ready" in report
+    assert "## Not checked" in report
+    assert "spent_estimate" in report and "Model calls: 2." in report
+    assert "Reader model:" in report
 
 
 def test_flagged_and_explainer_never_sees_reference(tmp_path):
@@ -116,7 +121,7 @@ def test_flagged_and_explainer_never_sees_reference(tmp_path):
                           {"J1": ("Base plate 60 by 40.", REF_SOURCE,
                                   False)})
     explainer_reply = json.dumps(
-        {"phrase": "60 by 40", "why": "axes unclear",
+        {"kind": "wording", "phrase": "60 by 40", "why": "axes unclear",
          "suggested_request": "Base plate 60 along X, 40 along Y."})
     reader = FakeReader(["```python\nresult = wrong()\n```",
                          explainer_reply])
@@ -127,7 +132,8 @@ def test_flagged_and_explainer_never_sees_reference(tmp_path):
                                    post_fn=reader)
     (cand,) = result["candidates"]
     assert cand["status"] == "FLAGGED"
-    assert cand["suggestion"] == {"phrase": "60 by 40",
+    assert cand["suggestion"] == {"kind": "wording",
+                                  "phrase": "60 by 40",
                                   "why": "axes unclear",
                                   "suggested_request":
                                   "Base plate 60 along X, 40 along Y."}
@@ -350,3 +356,153 @@ def test_cloud_session_runs_ephemeral_grader_app(monkeypatch):
         events.append("work")
     assert events == ["output-enter", "app-enter", "work",
                       "app-exit", "output-exit"]
+
+
+WRONG_CODE = "```python\nresult = wrong()\n```"
+
+GOOD_CODE = "result = box(60, 40, 4)"
+
+
+def box_good_code_only():
+    """Box fake: the reference and the good reader code build."""
+    def _box(code):
+        if code.strip() in (GOOD_CODE, REF_SOURCE.strip()):
+            return box_ok(code)
+        return {"brep_bytes": None, "measure": None, "log": "",
+                "run_error": "the answer wrote no BREP: crash"}
+    return _box
+
+
+def test_tie_break_ready_when_third_reader_passes(tmp_path):
+    past = make_past_work(str(tmp_path / "past"),
+                          {"J1": ("Base plate 60 by 40.", REF_SOURCE,
+                                  False)})
+    reader = FakeReader([READER_CODE, WRONG_CODE, READER_CODE])
+    out = str(tmp_path / "exam")
+    result = exam_agent.build_exam(past, out, 5.0, readers=2, workers=1,
+                                   box_fn=box_good_code_only(),
+                                   grade_fn=grade_script("PASS"),
+                                   post_fn=reader)
+    assert len(reader.bodies) == 3  # 2 readers + 1 tie-break, no explainer
+    (cand,) = result["candidates"]
+    assert cand["status"] == "READY"
+    assert [r["verdict"] for r in cand["readers"]] == [
+        "PASS", "FAIL", "PASS"]
+
+
+def test_tie_break_goes_to_explainer_when_third_reader_fails(tmp_path):
+    past = make_past_work(str(tmp_path / "past"),
+                          {"J1": ("Base plate 60 by 40.", REF_SOURCE,
+                                  False)})
+    explainer_reply = json.dumps(
+        {"kind": "wording", "phrase": "60 by 40", "why": "axes unclear",
+         "suggested_request": "Base plate 60 along X, 40 along Y."})
+    reader = FakeReader([READER_CODE, WRONG_CODE, WRONG_CODE,
+                         explainer_reply])
+    out = str(tmp_path / "exam")
+    result = exam_agent.build_exam(past, out, 5.0, readers=2, workers=1,
+                                   box_fn=box_good_code_only(),
+                                   grade_fn=grade_script("PASS"),
+                                   post_fn=reader)
+    assert len(reader.bodies) == 4  # tie-break FAIL -> explainer
+    (cand,) = result["candidates"]
+    assert cand["status"] == "FLAGGED"
+    assert cand["suggestion"]["kind"] == "wording"
+
+
+def test_reader_mistake_is_ready_with_note(tmp_path):
+    past = make_past_work(str(tmp_path / "past"),
+                          {"J1": ("Base plate 60 by 40.", REF_SOURCE,
+                                  False)})
+    explainer_reply = json.dumps(
+        {"kind": "reader_mistake", "phrase": "60 by 40",
+         "why": "reader called an unknown API",
+         "suggested_request": "Base plate 60 by 40."})
+    reader = FakeReader([WRONG_CODE, explainer_reply])
+    out = str(tmp_path / "exam")
+    result = exam_agent.build_exam(past, out, 5.0, readers=1, workers=1,
+                                   box_fn=box_ref_only(REF_SOURCE),
+                                   grade_fn=grade_script("FAIL"),
+                                   post_fn=reader)
+    (cand,) = result["candidates"]
+    assert cand["status"] == "READY"
+    assert (cand["note"] or "").startswith("reader mistake:")
+
+
+def test_wording_kind_is_flagged(tmp_path):
+    past = make_past_work(str(tmp_path / "past"),
+                          {"J1": ("Base plate 60 by 40.", REF_SOURCE,
+                                  False)})
+    explainer_reply = json.dumps(
+        {"kind": "wording", "phrase": "60 by 40", "why": "axes unclear",
+         "suggested_request": "Base plate 60 along X, 40 along Y."})
+    reader = FakeReader([WRONG_CODE, explainer_reply])
+    out = str(tmp_path / "exam")
+    result = exam_agent.build_exam(past, out, 5.0, readers=1, workers=1,
+                                   box_fn=box_ref_only(REF_SOURCE),
+                                   grade_fn=grade_script("FAIL"),
+                                   post_fn=reader)
+    (cand,) = result["candidates"]
+    assert cand["status"] == "FLAGGED"
+    assert cand["suggestion"]["kind"] == "wording"
+
+
+def test_report_layout_headline_sections_and_truncation(tmp_path):
+    long_why = " ".join("word%d" % i for i in range(30))
+    candidates = [
+        {"id": "J1", "text": "Base plate. Second sentence.",
+         "reference": REF_SOURCE, "status": "READY", "readers": [],
+         "reference_measurements": None, "suggestion": None,
+         "explainer_raw": None, "decision": None, "note": None},
+        {"id": "J2", "text": "Base plate 60 by 40. Keep this.",
+         "reference": REF_SOURCE, "status": "FLAGGED",
+         "readers": [{"verdict": "FAIL"}],
+         "reference_measurements": None,
+         "suggestion": {"kind": "wording", "phrase": "60 by 40",
+                        "why": long_why,
+                        "suggested_request":
+                        "Base plate 60 along X. Keep this."},
+         "explainer_raw": None, "decision": None, "note": None},
+        {"id": "J3", "text": "Base plate.", "reference": REF_SOURCE,
+         "status": "DEFERRED", "readers": [],
+         "reference_measurements": None, "suggestion": None,
+         "explainer_raw": None, "decision": None, "note": None},
+    ]
+    out = str(tmp_path / "exam")
+    os.makedirs(out)
+    path = os.path.join(out, "report.md")
+    exam_agent.write_report(path, candidates, 0.001, 5.0,
+                            reader_model="test-model", num_calls=7)
+    lines = open(path).read().splitlines()
+    assert lines[0] == ("**1 ready · 1 need your decision · "
+                        "1 not checked (money cap)**")
+    assert "## Need your decision" in lines
+    assert "## Ready" in lines
+    assert "## Not checked" in lines
+    flagged = [l for l in lines if l.startswith("- J2:")]
+    assert flagged and '"60 by 40"' in flagged[0]
+    assert len(flagged[0].split("—")[-1].split()) <= 20
+    suggested = [l for l in lines if "Suggested:" in l]
+    assert suggested and "Keep this" not in suggested[0]
+    assert "60 along X" in suggested[0]
+    assert "Run `expertery exam review <dir>`" in open(path).read()
+    assert "Re-run with a higher --cap-dollars." in lines
+    assert "Reader model: test-model." in lines
+    assert "Model calls: 7." in lines
+    assert all(len(l.split()) <= 30 for l in lines)
+
+
+def test_concurrent_cap_never_exceeded(tmp_path, monkeypatch):
+    monkeypatch.setattr(cloud, "in_flight_cost", lambda: 0.05)
+    monkeypatch.setattr(cloud, "cost_of_usage", lambda usage: 0.05)
+    past = make_past_work(
+        str(tmp_path / "past"),
+        {"J%d" % i: ("Base plate.", REF_SOURCE, False) for i in range(6)})
+    out = str(tmp_path / "exam")
+    result = exam_agent.build_exam(past, out, 0.2, readers=2, workers=4,
+                                   box_fn=box_ok,
+                                   grade_fn=grade_script("PASS"),
+                                   post_fn=FakeReader([READER_CODE] * 50))
+    assert result["spent_estimate"] <= 0.2 + 1e-9
+    statuses = {c["status"] for c in result["candidates"]}
+    assert "DEFERRED" in statuses  # cap bit on some jobs

@@ -88,8 +88,19 @@ expertery status
 Every command that can spend money takes `--cap-dollars` (required,
 > 0) and `--dry-run` (prints the plan and the estimated spend, spends
 nothing). Money: each model call is costed from its tokens with the
-teacher's price constants; no new calls start once the next could
-pass the cap; `spent_estimate` is written to the output.
+teacher's price constants; every call reserves its estimate before
+it starts, and a new call starts only while spent + reserved +
+one more reserve still fits the cap, so realised spend never passes
+it even with parallel workers. Jobs the cap stops stay DEFERRED;
+`report.md` says how many and to re-run with a higher
+`--cap-dollars`. `spent_estimate` is written to the output.
+
+`exam build` takes the majority of the readers (default 2): all
+PASS means READY; a split runs one tie-break reader; majority FAIL
+goes to the explainer, which classifies the failure as `wording`
+(needs a person) or `reader_mistake` (READY with a note).
+`report.md` leads with ready / need-your-decision / not-checked
+counts, then one short block per job needing a decision.
 
 `exam review` accepts `--accept-all` / `--keep-all` for scripts and
 tests (recorded with reviewer `"flag"`). Accepted or edited texts are

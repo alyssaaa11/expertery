@@ -11,7 +11,8 @@ from expertery import exam_agent
 from test_exam_build import (FakeReader, box_ok, grade_script,
                              make_past_work, REF_SOURCE)
 
-SUGGESTION = {"phrase": "60 by 40", "why": "axes unclear",
+SUGGESTION = {"kind": "wording", "phrase": "60 by 40",
+              "why": "axes unclear",
               "suggested_request": "Base plate 60 along X, 40 along Y."}
 
 

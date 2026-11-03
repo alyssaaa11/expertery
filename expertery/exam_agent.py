@@ -123,20 +123,47 @@ def parse_reply(data):
 
 
 class Budget:
-    """Cap guard: stop starting new calls when the next could pass."""
+    """Cap guard: each call reserves its estimate before it starts.
+
+    may_start is true only when spent + reserved_in_flight + one more
+    reserve still fits inside the cap. On finish, the reserve is
+    released and the real cost is charged, so with N workers the
+    realised spend can never pass the cap (real costs are bounded by
+    the reserve estimate).
+    """
 
     def __init__(self, cap_dollars):
         if not cap_dollars > 0:
             raise ExamError("--cap-dollars must be > 0")
         self.cap = float(cap_dollars)
         self.spent = 0.0
+        self.in_flight = 0
         self.reserve = _cloud.in_flight_cost()
         self.lock = threading.Lock()
+
+    def _fits_locked(self):
+        return (self.spent
+                + self.in_flight * self.reserve
+                + self.reserve <= self.cap)
 
     def may_start(self):
         """True when one more call still fits inside the cap."""
         with self.lock:
-            return self.spent + self.reserve <= self.cap
+            return self._fits_locked()
+
+    def try_reserve(self):
+        """Atomically reserve one call; False when it would pass cap."""
+        with self.lock:
+            if not self._fits_locked():
+                return False
+            self.in_flight += 1
+            return True
+
+    def release_and_charge(self, cost):
+        """Release one reserve and add the realised cost."""
+        with self.lock:
+            self.in_flight = max(0, self.in_flight - 1)
+            self.spent += max(0.0, float(cost))
 
     def charge(self, cost):
         """Add the realised cost of a finished call."""
@@ -155,17 +182,25 @@ def call_reader(post_fn, url, model, key, messages, timeout=600.0):
 
 
 def explainer_messages(request_text, reference_measurements,
-                       failures):
+                       failures, passes=0):
     """Messages for the explainer call.
 
-    Sees the request text, the reference part's measurements, and each
-    failed reader's measurements or run error. NEVER the reference
-    code (only measurements cross this boundary).
+    Sees the request text, the reference part's measurements, each
+    failed reader's measurements or run error, and the passing tries'
+    count. NEVER the reference code (only measurements cross this
+    boundary).
     """
     lines = [
         "You read CAD requests for wording problems. Reply with exactly "
-        'one JSON object {"phrase", "why", "suggested_request"} and '
-        "nothing else.",
+        'one JSON object {"kind", "phrase", "why", "suggested_request"} '
+        "and nothing else.",
+        'kind is "wording" when the text can be read two ways by a '
+        "careful engineer; kind is \"reader_mistake\" when a careful "
+        "engineer would read the text one way only (for example the "
+        "failure is a code or API error, or a misread of a clear "
+        "number).",
+        '"why" is at most 20 words. "suggested_request" is the full '
+        "request with the smallest wording change.",
         "",
         "Request text:",
         request_text,
@@ -179,6 +214,8 @@ def explainer_messages(request_text, reference_measurements,
     for i, fail in enumerate(failures):
         lines.append("- attempt %d: %s"
                      % (i + 1, json.dumps(fail, sort_keys=True)))
+    lines += ["",
+              "Passing attempts: %d." % passes]
     return [
         {"role": "system",
          "content": ("You spot ambiguous wording in CAD requests. Reply "
@@ -187,15 +224,26 @@ def explainer_messages(request_text, reference_measurements,
     ]
 
 
+def truncate_words(text, limit=20):
+    """First `limit` words of text (for the 20-word `why` rule)."""
+    words = (text or "").split()
+    return " ".join(words[:limit])
+
+
 def parse_explainer(content):
-    """(suggestion|None, raw). Invalid JSON -> (None, content)."""
+    """(suggestion|None, raw). Invalid JSON or kind -> (None, content)."""
     try:
         data = json.loads(content)
     except (ValueError, TypeError):
         return None, content
     if not isinstance(data, dict):
         return None, content
-    return {"phrase": data.get("phrase"), "why": data.get("why"),
+    if data.get("kind") not in ("wording", "reader_mistake"):
+        return None, content
+    why = data.get("why")
+    why = truncate_words(why) if isinstance(why, str) else why
+    return {"kind": data.get("kind"), "phrase": data.get("phrase"),
+            "why": why,
             "suggested_request": data.get("suggested_request")}, None
 
 
@@ -227,19 +275,23 @@ def build_one_job(job, readers, budget, box_fn, grade_fn, post_fn,
     ref_meas = slim_measurements(ref_run.get("measure"))
     verdicts = []
     failures = []
-    made_call = False
-    for attempt in range(readers):
-        if stop.is_set() or not budget.may_start():
+
+    def run_reader_try(attempt_no, kind="reader"):
+        """One reserved reader call; None when the cap blocks it."""
+        if stop.is_set() or not budget.try_reserve():
             stop.set()
-            break
-        content, usage, seconds = call_reader(
-            post_fn, reader_url, reader_model, reader_key,
-            _cloud.reader_messages(job["request"]))
-        made_call = True
+            return None
+        try:
+            content, usage, seconds = call_reader(
+                post_fn, reader_url, reader_model, reader_key,
+                _cloud.reader_messages(job["request"]))
+        except Exception:
+            budget.release_and_charge(0.0)
+            raise
         cost = _cloud.cost_of_usage(usage)
-        budget.charge(cost)
-        calls.append({"job": job_id, "kind": "reader",
-                      "attempt": attempt + 1, "model": reader_model,
+        budget.release_and_charge(cost)
+        calls.append({"job": job_id, "kind": kind,
+                      "attempt": attempt_no, "model": reader_model,
                       "prompt_tokens": usage.get("prompt_tokens", 0),
                       "completion_tokens": usage.get("completion_tokens", 0),
                       "seconds": round(seconds, 3),
@@ -262,30 +314,63 @@ def build_one_job(job, readers, budget, box_fn, grade_fn, post_fn,
             "run_error": run.get("run_error")})
         if graded.get("verdict") == "PASS":
             failures.pop()
+        return graded.get("verdict")
+
+    for attempt in range(readers):
+        if run_reader_try(attempt + 1) is None:
+            break
     if verdicts and all(v["verdict"] == "PASS" for v in verdicts):
         return {"id": job_id, "text": job["request"],
                 "reference": job["source"], "status": STATUS_READY,
                 "readers": verdicts, "reference_measurements": ref_meas,
                 "suggestion": None, "explainer_raw": None,
-                "decision": None}
-    if not made_call:
+                "decision": None, "note": None}
+    if not verdicts:
         return {"id": job_id, "text": job["request"],
                 "reference": job["source"], "status": STATUS_DEFERRED,
                 "readers": [], "reference_measurements": ref_meas,
                 "suggestion": None, "explainer_raw": None,
-                "decision": None}
-    if stop.is_set() or not budget.may_start():
+                "decision": None, "note": None}
+    passes = sum(1 for v in verdicts if v["verdict"] == "PASS")
+    fails = len(verdicts) - passes
+    if fails > passes:
+        pass
+    elif passes > 0:
+        # Mixed but no FAIL majority (tie or PASS majority short of
+        # unanimous): one tie-break reader decides the majority.
+        tied = run_reader_try(len(verdicts) + 1, kind="tie-break")
+        if tied is None:
+            return {"id": job_id, "text": job["request"],
+                    "reference": job["source"], "status": STATUS_DEFERRED,
+                    "readers": verdicts,
+                    "reference_measurements": ref_meas,
+                    "suggestion": None, "explainer_raw": None,
+                    "decision": None, "note": None}
+        passes = sum(1 for v in verdicts if v["verdict"] == "PASS")
+        if passes > len(verdicts) / 2:
+            return {"id": job_id, "text": job["request"],
+                    "reference": job["source"], "status": STATUS_READY,
+                    "readers": verdicts,
+                    "reference_measurements": ref_meas,
+                    "suggestion": None, "explainer_raw": None,
+                    "decision": None, "note": None}
+    if stop.is_set() or not budget.try_reserve():
         stop.set()
         return {"id": job_id, "text": job["request"],
                 "reference": job["source"], "status": STATUS_DEFERRED,
                 "readers": verdicts, "reference_measurements": ref_meas,
                 "suggestion": None, "explainer_raw": None,
-                "decision": None}
-    content, usage, seconds = call_reader(
-        post_fn, reader_url, reader_model, reader_key,
-        explainer_messages(job["request"], ref_meas, failures))
+                "decision": None, "note": None}
+    try:
+        content, usage, seconds = call_reader(
+            post_fn, reader_url, reader_model, reader_key,
+            explainer_messages(job["request"], ref_meas, failures,
+                               passes=passes))
+    except Exception:
+        budget.release_and_charge(0.0)
+        raise
     cost = _cloud.cost_of_usage(usage)
-    budget.charge(cost)
+    budget.release_and_charge(cost)
     calls.append({"job": job_id, "kind": "explainer", "attempt": 1,
                   "model": reader_model,
                   "prompt_tokens": usage.get("prompt_tokens", 0),
@@ -293,11 +378,19 @@ def build_one_job(job, readers, budget, box_fn, grade_fn, post_fn,
                   "seconds": round(seconds, 3),
                   "cost_estimate": round(cost, 6)})
     suggestion, raw = parse_explainer(content)
+    if suggestion is not None and suggestion.get("kind") == "reader_mistake":
+        note = "reader mistake: %s" % truncate_words(
+            suggestion.get("why") or "")
+        return {"id": job_id, "text": job["request"],
+                "reference": job["source"], "status": STATUS_READY,
+                "readers": verdicts, "reference_measurements": ref_meas,
+                "suggestion": suggestion, "explainer_raw": None,
+                "decision": None, "note": note}
     return {"id": job_id, "text": job["request"],
             "reference": job["source"], "status": STATUS_FLAGGED,
             "readers": verdicts, "reference_measurements": ref_meas,
             "suggestion": suggestion, "explainer_raw": raw,
-            "decision": None}
+            "decision": None, "note": None}
 
 
 def write_jsonl(path, rows):
@@ -313,32 +406,84 @@ def read_jsonl(path):
         return [json.loads(line) for line in f if line.strip()]
 
 
+def split_sentences(text):
+    """Split text into sentences (keeps short lines short)."""
+    import re
+    parts = re.split(r"(?<=[.!?])\s+|\n+", (text or "").strip())
+    return [p.strip() for p in parts if p.strip()]
+
+
+def changed_sentence(original, suggested):
+    """The changed sentence only: suggested sentences missing upstream."""
+    orig = split_sentences(original)
+    sugg = split_sentences(suggested)
+    if not sugg:
+        return (suggested or "").strip()
+    changed = [s for s in sugg if s not in orig]
+    if changed:
+        return " ".join(changed)
+    if sugg != orig:
+        return sugg[-1] if len(sugg) > 1 else sugg[0]
+    return sugg[0]
+
+
 def write_report(path, candidates, spent_estimate, cap_dollars,
-                 extra_lines=()):
-    """Write report.md: one table row per job, totals, spent estimate."""
-    lines = ["# Expertery exam build report", "",
-             "| job | status | readers passed | phrase | why |",
-             "|---|---|---|---|---|"]
-    for cand in candidates:
-        passed = sum(1 for r in cand.get("readers", [])
-                     if r.get("verdict") == "PASS")
-        tried = len(cand.get("readers", []))
+                 extra_lines=(), reader_model=None, num_calls=None):
+    """Write report.md, readable first: headline, decision, ready."""
+    if reader_model is None:
+        try:
+            reader_model = _cloud.reader_config()[1]
+        except Exception:  # noqa: BLE001
+            reader_model = "unknown"
+    if num_calls is None:
+        try:
+            calls_path = os.path.join(os.path.dirname(path), CALLS_NAME)
+            num_calls = len(read_jsonl(calls_path))
+        except (OSError, ValueError):
+            num_calls = 0
+    ready = sorted(c.get("id") for c in candidates
+                   if c.get("status") == STATUS_READY)
+    flagged = sorted((c for c in candidates
+                      if c.get("status") == STATUS_FLAGGED),
+                     key=lambda c: c.get("id"))
+    deferred = sorted(c.get("id") for c in candidates
+                      if c.get("status") == STATUS_DEFERRED)
+    mistakes = [c for c in candidates
+                if c.get("status") == STATUS_READY and c.get("note")]
+    lines = ["**%d ready · %d need your decision · %d not checked "
+             "(money cap)**" % (len(ready), len(flagged), len(deferred)),
+             "",
+             "## Need your decision",
+             ""]
+    if not flagged:
+        lines.append("None.")
+    for cand in flagged:
         suggestion = cand.get("suggestion") or {}
-        lines.append("| %s | %s | %d/%d | %s | %s |"
-                     % (cand.get("id"), cand.get("status"), passed,
-                        tried, suggestion.get("phrase") or "",
-                        suggestion.get("why") or ""))
-    counts = {}
-    for cand in candidates:
-        counts[cand.get("status")] = counts.get(cand.get("status"), 0) + 1
+        phrase = suggestion.get("phrase") or "?"
+        why = truncate_words(suggestion.get("why") or "")
+        lines.append("- %s: \"%s\" — %s" % (cand.get("id"), phrase, why))
+        changed = changed_sentence(cand.get("text") or "",
+                                   suggestion.get("suggested_request") or "")
+        lines.append("  Suggested: %s" % changed)
+        lines.append("  Run `expertery exam review <dir>` to accept, "
+                     "keep, edit or drop.")
     lines += ["",
-              "Totals: %d jobs (%s)."
-              % (len(candidates),
-                 ", ".join("%d %s" % (counts[k], k)
-                           for k in sorted(counts)) or "none"),
-              "spent_estimate: $%.4f (cap $%.2f)."
-              % (spent_estimate, cap_dollars),
-              FLAGGED_LINE]
+              "## Ready",
+              ""]
+    lines.append(", ".join(ready) + "." if ready else "None.")
+    for cand in sorted(mistakes, key=lambda c: c.get("id")):
+        lines.append("- %s: %s" % (cand.get("id"), cand.get("note")))
+    lines += ["",
+              "## Not checked",
+              ""]
+    lines.append(", ".join(deferred) + "." if deferred else "None.")
+    if deferred:
+        lines.append("Re-run with a higher --cap-dollars.")
+    lines += ["",
+              "spent_estimate: $%.4f (cap $%.2f)." % (spent_estimate,
+                                                      cap_dollars),
+              "Reader model: %s." % reader_model,
+              "Model calls: %d." % num_calls]
     lines.extend(extra_lines)
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
@@ -359,9 +504,9 @@ def build_exam(past_work_dir, exam_dir, cap_dollars, readers=2,
                         % exam_path)
     reader_url, reader_model, _ = _cloud.reader_config()
     if dry_run:
-        calls = sum(readers + 1 for j in jobs if not j["step"])
+        calls = sum(readers + 2 for j in jobs if not j["step"])
         print_fn("dry-run: %d jobs x up to %d reader calls + explainer"
-                 % (len(jobs), readers))
+                 % (len(jobs), readers + 1))
         print_fn("dry-run: estimated spend <= $%.4f (cap $%.2f)"
                  % (calls * _cloud.in_flight_cost(), cap_dollars))
         print_fn("dry-run: would write %s, %s, %s in %s"
@@ -412,7 +557,8 @@ def build_exam(past_work_dir, exam_dir, cap_dollars, readers=2,
     write_jsonl(os.path.join(exam_dir, CANDIDATES_NAME), candidates)
     write_jsonl(os.path.join(exam_dir, CALLS_NAME), ordered_calls)
     write_report(os.path.join(exam_dir, REPORT_NAME), candidates,
-                 budget.spent, budget.cap)
+                 budget.spent, budget.cap, reader_model=reader_model,
+                 num_calls=len(ordered_calls))
     return {"candidates": candidates, "spent_estimate": budget.spent}
 
 
@@ -510,10 +656,12 @@ def review_exam(exam_dir, accept_all=False, keep_all=False,
         if auto is not None:
             cand["decision"]["reviewer"] = "flag"
     save_candidates(exam_dir, candidates)
-    spent = sum(c.get("cost_estimate", 0.0)
-                for c in read_jsonl(os.path.join(exam_dir, CALLS_NAME)))
+    call_rows = read_jsonl(os.path.join(exam_dir, CALLS_NAME))
+    spent = sum(c.get("cost_estimate", 0.0) for c in call_rows)
+    model = call_rows[0].get("model") if call_rows else None
     write_report(os.path.join(exam_dir, REPORT_NAME), candidates,
-                 spent, spent, extra_lines=["", RECHECK_LINE])
+                 spent, spent, extra_lines=["", RECHECK_LINE],
+                 reader_model=model, num_calls=len(call_rows))
     return candidates
 
 
