@@ -28,6 +28,7 @@ offline; exec/grade/server-info steps are injected fakes.
 
 import argparse
 import concurrent.futures
+import hashlib
 import json
 import os
 import statistics
@@ -64,6 +65,7 @@ A_MODEL = "muse-glimmer"
 A_ARM = "A"
 BX_ARM = "BX"
 FTX_ARM = "FTX"
+AX_ARM = "AX"
 VALID_FINAL_ARMS = (FT_ARM, A_ARM, BX_ARM)
 GPU_DOLLARS_PER_HOUR = runner.GPU_DOLLARS_PER_HOUR  # 2.50, same yardstick
 CALL_TIMEOUT = runner.CALL_TIMEOUT
@@ -1219,15 +1221,18 @@ def run_bx_fill(baseline_dir, exam_jobs, out_dir, endpoint, model, key,
 
 def run_ftx_suite(jobs, out_dir, endpoint, model, key, exam, post_fn,
                   sleep_fn, exec_fn, grade_fn, server_info_fn=None,
-                  k=3, workers=8, budget=5.0, gpu_start=None):
-    """Arm FTX: the trained model answers with the FT prompt and then
-    gets exactly the BX fix loop (do_bx_cloud_call with the FT starting
-    messages), graded by the cloud grader.
+                  k=3, workers=8, budget=5.0, gpu_start=None,
+                  arm_label=FTX_ARM):
+    """Arm FTX (or arm AX: the base Glimmer model with the rule card
+    answers with the FT prompt and then gets exactly the BX fix loop).
 
-    Runs every (job, rep) pair through the same run_pairs machinery as
-    run_bx_fill (final record + per-round records in calls.jsonl, finals
-    with bx_final True); the summary arm is FTX. Budget, workers, k and
-    gpu_start behave exactly as the FT path."""
+    `arm_label` lands on every final and round record and on the summary
+    arm (FTX by default, AX for the card arm); it is passed to
+    do_bx_cloud_call and to run_pairs in place of FTX_ARM. Runs every
+    (job, rep) pair through the same run_pairs machinery as run_bx_fill
+    (final record + per-round records in calls.jsonl, finals with
+    bx_final True). Budget, workers, k and gpu_start behave exactly as
+    the FT path."""
     secrets = [key] if key else []
     server_info = (server_info_fn or
                    (lambda: fetch_server_info(endpoint, key)))()
@@ -1237,11 +1242,11 @@ def run_ftx_suite(jobs, out_dir, endpoint, model, key, exam, post_fn,
                                post_fn, sleep_fn, exec_fn, grade_fn,
                                exam=exam, rep=rep,
                                messages=ft_messages(job["text"]),
-                               arm_label=FTX_ARM)
+                               arm_label=arm_label)
         return rec, list(rec.get("bx_rounds") or [])
 
     pairs = [(job, rep) for job in jobs for rep in range(k)]
-    return run_pairs(pairs, _call, out_dir, FTX_ARM, exam, budget,
+    return run_pairs(pairs, _call, out_dir, arm_label, exam, budget,
                      gpu_start, workers, server_info, k)
 
 
@@ -1321,10 +1326,12 @@ def main(argv=None):
                              "dev/exam): retry only on crash, invalid "
                              "shape or solids != 1")
     parser.add_argument("--bx-loop", action="store_true",
-                        help="second-look arm FTX: the trained model "
-                             "answers with the FT prompt, then gets the "
-                             "BX fix loop (needs exactly --arms FT; not "
-                             "with --fill-missing, --hints or --selffix)")
+                        help="second-look arm FTX (trained, --arms FT) or "
+                             "arm AX (base Glimmer + rule card, --arms A): "
+                             "the model answers with the FT prompt, then "
+                             "gets the BX fix loop (needs exactly --arms "
+                             "FT or exactly --arms A; not with "
+                             "--fill-missing, --hints or --selffix)")
     args = parser.parse_args(argv)
     if args.workers is not None and args.workers < 1:
         parser.error("--workers must be >= 1")
@@ -1344,14 +1351,21 @@ def main(argv=None):
         if args.workers is None:
             args.workers = 12
     if args.bx_loop:
-        if arms != (FT_ARM,):
-            parser.error("--bx-loop needs exactly --arms FT")
+        if arms != (FT_ARM,) and arms != (A_ARM,):
+            parser.error("--bx-loop needs exactly --arms FT or exactly "
+                         "--arms A")
         if args.fill_missing is not None:
             parser.error("--bx-loop cannot be used with --fill-missing")
         if args.hints is not None:
             parser.error("--bx-loop cannot be used with --hints")
         if args.selffix is not None:
             parser.error("--bx-loop cannot be used with --selffix")
+        card_path = os.environ.get("FORGE_RULE_CARD", "")
+        if arms == (A_ARM,):
+            if not card_path or not os.path.isfile(card_path):
+                parser.error("arm AX needs FORGE_RULE_CARD")
+        elif card_path:
+            parser.error("arm FTX must run without the card")
     if args.workers is None:
         args.workers = 8
     if args.fill_missing is None and args.jobs is None \
@@ -1429,7 +1443,8 @@ def main(argv=None):
                      "(--arms BX needs --fill-missing)" % (arms,))
     if serving == [A_ARM]:
         endpoint = glimmer_url.rstrip("/") + "/v1/chat/completions"
-        run_key, run_model, run_arm = glimmer_key, A_MODEL, A_ARM
+        run_key, run_model = glimmer_key, A_MODEL
+        run_arm = AX_ARM if args.bx_loop else A_ARM
     else:
         endpoint = forge_url.rstrip("/") + "/v1/chat/completions"
         run_key, run_model = forge_key, FT_MODEL
@@ -1458,6 +1473,10 @@ def main(argv=None):
         jobs = [j for j in jobs if j["id"] in hints]
         if not jobs:
             parser.error("--hints: no jobs in %s" % args.hints)
+    if args.bx_loop and arms == (A_ARM,):
+        with open(card_path, "rb") as f:
+            card_sha = hashlib.sha256(f.read()).hexdigest()
+        print("rule card %s sha256: %s" % (card_path, card_sha))
     post_fn = _real_post_fn(lambda _e: (endpoint, run_key))
     with cloud_cq.modal.enable_output():
         with cloud_cq._app.run():
@@ -1468,7 +1487,7 @@ def main(argv=None):
                     exec_fn=lambda code: cloud_cq.run_answer_in_box(code),
                     grade_fn=grade_fn_for(jobs),
                     k=args.k, workers=args.workers, budget=args.budget,
-                    gpu_start=args.gpu_start)
+                    gpu_start=args.gpu_start, arm_label=run_arm)
             else:
                 _records, summary = run_ft_suite(
                     jobs, args.out, endpoint, run_model, run_key, exam,

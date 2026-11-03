@@ -885,3 +885,119 @@ def test_ftx_finals_rule_matches_bx():
     recs = [{"job": "M1", "arm": "FTX", "bx_final": True, "sample": 0},
             {"job": "M1", "arm": "FTX", "bx_final": False, "sample": 0}]
     assert compare.finals_for(recs, "FTX") == [recs[0]]
+
+
+# ------------------------------------------------------- AX card arm
+
+
+def test_ax_arm_constant():
+    assert runner_final.AX_ARM == "AX"
+
+
+def test_main_bx_loop_ax_routes_to_ftx_suite_with_card(
+        monkeypatch, tmp_path, capsys):
+    """--arms A --bx-loop runs run_ftx_suite on the Glimmer endpoint with
+    model A_MODEL and arm_label AX (mocked; no network, no Modal)."""
+    import hashlib
+    card = tmp_path / "RULE_CARD.md"
+    card.write_text("CARD TEXT", encoding="utf-8")
+    monkeypatch.setenv("GLIMMER_URL", "http://glimmer")
+    monkeypatch.setenv("GLIMMER_KEY", "K")
+    monkeypatch.setenv("FORGE_RULE_CARD", str(card))
+    seen = {}
+
+    def _suite(jobs, out, endpoint, model, key, exam, **kwargs):
+        seen.update(endpoint=endpoint, model=model, key=key, exam=exam,
+                    arm_label=kwargs.get("arm_label"),
+                    k=kwargs.get("k"), workers=kwargs.get("workers"),
+                    budget=kwargs.get("budget"),
+                    gpu_start=kwargs.get("gpu_start"))
+        return [], {"n": 0, "pass_rate": None}
+
+    def _boom_suite(*args, **kwargs):
+        raise AssertionError("the FT suite must not run with --bx-loop")
+
+    monkeypatch.setattr(runner_final, "run_ftx_suite", _suite)
+    monkeypatch.setattr(runner_final, "run_ft_suite", _boom_suite)
+    import types
+    fake_cq = types.SimpleNamespace(
+        modal=types.SimpleNamespace(enable_output=lambda: _Ctx()),
+        _app=types.SimpleNamespace(run=lambda: _Ctx()),
+        run_answer_in_box=lambda code: {}, grade=types.SimpleNamespace())
+    monkeypatch.setattr(runner_final, "cloud_cq", fake_cq)
+    assert runner_final.main(["--jobs", "dry", "--out", str(tmp_path),
+                              "--arms", "A", "--bx-loop"]) == 0
+    assert seen["endpoint"] == "http://glimmer/v1/chat/completions"
+    assert seen["model"] == "muse-glimmer" and seen["key"] == "K"
+    assert seen["arm_label"] == "AX"
+    assert seen["exam"] == "first-test"
+    assert seen["k"] == 3 and seen["workers"] == 8
+    assert seen["budget"] == 5.0 and seen["gpu_start"] is None
+    out = capsys.readouterr().out
+    assert "sha256" in out
+    assert hashlib.sha256(b"CARD TEXT").hexdigest() in out
+
+
+def test_bx_loop_card_guards(monkeypatch, tmp_path):
+    """--arms A --bx-loop without FORGE_RULE_CARD is a parser error, and
+    --arms FT --bx-loop with it set is a parser error."""
+    base_a = ["--jobs", "dry", "--out", str(tmp_path),
+              "--arms", "A", "--bx-loop"]
+    base_ft = ["--jobs", "dry", "--out", str(tmp_path),
+               "--arms", "FT", "--bx-loop"]
+    monkeypatch.delenv("FORGE_RULE_CARD", raising=False)
+    with pytest.raises(SystemExit):
+        runner_final.main(base_a)
+    card = tmp_path / "RULE_CARD.md"
+    card.write_text("CARD", encoding="utf-8")
+    monkeypatch.setenv("FORGE_RULE_CARD", str(card))
+    with pytest.raises(SystemExit):
+        runner_final.main(base_ft)
+    monkeypatch.setenv("FORGE_RULE_CARD", str(tmp_path / "missing.md"))
+    with pytest.raises(SystemExit):
+        runner_final.main(base_a)
+
+
+def test_run_ftx_suite_arm_label_ax(tmp_path, monkeypatch):
+    """run_ftx_suite with arm_label AX: every final and round record has
+    arm AX; round 1 messages equal ft_messages(text), with the card text
+    in the system message when FORGE_RULE_CARD is set."""
+    card = tmp_path / "RULE_CARD.md"
+    card.write_text("UNIQUE-CARD-TEXT-AX", encoding="utf-8")
+    monkeypatch.setenv("FORGE_RULE_CARD", str(card))
+    job = {"id": "M1", "text": "make a box", "level": "medium"}
+    post = _post_scripted([_resp(CODE_A), _resp("DONE")])
+    out = str(tmp_path / "ax")
+    recs, summary = runner_final.run_ftx_suite(
+        [job], out, "http://x/v1/chat/completions", runner_final.A_MODEL,
+        "K", "first-test", post, lambda s: None,
+        _box_exec_from([(False, None), (False, None)]),
+        _grade_pass(), server_info_fn=lambda: {}, k=1, workers=1,
+        budget=5.0, arm_label=runner_final.AX_ARM)
+    assert len(recs) == 1 and recs[0]["arm"] == "AX"
+    assert recs[0]["bx_final"] is True
+    assert recs[0]["model"] == "muse-glimmer"
+    assert summary["arm"] == "AX"
+    assert post.sent[0] == runner_final.ft_messages("make a box")
+    assert "UNIQUE-CARD-TEXT-AX" in post.sent[0][0]["content"]
+    calls = [json.loads(line) for line in
+             open(os.path.join(out, "calls.jsonl")) if line.strip()]
+    assert all(c.get("arm") == "AX" for c in calls)
+    assert json.load(
+        open(os.path.join(out, "summary.json")))["arm"] == "AX"
+
+
+def test_run_ftx_suite_default_label_stays_ftx(tmp_path, monkeypatch):
+    """No arm_label passed: today's behaviour is byte-identical (FTX)."""
+    monkeypatch.delenv("FORGE_RULE_CARD", raising=False)
+    jobs = [{"id": "M1", "text": "make a box", "level": "medium"}]
+    post = _post_scripted([_resp(CODE_A), _resp("DONE")])
+    out = str(tmp_path / "ftx")
+    recs, summary = runner_final.run_ftx_suite(
+        jobs, out, "http://x/v1/chat/completions", runner_final.FT_MODEL,
+        "K", "first-test", post, lambda s: None,
+        _box_exec_from([(False, None), (False, None)]),
+        _grade_pass(), server_info_fn=lambda: {}, k=1, workers=1,
+        budget=5.0)
+    assert all(r["arm"] == "FTX" for r in recs)
+    assert summary["arm"] == "FTX"
