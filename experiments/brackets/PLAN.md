@@ -51,3 +51,12 @@ Muse Code (the two small code changes, specs/MUSE_BRACKETS_2026-11-03.md): cap $
 Modal: cap $6 for both arms together (runner `--budget`, plus a billing check after the first arm).
 
 ## Freeze (sha256, filled before the first call)
+4ab2f6d627984e3b2d2f35e1200f80d7d1cea3d71eb1f608c638ca09636fab2f  experiments/brackets/jobs_brackets.jsonl
+0a1894e00df6b45b9bb0b558cdcb0dd82d738ca1901ab8c78687ea57ef2061ea  experiments/brackets/jobs_brackets.py
+9d0929b235888958c70a4e7528fc99f5f30f303f99293aa534c633c5cd5729c7  experiments/final/RULE_CARD.md
+d849eb024dc80515c42d160bd2f9185a0a1b1641f67758a141279555e9c7e626  experiments/final/runner_final.py
+2071662806e0e4568efa990c0798b1e21ce3c0e21dc274b588f8a7d6f6ea9568  experiments/brackets/compare_brackets.py
+32fa9b477b007ef74e68f9330acc6de5e0acaf403aea893ee1e457743e83269a  experiments/final/cloud_cq.py
+7f63fcc1eac6757a284b23124e24388404c2c2874e201c81672186cd0dc0d87d  deploy/modal_forge.py
+e1f88e6da0ca53bc3ff1754881da70f9c5a465dfdd83a7673d197e637947bd49  deploy/modal_glimmer.py
+# recorded 2026-11-03 11:10 CET at commit eadaf89, before any bracket model call
