@@ -6,7 +6,7 @@ that account. v0 supports one tool: CadQuery CAD.
 
 ## Install
 
-Needs Python 3.12+, `uv`, and `modal` (run `modal setup` first).
+Needs Python 3.12, `uv`, and `modal` (run `modal setup` first).
 
 ```sh
 ./install.sh
@@ -14,8 +14,16 @@ expertery init
 ```
 
 `install.sh` checks `uv` and `modal` exist, runs
-`uv tool install --editable "<repo dir>"`, then prints the next step
-(`expertery init`). It never asks for or prints secrets.
+`uv tool install --python 3.12 --reinstall --editable "<repo dir>"`,
+then prints the next step (`expertery init`). It never asks for or
+prints secrets. The install pins Python 3.12 with CadQuery
+(`cadquery==2.8.0`, `cadquery-ocp==7.9.3.1`, the same pins as the
+cloud box): CadQuery runs locally only to load the factory's
+prompt/check modules (for example `expertery exam build` loads the
+runner, which imports `checks`), so the local tool env needs the same
+CadQuery the cloud box runs. Model-written code never runs locally;
+it runs in the cloud box. Python 3.13+ has no CadQuery wheels, so
+3.12 is required.
 
 `expertery init` checks the Modal token works (`modal profile
 current`), reports whether a reader key is configured

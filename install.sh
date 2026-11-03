@@ -12,5 +12,5 @@ if ! command -v modal >/dev/null 2>&1; then
   echo "expertery install: 'modal' not found; install it first" >&2
   exit 1
 fi
-uv tool install --editable "${REPO_DIR}"
+uv tool install --python 3.12 --reinstall --editable "${REPO_DIR}"
 echo "next step: expertery init"

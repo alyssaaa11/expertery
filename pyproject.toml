@@ -6,8 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "expertery"
 version = "0.1.0"
 description = "Expertery v0: installable private factory with an exam agent (CadQuery)"
-requires-python = ">=3.12"
-dependencies = ["modal"]
+requires-python = ">=3.12,<3.13"
+dependencies = ["modal", "cadquery==2.8.0", "cadquery-ocp==7.9.3.1"]
 
 [project.scripts]
 expertery = "expertery.cli:main"
