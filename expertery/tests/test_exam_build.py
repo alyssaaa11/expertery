@@ -237,3 +237,116 @@ def test_reader_cost_uses_teacher_prices():
     cost = cloud.cost_of_usage({"prompt_tokens": 1_000_000,
                                 "completion_tokens": 1_000_000})
     assert cost == pytest.approx(1.25 + 4.25)
+
+
+class SessionRecorder:
+    """Fake cloud_session: counts entries, records fake args."""
+
+    def __init__(self):
+        self.entries = []
+
+    def __call__(self, *args, **kwargs):
+        self.entries.append((args, kwargs))
+        recorder = self
+
+        class _Ctx:
+            def __enter__(self):
+                return None
+
+            def __exit__(self, *exc):
+                recorder.entries.append("exit")
+                return False
+
+        return _Ctx()
+
+
+def test_build_with_fakes_never_enters_cloud_session(tmp_path,
+                                                     monkeypatch):
+    recorder = SessionRecorder()
+    monkeypatch.setattr(cloud, "cloud_session", recorder)
+    past = make_past_work(str(tmp_path / "past"),
+                          {"J1": ("Base plate 60 by 40.", REF_SOURCE,
+                                  False)})
+    out = str(tmp_path / "exam")
+    result = exam_agent.build_exam(past, out, 5.0, readers=2, workers=1,
+                                   box_fn=box_ok,
+                                   grade_fn=grade_script("PASS"),
+                                   post_fn=FakeReader([READER_CODE]))
+    assert len(result["candidates"]) == 1
+    assert recorder.entries == []
+
+
+def test_build_dry_run_never_enters_cloud_session(tmp_path, monkeypatch):
+    recorder = SessionRecorder()
+    monkeypatch.setattr(cloud, "cloud_session", recorder)
+    past = make_past_work(str(tmp_path / "past"),
+                          {"J1": ("Base plate.", REF_SOURCE, False)})
+    out = str(tmp_path / "exam")
+    exam_agent.build_exam(past, out, 5.0, readers=2, dry_run=True,
+                          box_fn=box_ok, grade_fn=grade_script("PASS"),
+                          post_fn=FakeReader([READER_CODE]),
+                          print_fn=lambda *a, **k: None)
+    assert recorder.entries == []
+
+
+def test_build_real_run_enters_cloud_session_once(tmp_path, monkeypatch):
+    recorder = SessionRecorder()
+    monkeypatch.setattr(cloud, "cloud_session", recorder)
+    monkeypatch.setattr(cloud, "run_box", lambda code, box_fn=None:
+                        box_ok(code))
+    monkeypatch.setattr(cloud, "factory_grade_fn",
+                        lambda jobs, grade_fn=None: grade_script("PASS"))
+    past = make_past_work(str(tmp_path / "past"),
+                          {"J1": ("Base plate 60 by 40.", REF_SOURCE,
+                                  False)})
+    out = str(tmp_path / "exam")
+    result = exam_agent.build_exam(past, out, 5.0, readers=2, workers=1,
+                                   post_fn=FakeReader([READER_CODE,
+                                                       READER_CODE]))
+    assert len(result["candidates"]) == 1
+    # Exactly one session for the whole build (call + exit markers).
+    calls = [e for e in recorder.entries if e != "exit"]
+    assert calls == [((), {})]
+
+
+def test_cloud_session_noop_with_fakes(monkeypatch):
+    def _boom():
+        raise AssertionError("no-op session must not load cloud_cq")
+
+    monkeypatch.setattr(cloud, "load_cloud_cq", _boom)
+    with cloud.cloud_session(box_fn=box_ok):
+        pass
+    with cloud.cloud_session(grade_fn=grade_script("PASS")):
+        pass
+
+
+def test_cloud_session_runs_ephemeral_grader_app(monkeypatch):
+    import contextlib
+
+    events = []
+
+    @contextlib.contextmanager
+    def _marked(name):
+        events.append(name + "-enter")
+        try:
+            yield
+        finally:
+            events.append(name + "-exit")
+
+    class _FakeModal:
+        def enable_output(self):
+            return _marked("output")
+
+    class _FakeApp:
+        def run(self):
+            return _marked("app")
+
+    class _FakeCloudCq:
+        modal = _FakeModal()
+        _app = _FakeApp()
+
+    monkeypatch.setattr(cloud, "load_cloud_cq", lambda: _FakeCloudCq())
+    with cloud.cloud_session():
+        events.append("work")
+    assert events == ["output-enter", "app-enter", "work",
+                      "app-exit", "output-exit"]

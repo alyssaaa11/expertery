@@ -131,37 +131,49 @@ def test_train_uses_guarded_entrypoint_and_dry_run():
     assert dry.calls == []
 
 
-def test_init_checks_deploys_writes_config_no_secrets(
+def test_init_ensures_box_app_writes_config_no_secrets(
         tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("EXPERTERY_READER_KEY", "sekret-key-123")
     monkeypatch.delenv("BASETEN_API_KEY", raising=False)
     monkeypatch.setattr(config, "CONFIG_DIR", str(tmp_path))
     monkeypatch.setattr(config, "CONFIG_PATH",
                         str(tmp_path / "config.json"))
-    run = Record([FakeProc(0, "default\n"),
-                  FakeProc(0, "https://grader.modal.run\n")])
+    ensured = []
+    monkeypatch.setattr(cloud, "ensure_exec_app",
+                        lambda: ensured.append(1) or object())
+    run = Record([FakeProc(0, "default\n")])
     rc = cli.cmd_init(parse("init"), run=run, print_fn=print)
     assert rc == 0
     assert run.calls[0]["argv"] == ["modal", "profile", "current"]
-    assert run.calls[1]["argv"] == ["modal", "deploy",
-                                    cloud.cloud_cq_path()]
+    # init never runs `modal deploy`; the box app is ensured by lookup.
+    assert all(call["argv"][:2] != ["modal", "deploy"]
+               for call in run.calls)
+    assert len(ensured) == 1
     saved = json.load(open(str(tmp_path / "config.json")))
     assert saved["tool"] == "cadquery"
     out = capsys.readouterr().out
     assert "sekret-key-123" not in out
     assert "present" in out
+    assert cli.READY_LINE in out
 
 
 def test_init_dry_run_changes_nothing(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "CONFIG_DIR", str(tmp_path))
     monkeypatch.setattr(config, "CONFIG_PATH",
                         str(tmp_path / "config.json"))
+
+    def _boom():
+        raise AssertionError("dry-run must not ensure the box app")
+
+    monkeypatch.setattr(cloud, "ensure_exec_app", _boom)
     run = Record()
+    lines = []
     rc = cli.cmd_init(parse("init", "--dry-run"), run=run,
-                      print_fn=lambda *a, **k: None)
+                      print_fn=lines.append)
     assert rc == 0
     assert run.calls == []
     assert not os.path.exists(str(tmp_path / "config.json"))
+    assert cli.READY_LINE in lines
 
 
 def test_status_reports_no_secrets(tmp_path, monkeypatch, capsys):

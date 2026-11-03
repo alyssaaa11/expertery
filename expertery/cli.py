@@ -3,7 +3,7 @@
 Subcommands (also importable for tests; every handler takes `run` and
 `print_fn` so tests can mock the subprocess boundary):
 
-- init
+- init (check Modal + key, ensure box app)
 - exam build | review | lock
 - test --exam ... --model trained|base ...
 - serve --name ...
@@ -29,7 +29,7 @@ import sys
 from . import config as _config
 
 COMMANDS_EPILOG = """commands:
-  init                          check Modal + reader key, deploy box+grader
+  init                          check Modal + key, ensure box app, write config
   exam build|review|lock        turn past work into a locked exam
   test --exam ...               run the exam on trained|base
   serve --name ...              deploy the trained model
@@ -59,8 +59,8 @@ def build_parser():
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    init = sub.add_parser("init", help="check Modal + key, deploy, write "
-                                       "~/.expertery/config.json")
+    init = sub.add_parser("init", help="check Modal + key, ensure box "
+                                       "app, write ~/.expertery/config.json")
     init.add_argument("--dry-run", action="store_true",
                       help="print the plan, change nothing")
 
@@ -123,16 +123,22 @@ def _fail(message, print_fn):
     return 2
 
 
+READY_LINE = ("box app forge-cq ready in your Modal account; the "
+                "referee (grader) starts on demand during each run "
+                "and stops after")
+
+
 def cmd_init(args, run=subprocess.run, print_fn=print):
-    """Check Modal + reader key, deploy box + grader, write config."""
+    """Check Modal + reader key, ensure box app, write config."""
     from . import cloud as _cloud
     if args.dry_run:
         print_fn("dry-run: would run `modal profile current`")
         print_fn("dry-run: reader key %s (or %s): %s"
                  % (_config.READER_KEY_ENV, _config.READER_KEY_FALLBACK_ENV,
                     "present" if _cloud.reader_key() else "missing"))
-        print_fn("dry-run: would run `modal deploy %s`"
-                 % _cloud.cloud_cq_path())
+        print_fn("dry-run: would ensure the box app exists "
+                 "(lookup forge-cq, create_if_missing)")
+        print_fn(READY_LINE)
         print_fn("dry-run: would write %s" % _config.CONFIG_PATH)
         return 0
     profile = run(["modal", "profile", "current"],
@@ -146,13 +152,8 @@ def cmd_init(args, run=subprocess.run, print_fn=print):
     print_fn("reader key %s (fallback %s): %s"
              % (_config.READER_KEY_ENV, _config.READER_KEY_FALLBACK_ENV,
                 "present" if key_present else "missing"))
-    deploy = run(["modal", "deploy", _cloud.cloud_cq_path()],
-                 capture_output=True, text=True)
-    if deploy.returncode != 0:
-        return _fail("deploy failed: %s" % (deploy.stderr or "")[-2000:],
-                     print_fn)
-    out_lines = (deploy.stdout or "").strip().splitlines()
-    print_fn(out_lines[-1] if out_lines else "deployed")
+    _cloud.ensure_exec_app()
+    print_fn(READY_LINE)
     url, model, _ = _cloud.reader_config()
     os.makedirs(_config.CONFIG_DIR, exist_ok=True)
     with open(_config.CONFIG_PATH, "w", encoding="utf-8") as f:

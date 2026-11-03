@@ -14,6 +14,7 @@ Reusable pieces (never rewritten here):
   TEMPERATURE, TOP_P, cost_of_usage, IN_FLIGHT_COST.
 """
 
+import contextlib
 import json
 import os
 import sys
@@ -160,6 +161,34 @@ def factory_grade_fn(jobs, grade_fn=None):
         return cloud_cq.grade.remote(*args, **kwargs)
 
     return cloud_cq.factory_grade_fn(jobs, _remote)
+
+
+def ensure_exec_app():
+    """Ensure the box app exists in the user's own Modal account.
+
+    Looks up EXEC_APP_NAME ("forge-cq"), creating it if missing. The
+    grader app is ephemeral: callers run it on demand via
+    cloud_session() and it stops after each run.
+    """
+    return load_cloud_cq().lookup_exec_app()
+
+
+@contextlib.contextmanager
+def cloud_session(box_fn=None, grade_fn=None):
+    """Run the grader app for one exam build (real runs only).
+
+    A no-op when fakes are injected (box_fn or grade_fn given): tests
+    never touch Modal. Otherwise enters `modal.enable_output()` with
+    the ephemeral grader `_app.run()`, exactly as cloud_cq's own
+    --check-refs / --regrade paths do.
+    """
+    if box_fn is not None or grade_fn is not None:
+        yield
+        return
+    cloud_cq = load_cloud_cq()
+    with cloud_cq.modal.enable_output():
+        with cloud_cq._app.run():
+            yield
 
 
 def cloud_cq_path():

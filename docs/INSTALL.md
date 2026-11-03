@@ -20,13 +20,14 @@ expertery init
 `expertery init` checks the Modal token works (`modal profile
 current`), reports whether a reader key is configured
 (`EXPERTERY_READER_KEY`, falling back to `BASETEN_API_KEY`;
-present/missing only, values are never printed), deploys the CAD box +
-grader apps (the same deploy `experiments/final/cloud_cq.py` defines)
-into the current Modal account, and writes
+present/missing only, values are never printed), ensures the CAD box
+app exists in the current Modal account (looks up `forge-cq`,
+creating it if missing; no `modal deploy` step), and writes
 `~/.expertery/config.json` (tool `cadquery`; reader url/model
 defaults from the factory teacher, overridable via
 `EXPERTERY_READER_URL` / `EXPERTERY_READER_MODEL` so a company can
-point at its own Spark Open or Glimmer server).
+point at its own Spark Open or Glimmer server). The referee (grader)
+is ephemeral: it starts on demand during each run and stops after.
 
 ## Privacy model (what runs where)
 

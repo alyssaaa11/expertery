@@ -393,9 +393,20 @@ def build_exam(past_work_dir, exam_dir, cap_dollars, readers=2,
                                  calls, calls_lock), stop)
 
     os.makedirs(exam_dir, exist_ok=True)
-    with concurrent.futures.ThreadPoolExecutor(
-            max_workers=max(1, workers)) as pool:
-        candidates = list(pool.map(run_job, jobs))
+
+    def run_all():
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=max(1, workers)) as pool:
+            return list(pool.map(run_job, jobs))
+
+    # Real runs (no injected fakes) grade in the cloud: the ephemeral
+    # grader app runs for the whole build, then stops. With fakes or
+    # dry-run there is no cloud contact at all.
+    if box_fn is None and grade_fn is None:
+        with _cloud.cloud_session():
+            candidates = run_all()
+    else:
+        candidates = run_all()
     candidates.sort(key=lambda c: c["id"])
     ordered_calls = sorted(calls, key=lambda c: (c["job"], c["attempt"]))
     write_jsonl(os.path.join(exam_dir, CANDIDATES_NAME), candidates)
