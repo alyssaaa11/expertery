@@ -1,0 +1,1 @@
+Millimetres, Z up. Flat triangular gusset plate, 5 thick: a right triangle with both short sides 80 long, the right angle on the origin and the short sides along +X and +Y. Three 6.6 mm holes go through it along Z at (X, Y) = (12, 12), (55, 12) and (12, 55). Bottom on Z = 0.

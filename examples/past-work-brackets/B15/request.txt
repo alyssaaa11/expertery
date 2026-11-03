@@ -1,0 +1,1 @@
+Millimetres, Z up. Floor flange for a 25.4 mm (1 inch) tube. Square plate 50 by 50, 5 thick. A round boss on top, 35 diameter, 20 tall above the plate. The 25.4 mm tube bore goes through the boss and the plate. Four 5.5 mm holes go through the plate near the corners, 18 from the centre in both X and Y. Placement: centred on the Z axis, bottom on Z = 0.
