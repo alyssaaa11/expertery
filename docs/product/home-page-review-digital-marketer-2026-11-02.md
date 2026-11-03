@@ -1,4 +1,4 @@
-# Homegrown home page: review by digital-marketer (2026-11-02)
+# Expertery home page: review by digital-marketer (2026-11-02)
 
 Reviewed: `home-page-draft-2026-11-02.md` (v1) against `README.md`. This is advice only. The draft was not edited and nothing was posted.
 Sources: the digital-marketer wiki (`~/Obsidian-wikis/digital-marketer`), cited as `[[page]]`. Neil Patel pages are
@@ -38,18 +38,18 @@ A one-liner should state what the product does before why it matters, avoid jarg
 
 **A. Specialist + checked work (my pick).** It answers all three questions in the first block and is the most honest.
 > **Your tool's own AI specialist. Trained only on work that passed inspection.**
-> Homegrown turns Meta's open Glimmer model into a specialist on one tool. It practises, a strict referee keeps only
+> Expertery turns Meta's open Glimmer model into a specialist on one tool. It practises, a strict referee keeps only
 > correct answers, and the finished model runs privately. Proven on CAD: 92% on a hand-made exam, close to the best
 > setup's 94%, with no manual and 2.7× fewer tokens.
 
 **B. Industrial (closest to the "steel, GoPro" brief).**
 > **Build your AI the way you build parts: inspect everything.**
-> Homegrown writes practice jobs, runs every answer in a locked box, and trains Meta's open Glimmer only on what
+> Expertery writes practice jobs, runs every answer in a locked box, and trains Meta's open Glimmer only on what
 > passes. The finished model runs privately and measures every part before it hands it over. Proven on CAD.
 
 **C. Privacy-led, if Alyssa wants privacy first.**
 > **The AI expert your company gets to keep.**
-> Cloud assistants are smart, but your tools and data leave your building. Homegrown trains an open Meta model on your
+> Cloud assistants are smart, but your tools and data leave your building. Expertery trains an open Meta model on your
 > tool, learns only from answers a referee proved correct, and the finished model runs where you choose.
 > Proven on CAD: 92% on a hand-made exam with its self-check loop.
 
@@ -90,7 +90,7 @@ Option A does both in one block.
 Reasons:
 - Privacy says who the buyer is, but every local-LLM vendor already says "private AI". It isn't specific, and the wiki
   says specificity is what earns trust ([[np-why-98-of-websites-dont-make-money-its-not-the-design]]).
-- Checked work is the part only Homegrown can show: the referee, the exam, and "wrong answers never teach". It also comes with numbers.
+- Checked work is the part only Expertery can show: the referee, the exam, and "wrong answers never teach". It also comes with numbers.
 - Privacy is where the honesty risk is (§5, first item). If the hero leads on privacy, the hero's main promise is the
   one the current build proves least.
 
@@ -121,7 +121,7 @@ To test it cheaply, use two versions of the X post (one per angle) and compare r
   | Graphite text on a teal button | 5.2:1 | use this |
 
 - **GoPro as a reference:** what transfers is "show the real output, not the brand". GoPro sells with footage, so
-  Homegrown should sell with rendered parts, measurements and the code. Not in the wiki: industrial web design for
+  Expertery should sell with rendered parts, measurements and the code. Not in the wiki: industrial web design for
   engineering buyers. This point is my judgment.
 
 ## (4) Best CTA with no customers yet
@@ -133,7 +133,7 @@ To test it cheaply, use two versions of the X post (one per angle) and compare r
    ([[conversion-optimization]]: one call to action).
 2. **Right after a demo part finishes: "Want this for your tool?"** This is the free-tool pattern: show the result first,
    then make the ask while the result is still on screen ([[conversion-optimization]], Greg Isenberg source).
-3. **Bottom: a 3-field form, "Bring Homegrown to your tool".** It asks which tool, whether they have ~30 past jobs with
+3. **Bottom: a 3-field form, "Bring Expertery to your tool".** It asks which tool, whether they have ~30 past jobs with
    known correct results (yes / no / not sure), and an email address.
    - Don't use **"Contact us"**: it's vague and has no reason attached.
    - Don't use a **plain waitlist**: it shows interest, not commitment from a buyer ([[satellite-monitoring]],

@@ -1,6 +1,6 @@
 # Expertery
 
-> **Name:** the project was first called "Forge". Internal code, cloud apps, file names and the frozen
+> **Name:** the project was first called "Forge", then "Homegrown" (Nov 2-3), now Expertery. Internal code, cloud apps, file names and the frozen
 > exam files keep older internal names on purpose, so nothing breaks and the exam evidence stays valid.
 
 **Expertery turns a small open model into a private expert on your tool, learning only from answers a referee proved

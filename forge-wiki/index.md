@@ -1,6 +1,6 @@
 # Forge wiki: index
 
-> **Name change (2026-11-02):** the project is now called **Homegrown** (it was "Forge"). Internal code, cloud apps, file names and the frozen exam files keep the old `forge` names on purpose, so nothing breaks and the exam evidence (sha256 fingerprints) stays valid.
+> **Name change (2026-11-02):** the project is now called **Expertery** (it was "Forge"). Internal code, cloud apps, file names and the frozen exam files keep the old `forge` names on purpose, so nothing breaks and the exam evidence (sha256 fingerprints) stays valid.
 
 Project folder: `~/projects/forge` (README routes to code, results and everything else).
 
@@ -9,7 +9,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
 
 ## findings
-- [live-demo-2026-11-02](wiki/findings/live-demo-2026-11-02.md): the live product at homegrown-factory.vercel.app: settings ($15 total, 1 try), first real build (PASS, 120 s, 3 rounds), 14-min cold start, money, page decisions
+- [live-demo-2026-11-02](wiki/findings/live-demo-2026-11-02.md): the live product at expertery.vercel.app: settings ($15 total, 1 try), first real build (PASS, 120 s, 3 rounds), 14-min cold start, money, page decisions
 - [r5-own-answers-training-2026-11-01](wiki/findings/r5-own-answers-training-2026-11-01.md): R5: card v2 (74.5% → 94%), 2,000 own answers, self-fix, training without the card (loss 0.63 → 0.32), held-out baselines 62% / 96%
 - [[r5-final-spark-guided-2026-11-01]] — r5 dev 94/100, Spark hints 52/54, tutoring lessons, r5f
 - [[submission-plan-2026-11-02]] — everything still missing before submission (product, access, video, prizes, Impact, form)

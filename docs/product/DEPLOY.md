@@ -1,4 +1,4 @@
-# Homegrown live demo: go-live steps (NOT run yet; user said "no go yet", 2026-11-02)
+# Expertery live demo: go-live steps (NOT run yet; user said "no go yet", 2026-11-02)
 
 Decisions (user, 2026-11-02 evening): $15 TOTAL (no daily cap), 1 live try per visitor IP (user changed from 2, 2026-11-02 ~22:00), counter estimate $0.60/try
 (verifier note), reasoning xhigh until the high-vs-xhigh check. Verifier GO on 7cb32a2

@@ -1,6 +1,6 @@
 # Forge status: START HERE each day
 
-> **Name change (2026-11-02):** the project is now called **Homegrown** (it was "Forge"). Internal code, cloud apps, file names and the frozen exam files keep the old `forge` names on purpose, so nothing breaks and the exam evidence (sha256 fingerprints) stays valid.
+> **Name change (2026-11-02):** the project is now called **Expertery** (it was "Forge"). Internal code, cloud apps, file names and the frozen exam files keep the old `forge` names on purpose, so nothing breaks and the exam evidence (sha256 fingerprints) stays valid.
 
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
@@ -71,10 +71,10 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **NOW (2026-11-02 night): LIVE DEMO LAUNCHED → https://homegrown-factory.vercel.app** (details, settings, first
+- **NOW (2026-11-02 night): LIVE DEMO LAUNCHED → https://expertery.vercel.app** (details, settings, first
   real build, money: [[live-demo-2026-11-02]]). $15 total cap, 1 free live try per visitor, xhigh. Pushed to GitHub
   up to 0af129e; later page-copy commits are local.
-- decision (user, 2026-11-03): impact test "bracket workflow" — 20 employee-style bracket jobs, Homegrown + loop (FTX) vs
+- decision (user, 2026-11-03): impact test "bracket workflow" — 20 employee-style bracket jobs, Expertery + loop (FTX) vs
   untrained Glimmer + rule card + same loop (AX); claim X = lower cost per usable part with no quality loss (rules
   pre-registered: experiments/brackets/PLAN.md, commit 567b24d). verified: references selftest 20/20 (jobs_brackets.py
   --selftest). Muse Code done (eadaf89, pytest 87). verified: FTX 34/60 = 57% usable (pass@3 80%), $3.65 (results/brackets-2026-11-03/REPORT.md).

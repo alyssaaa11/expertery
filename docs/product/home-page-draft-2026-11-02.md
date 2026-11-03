@@ -1,9 +1,9 @@
-# Homegrown home page: draft v1 (2026-11-02, for review by digital-marketer)
+# Expertery home page: draft v1 (2026-11-02, for review by digital-marketer)
 
 Status: draft. Not built. The user's direction is labelled **decision**; everything else is Claude's proposal (**hypothesis**).
 
 ## Product in one line
-Homegrown is a factory that turns an open Meta model (Muse Glimmer 30B) into a private specialist for one company's tools.
+Expertery is a factory that turns an open Meta model (Muse Glimmer 30B) into a private specialist for one company's tools.
 It writes practice jobs, a teacher model (Spark Open) solves them, a locked cloud box runs each answer, and a strict
 referee keeps only correct work. The small model trains on that work and then runs privately. The demo tool is
 CadQuery (3D CAD from code).
@@ -14,16 +14,16 @@ tools and data to a cloud AI.
 
 ## What the visitor must feel (decision, user)
 "I want this factory for my company."
-1. **Private**: a cloud assistant is smart, but your private tools and data leave your building. Homegrown is an assistant
+1. **Private**: a cloud assistant is smart, but your private tools and data leave your building. Expertery is an assistant
    that lives inside your company, knows your tools and works on its own.
-2. **Checks itself**: factories decay over months. Homegrown has a loop that checks every part it makes.
+2. **Checks itself**: factories decay over months. Expertery has a loop that checks every part it makes.
 3. **Not "AI talking"**: it must feel like a real, strong industrial product (the user's reference: GoPro).
 
 ## Page sections (top to bottom)
 1. **Hero**: "Your own AI expert. Trained on your tools. It never leaves your company."
-   Subline: "Homegrown turns an open model into a private specialist for your company's tools, and checks every part it builds."
+   Subline: "Expertery turns an open model into a private specialist for your company's tools, and checks every part it builds."
    Buttons: [Try it live] [See how the factory works]
-2. **Problem, 3 lines**: cloud AI is smart, but you send your tools out · small open models stay private but make mistakes on hard jobs · Homegrown closes that gap.
+2. **Problem, 3 lines**: cloud AI is smart, but you send your tools out · small open models stay private but make mistakes on hard jobs · Expertery closes that gap.
 3. **Factory diagram (animated)**: practice jobs → teacher → locked box → strict referee → your private model learns, with a "checks itself" loop arrow.
 4. **Live demo**: describe a part → watch it write, build, measure, check and fix (≤3 rounds) → 3D picture + measurements + STEP/STL download + code.
    decision (user): open to anyone who has the link (no passcode); rate limits and a spending cap stay on.

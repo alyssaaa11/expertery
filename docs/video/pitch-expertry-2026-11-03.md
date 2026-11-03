@@ -1,8 +1,8 @@
-# Expertry pitch: 3-minute video script + live deck (draft v2, 2026-11-03)
+# Expertery pitch: 3-minute video script + live deck (draft v2, 2026-11-03)
 
 Made with the `winning-pitch` skill. Status: **draft for the user's approval**; nothing recorded or published.
 
-- decision (user, 2026-11-03): name **Expertry** in the pitch (page headline "AI that knows your tool.").
+- decision (user, 2026-11-03): name **Expertery** in the pitch (page headline "AI that knows your tool.").
 - decision (user, 2026-11-03): **no founder sentence**.
 - decision (user, 2026-11-03): format = 3-minute video + a live deck that mirrors it.
 - decision (user, 2026-11-03, v2): **the main story is "I trained a model"**. The self-check loop is a product
@@ -53,13 +53,13 @@ changes every 10–20 s; every speed-up labelled. **Wake the model ~15 min befor
 
 | Time | Voice-over | Screen | On-screen label / caption |
 |---|---|---|---|
-| **0:00–0:11** Hook | "Expertry: AI that knows your tool. I trained Meta's open Glimmer model on CAD. With no manual, it went from 62 to 96 percent on jobs it had never seen." (30 w) | Live page hero → a rendered part rotating → the 62 → 96 bars snap in | "Expertry · AI that knows your tool." · "62% → 96% · no manual · 100 unseen jobs" |
+| **0:00–0:11** Hook | "Expertery: AI that knows your tool. I trained Meta's open Glimmer model on CAD. With no manual, it went from 62 to 96 percent on jobs it had never seen." (30 w) | Live page hero → a rendered part rotating → the 62 → 96 bars snap in | "Expertery · AI that knows your tool." · "62% → 96% · no manual · 100 unseen jobs" |
 | **0:11–0:28** Problem | "Out of the box, Glimmer can't do this reliably. The usual fix is a manual pasted into every request: 5,700 words, every time. Or a big cloud model, and your designs leave your building. So I didn't prompt it. I trained it." (42 w) | The real BX prompt scrolling (manual text), prompt-token counter to 14,151 | "Manual in every request: ~5,700 words" · "14,151 prompt tokens per correct part (measured)" |
 | **0:28–1:15** How I trained it (the factory) | "Here's the factory. Muse Code built a generator of 2,000 practice parts, each with a hidden correct answer. Glimmer tries every one. A locked cloud box builds its code, and a strict referee compares the result with the real part, within 0.2 percent. When Glimmer fails, it sees its own error and tries again. Still stuck? Meta's Spark Open gives one hint, never code; with those hints, Glimmer solved 52 of 54. Only answers the referee proved correct become lessons: 1,742, with Glimmer's own reasoning. Wrong answers never teach. Then: training, on one GPU, about two hours." (98 w) | Factory diagram lighting up step by step; real factory gallery (results/factory-gallery) with PASS/FAIL ticker; training loss curve 0.63 → 0.32 | Stage labels GENERATE / TRY / REFEREE / TUTOR / LESSONS / TRAIN · "Built entirely on Meta: Glimmer · Spark Open · Muse Code" · "Training: 1 GPU, ~2 h (real run, sped up)" |
 | **1:15–1:50** Did it learn? | "Did it learn? On 100 practice jobs it never saw: 62 percent before training, 96 after, with no manual, and crashes dropped from 12 to 1. Then the hard test: 30 hand-made parts, written before training, three tries each. Trained, with no manual: 83 percent. That's level with the untrained model reading a rule card, and 11 points behind the best setup with the full manual, mostly on the hardest parts." (73 w) | Bars 62 → 96 with CI; then exam bars: trained 83.3 · card 85.6 · full manual 94.4, CI whiskers | "100 unseen practice jobs (same generator as training) · +34 pts, 95% CI [+24, +44]" · "Exam: 30 hand-made parts × 3 tries = 90 answers · frozen before training" · "vs card −2.2 [−12, +7] · vs full manual −11 [−24, +1]" |
 | **1:50–2:00** Re-hook | "But look at what it sends. 215 prompt tokens per correct part, instead of 14,000. Six and a half times fewer tokens in total." (22 w) | Two prompt boxes side by side: tiny vs the scrolling manual; token bars 3,352 vs 21,823 | "Tokens per correct part: 3,352 vs 21,823 (measured) = 6.5× fewer" |
 | **2:00–2:30** Put to work | "Then I put the trained model to work. Type a part: an L-bracket, 80 by 30 by 45 millimetres, two 6-millimetre holes. It writes the code, the box builds and measures it, and it fixes its own mistakes before you see the part. With that self-check, it reaches 92 percent on the exam, level with the full-manual setup." (57 w) | Live-page recorded run: typing → code → build → measurements → PASS → 3D view → STEP | "Real run, Nov 2 · 120 s, sped up 4×" · "With self-check: 92% vs 94%, −2.2 [−11, +6]" |
-| **2:30–2:50** Close | "Expertry: AI that knows your tool. Trained only on proven answers. No manual, six and a half times fewer tokens. And it's Meta's open model, so it can run on a GPU you control. Proven on CAD. Try it live." (40 w) | Three vertebrae appear one by one → live page URL | Tagline · 3 vertebrae · URL · "Proven on CAD so far" |
+| **2:30–2:50** Close | "Expertery: AI that knows your tool. Trained only on proven answers. No manual, six and a half times fewer tokens. And it's Meta's open model, so it can run on a GPU you control. Proven on CAD. Try it live." (40 w) | Three vertebrae appear one by one → live page URL | Tagline · 3 vertebrae · URL · "Proven on CAD so far" |
 
 ## Live deck (10 slides; headings ≤ 7 words; one point each)
 For a live final: play the recorded segments and narrate over them. At most **one** live call (the live page, model
@@ -67,7 +67,7 @@ already warm, run cleanly 5× in a row beforehand).
 
 | # | Heading | Content | Time |
 |---|---|---|---|
-| 1 | **AI that knows your tool.** | Expertry logo; "I trained Meta's Glimmer: 62% → 96%, no manual" | 0:00 |
+| 1 | **AI that knows your tool.** | Expertery logo; "I trained Meta's Glimmer: 62% → 96%, no manual" | 0:00 |
 | 2 | **Every request ships a manual** | The 5,700-word manual as a tall scroll; "14,151 prompt tokens per correct part"; "or your designs leave the building" | 0:11 |
 | 3 | **So I trained it instead** | Factory diagram: 2,000 jobs → try → referee → tutor → lessons → train | 0:28 |
 | 4 | **Built entirely on Meta** | Three columns: Glimmer (the model I trained) · Spark Open (tutor, hints only, 52/54) · Muse Code (built the factory) | 0:50 |
@@ -119,6 +119,6 @@ State on 2026-11-03: FTX arm has 61 call lines in results/brackets-2026-11-03/FT
 
 Top 3 fixes:
 1. **Impact:** finish the bracket test (AX arm + compare) or get one real tester's quote. Never invent one.
-2. **Name mismatch:** URL, README, diagram and form still say Homegrown.
+2. **Name mismatch:** URL, README, diagram and form still say Expertery.
 3. **Footage:** the factory beat needs real footage (gallery, PASS/FAIL ticker, loss curve) cut before recording;
    check results/factory-gallery and results/train-r5f have what's needed.
