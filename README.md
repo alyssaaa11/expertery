@@ -102,6 +102,12 @@ Readings: [`results/exam-2026-11-02/`](results/exam-2026-11-02/) (`compare_bars.
 source: [`forge-wiki/wiki/status.md`](forge-wiki/wiki/status.md).
 
 ## What we learned (each from a measured failure)
+- **Study the student before teaching it.** We first ran the untrained Glimmer to see where it fails: in the first
+  practice run 28 of its 47 crashes came from one CadQuery call that does not exist, so two lines added to its rule
+  card took it from 74.5% to 94% on the same 200 practice jobs. After that, every lesson started from Glimmer's own
+  work: its own checked answers and reasoning, self-fix from its own errors, and Spark hints only on the jobs it could
+  not solve. The training fits how Glimmer works instead of a generic dataset; lessons written in a bigger model's
+  style made it worse (next point).
 - Training on a bigger model's answers made Glimmer worse (38%, then 48% vs 52% untrained). Training on its **own**
   referee-checked answers worked (62 → 96 on the secret practice test).
 - The referee is everything: the model learns exactly what the referee approves.
