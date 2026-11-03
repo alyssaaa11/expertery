@@ -249,4 +249,9 @@
 - **Scrub personal data before the first push, not after** (2026-11-02). How learned: the Gmail address and
   account-name URLs were in unpushed commits; `git filter-branch --tree-filter` on `origin/main..HEAD` (backup branch
   first) removed them. Check: `git show --format= <c> | grep "^+" | grep -c <string>` is 0 for every unpushed commit.
-
+- **Natural "employee" wording drops the trained model from 92% to 57% on a new part type** (2026-11-03). How learned:
+  bracket test (results/brackets-2026-11-03/REPORT.md): 20 jobs worded like a person asks, FTX 34/60; reading the 26
+  failed codes showed misread conventions ("overall", "flush", "80 long"), the CadQuery XZ-extrude-toward-−Y trap, and
+  touching-only pieces. Check: run a new job family through the dev arm before claiming transfer; add the wording
+  style and trap cases to the factory jobs. Also: a runner $ cap stops new calls only, so slow answers overshoot it
+  ($3.65 vs $3) — set the cap ~20% under the real limit.

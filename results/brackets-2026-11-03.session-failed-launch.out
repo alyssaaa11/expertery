@@ -1,0 +1,11 @@
+== billing before 11:13:10
+  Metered Cost:                36.90  
+    Ephemeral Apps:            19.21  
+    Deployed Apps:             17.69  
+    Network Egress:             0.00  
+  Credits:                    -36.90  
+  Network Egress Allowance:    -0.00  
+  Billed Cost:                 $0.00  
+                                      
+== FTX 11:13:11
+~/.claude/jobs/b8aac1fe/tmp/run_brackets.sh:12: bad math expression: operand expected at `/Users/aly...'

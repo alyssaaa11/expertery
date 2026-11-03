@@ -77,7 +77,8 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 - decision (user, 2026-11-03): impact test "bracket workflow" — 20 employee-style bracket jobs, Homegrown + loop (FTX) vs
   untrained Glimmer + rule card + same loop (AX); claim X = lower cost per usable part with no quality loss (rules
   pre-registered: experiments/brackets/PLAN.md, commit 567b24d). verified: references selftest 20/20 (jobs_brackets.py
-  --selftest). Next: user yes for Muse Code (specs/MUSE_BRACKETS_2026-11-03.md, cap $1.50), then runs (Modal cap $6).
+  --selftest). Muse Code done (eadaf89, pytest 87). verified: FTX 34/60 = 57% usable (pass@3 80%), $3.65 (results/brackets-2026-11-03/REPORT.md).
+  decision (user, ~13:30, after seeing FTX): AX not run → claim X untested; no training-vs-card claim from this test.
 - **TODO to submission: see [[submission-plan-2026-11-02]].** Left: page copy (user deciding), high-vs-xhigh check,
   push, 3-min video (wake the model ~15 min before), X post (approval), Impact testers, form (deadline Nov 5 03:00 CET).
 - **NOW (2026-11-02 15:10): SECOND LOOK done (labelled; exam headline stays 83.3%). Trained Glimmer r5f inside the

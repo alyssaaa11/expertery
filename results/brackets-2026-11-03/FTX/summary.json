@@ -1,0 +1,38 @@
+{
+ "arm": "FTX",
+ "grader": "factory",
+ "status": "COMPLETE",
+ "n": 60,
+ "PASS": 34,
+ "FAIL": 26,
+ "INVALID": 0,
+ "pass_rate": 0.5666666666666667,
+ "pass_rate_tight": 0.5666666666666667,
+ "pass_at_k": 0.8,
+ "by_level": {},
+ "prompt_tokens": 69110,
+ "completion_tokens": 751247,
+ "total_tokens": 820357,
+ "tokens_per_correct": 24128.147058823528,
+ "prompt_per_correct": 2032.6470588235295,
+ "completion_per_correct": 22095.5,
+ "seconds_per_answer": {
+  "median": 476.4395,
+  "mean": 536.6221166666667
+ },
+ "wall_seconds": 4724.592,
+ "cold_start_s": 167.556,
+ "dollars_per_correct": 0.09649901960784313,
+ "server": {
+  "models": [
+   "forge"
+  ],
+  "image_digest": null
+ },
+ "k": 3,
+ "workers": 8,
+ "budget": 3.0,
+ "budget_stopped": false,
+ "skipped": 0,
+ "dev_gate": "STOP"
+}
