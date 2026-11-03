@@ -86,6 +86,11 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
   Spark Open read "80 long" correctly, so B2 was Glimmer's error, not ambiguous wording (corrects the bracket REPORT
   hypothesis). hypothesis: several 1/2 flags are reader mistakes, not wording (B4 is a CadQuery error) → v0.2: flag
   only when both readers fail or disagree, and let the explainer answer "no ambiguity".
+- verified (2026-11-03 ~20:30): **exam agent v0.2** (abe554a: tie-break reader, explainer classifies wording vs
+  reader mistake, hard cap with in-flight reserve, short report) re-run: **18 READY, 2 FLAGGED (B7, B8: which side of
+  Y = 0 the plate thickness goes), 0 deferred, est. $1.72 of $2.50** (results/expertery-exam-brackets-2026-11-03c).
+  B20 kept READY as a reader mistake. B16 was READY this time (readers built it right), so it is NOT caught every run:
+  results vary between runs because readers sample at temperature 1.0. hypothesis: 3+ readers would make it steadier.
 - **TODO to submission: see [[submission-plan-2026-11-02]].** Left: page copy (user deciding), high-vs-xhigh check,
   push, 3-min video (wake the model ~15 min before), X post (approval), Impact testers, form (deadline Nov 5 03:00 CET).
 - **NOW (2026-11-02 15:10): SECOND LOOK done (labelled; exam headline stays 83.3%). Trained Glimmer r5f inside the

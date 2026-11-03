@@ -1,0 +1,15 @@
+✓ Initialized. View run at 
+https://modal.com/apps/my-workspace/main/ap-Q7ANCB0Yx4FcATDS53gBzT
+✓ Created objects.
+├── ✓ Uploaded ~/projects/forge/experiments/final/cloud_cq.py
+├── ✓ Uploaded ~/projects/forge/experiments/factory/jobs.jsonl
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/expected.json
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/checks.py
+├── ✓ Uploaded ~/projects/forge/experiments/first-test/jobs.py
+├── ✓ Created Function grade.
+└── ✓ Created Function measure_brep.
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/my-workspace/main/ap-Q7ANCB0Yx4FcATDS53gBzT
+built 20 jobs (2 FLAGGED, 18 READY) in results/expertery-exam-brackets-2026-11-03c
+spent_estimate: $1.7192
