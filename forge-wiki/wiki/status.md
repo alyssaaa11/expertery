@@ -5,7 +5,7 @@
 **Summary**: The one page to read first (the verifier reads it first too). Goal, what is proven, what is open, and the
 next step. Each claim links to the page with its evidence. Rewrite (don't append) after every finished step.
 
-**Last updated**: 2026-11-02 20:00 (submission plan page; product last)
+**Last updated**: 2026-11-03 night (live demo launched)
 
 ---
 
@@ -71,9 +71,11 @@ everything together, credits included (Baseten, Modal, Meta). Every paid step st
 3. Budget: ≈ $9 left under $30; the full plan after the FreeCAD test is ≈ $34-35 → the user's budget answer.
 
 ## Where we stopped (2026-10-30 afternoon, factory ready for the pilot pending verifier)
-- **TODO to submission: see [[submission-plan-2026-11-02]] (every open item, owner, decisions waiting).** Short form:
-  product page LAST (user) · model access undecided · 3-min video · X post (approval) · Impact: no engineer contact,
-  options listed · form by Nov 4 18:00 CET. Done today: README rewrite, GitHub description/topics, agent section, dates.
+- **NOW (2026-11-02 night): LIVE DEMO LAUNCHED → https://homegrown-factory.vercel.app** (details, settings, first
+  real build, money: [[live-demo-2026-11-02]]). $15 total cap, 1 free live try per visitor, xhigh. Pushed to GitHub
+  up to 0af129e; later page-copy commits are local.
+- **TODO to submission: see [[submission-plan-2026-11-02]].** Left: page copy (user deciding), high-vs-xhigh check,
+  push, 3-min video (wake the model ~15 min before), X post (approval), Impact testers, form (deadline Nov 5 03:00 CET).
 - **NOW (2026-11-02 15:10): SECOND LOOK done (labelled; exam headline stays 83.3%). Trained Glimmer r5f inside the
   BX fix loop (FTX): 83/90 = 92.2% (hard 41/45 = BX's). Pre-registered "about as good as BX": PASS.**
   - verified (results/exam2-ftx-2026-11-02/compare_ftx.json): FTX−BX −2.2 [−11.1, +5.6]; FTX−FT +8.9 [+1.1, +18.9]

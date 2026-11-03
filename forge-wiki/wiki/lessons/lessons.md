@@ -226,3 +226,27 @@
 - **Uncommitted experiment work is invisible proof** (2026-11-02). How learned: HerdShot's Oct 27 A2/C1/C2 code and
   reports were never committed; found while writing the README. Check: `git status --short` (full list, not `head`)
   in every project repo before a public deadline.
+- **`modal deploy` imports your file on the Mac first** (2026-11-02). How learned: `modal deploy deploy/modal_web.py`
+  failed with "No module named cadquery" because the plain `modal` CLI's Python lacks CadQuery. Fix: run
+  `.venv/bin/python -m modal deploy …`. Check: the deploy prints "Created Function web".
+- **Deploy-time env is empty inside a Modal container** (2026-11-02). How learned: code review of modal_web.py (Claude
+  and verifier independently): FORGE_URL and every cap were read with os.environ at import, which runs again in the
+  container without them. Fix: `image.env({...})` from the deploy shell + a startup check. Check: the startup log line
+  `homegrown-web config: {...}` shows the values.
+- **FastAPI `mount("/", StaticFiles)` must come after the API routes** (2026-11-02). How learned: verifier tested the
+  real app: /api/status 404, /api/build 405. Check: a TestClient test of GET /api/status on the real app.
+- **A proxy in front of per-IP limits makes all visitors one person** (2026-11-02). How learned: design for the Vercel
+  page; a rewrite would show Vercel's IP to the backend. Fix: the page calls the engine directly (CORS allow-list).
+  Check: `curl -H "Origin: <page>" <engine>/api/status` returns access-control-allow-origin.
+- **Muse can end a loop early when the spec's example is too narrow** (2026-11-02). How learned: P2's loop stopped
+  after the first build because the spec's event-order example had no self-check round; found by reading loop.py.
+  Check: a test where the first build has 2 solids and the model fixes it.
+- **Headless `--window-size=390` is not a phone** (2026-11-02). How learned: screenshots showed overflow that a CDP
+  `Emulation.setDeviceMetricsOverride(mobile:true)` run did not; an element-overflow scan settled it. Check: the scan
+  lists only the marquee track wider than 390 px.
+- **`git commit -a` while Muse is editing the same repo** (2026-11-02). How learned: a wiki commit during Muse P2c;
+  `git show --stat HEAD` proved only the wiki file went in. Rule: commit explicit paths while Muse runs.
+- **Scrub personal data before the first push, not after** (2026-11-02). How learned: the Gmail address and
+  account-name URLs were in unpushed commits; `git filter-branch --tree-filter` on `origin/main..HEAD` (backup branch
+  first) removed them. Check: `git show --format= <c> | grep "^+" | grep -c <string>` is 0 for every unpushed commit.
+
