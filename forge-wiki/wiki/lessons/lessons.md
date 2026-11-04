@@ -255,3 +255,26 @@
   touching-only pieces. Check: run a new job family through the dev arm before claiming transfer; add the wording
   style and trap cases to the factory jobs. Also: a runner $ cap stops new calls only, so slow answers overshoot it
   ($3.65 vs $3) — set the cap ~20% under the real limit.
+
+- **Study the student before teaching it** (user, 2026-11-03; evidence Oct 31 – Nov 1). How learned: the untrained
+  Glimmer pilot (card v1, 200 jobs) scored 74.5% with 47 crashes, 28 of them `Workplane has no .solid()`; card v2 (two
+  lines for exactly those crashes) scored 94% on the same 200 (in-sample). Teacher-style lessons hurt (R1 38%, R3 48% vs
+  52% untrained), Glimmer's own checked answers + reasoning worked (r5f 62 → 96 secret test, 83.3% exam). So the
+  factory is built around this student's real failures, not a generic dataset. Check:
+  wiki/findings/r5-own-answers-training-2026-11-01.md (pilot table + crash causes) and README "What we learned".
+- **In zsh, "$VAR:X" is a modifier, not text** (2026-11-03). How learned: the bracket chain died at once with "bad math
+  expression" on `"$JOBS:FTX:FT:3"` (`:F` is a zsh modifier), $0 spent. Check: always write `"${VAR}:..."`;
+  `zsh -n script` does not catch it, run `zsh -c 'J=x; echo "${J}:FTX"'`.
+- **Session scripts stop the shared model app; the live demo depends on it** (2026-11-03). How learned: reading
+  deploy/modal_web.py (Function.from_name("forge-trained")) before the bracket run; run_final_session.sh traps EXIT
+  with `modal app stop forge-trained` and rewrites the forge-glimmer secret. Check: after any trained session run
+  `FORGE_MODEL_NAME=r5f modal deploy deploy/modal_forge.py`; never run the trained and base sessions in parallel
+  (same secret).
+- **A real install finds bugs that fake-based tests miss** (2026-11-03). How learned: Expertery had 25 green tests, but
+  `sh install.sh` + `expertery init` + `exam build` failed twice (init deployed a module with no app; the uv tool env
+  lacked cadquery). Check: after every Muse build of a CLI, install it with its own installer and run one real command.
+- **A strong reader separates bad wording from model mistakes** (2026-11-03). How learned: Muse Spark Open built B2,
+  B12, B18 right from the same text the trained model failed 3/3, so those were model errors; one failed try in two
+  is weak evidence (v0 flagged 8, v0.2 with tie-break + "wording vs reader mistake" flagged 2). Check: results vary
+  per run at temperature 1.0; repeat a run before claiming the agent "always" catches a problem.
+

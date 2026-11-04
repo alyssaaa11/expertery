@@ -133,3 +133,99 @@
 Live demo launched (Vercel page + Modal engine), first real build, settings, money, page decisions. Updated status.md
 (NOW + TODO), decisions/submission-plan-2026-11-02.md (items 1-2 done), lessons.md (+8 lessons with how learned),
 index.md.
+
+## [2026-11-03 11:30] create | public copy ~/projects/homegrown (user: "i want to keep the other things so i should do a duplicate")
+- decision (user): keep this repo complete and private; publish a slim duplicate instead.
+- verified: `~/projects/homegrown-publish/make_public_copy.sh` rebuilds it from this repo: full dated history (353 commits)
+  with the NotebookLM video, the personal email (also as commit author → GitHub noreply), `~/` and the Modal
+  workspace name scrubbed (check in the script prints 0); one cleanup commit removes `remove.txt` paths (1791 → 480
+  files); `fix_readme.py` fixes README links. Kept tests 475 passed, 1 skipped (2026-11-03 11:27).
+- lesson (how learned): `b2-hint/`, `bmax/` and `smoke/` look like dead ends but the exam runner and training pipeline
+  read them; removing them broke 13 tests. Check: rebuild with tests, never trust a path list by name alone.
+- lesson (how learned): CAD sandbox tests fail with "Operation not permitted .venv/pyvenv.cfg" when `.venv` is a
+  symlink to another repo's venv; the sandbox only reads the repo's own `.venv`. Fix: `cp -cR` (copy-on-write).
+- Next: re-run the script after the last forge commit; GitHub repo creation + push via Muse Code after the user's yes.
+
+## [2026-11-03 evening] create | docs/video/pitch-expertry-2026-11-03.md (winning-pitch skill)
+- decision (user, 2026-11-03): pitch uses the name **Expertry** (page headline "AI that knows your tool."); **no founder
+  sentence**; format = 3-min video script + 10-slide live deck.
+- verified: every number in the script traced to results/exam2-ftx-2026-11-02/compare_ftx.json (92.2 vs 94.4, CI
+  [−11.1, +5.6], 7,946 vs 21,823 tokens, 266 vs 301 s) and README (1,742 lessons, 52/54, L-bracket run 120 s).
+- lesson (how learned): the first draft said "Muse Code wrote the referee"; README "Who wrote what" (line ~185) shows the
+  exam referee was written by Claude on purpose, Muse wrote the factory/cloud box. Check: grep README "Who wrote what"
+  before any authorship line in a pitch.
+- open: Expertry vs "homegrown" in the URL/README/diagram/form; bracket test AX arm not run; 53% baseline is k=1 from an
+  earlier session. Self-review 85/100.
+- decision (user, 2026-11-03, v2): "the main is that i trained a model" → pitch rebuilt: training is the headline,
+  the self-check loop is one product beat. Lead number = dev 62 → 96 (compare_dev.json, +34 [24, 44]); exam alone 83.3
+  (tie with card 85.6; −11.1 vs full manual); 6.5× fewer tokens (compare_bars.json). 53% baseline and wall-clock/$
+  dropped. Self-review 87/100.
+
+## [2026-11-03 11:50] decision | project renamed Homegrown → Experty (user, README scope only for now)
+- verified: README in 518f364 says Experty; name note covers Forge → Homegrown → Experty; URLs, file names, live page
+  (homegrown-factory.vercel.app) keep old names. Public copy rebuilt (480 files, 475 tests passed, links OK).
+- open: live page text and its address still say Homegrown (page is Muse-built; change via Muse Code if the user wants).
+
+## [2026-11-03 12:10] decision | name spelled **Expertry** (matches the live site title); README no longer mentions Homegrown (user)
+- Supersedes the 11:50 "Experty" entry (typo in chat; the live site says Expertry 7×, checked with curl).
+- verified: 3312198: README note says only "first called Forge"; diagram files renamed docs/video/expertry-factory.*, PNG
+  re-captured (headless Chrome, 2048×1320, scale 1); only the live address keeps "homegrown". Public copy rebuilt, links OK.
+- open: the live page HTML has `<meta name="hg-api">` = the Modal URL containing the workspace name (visible in page source).
+
+## [2026-11-03 13:05] decision + deploy | name **Expertery**; live page https://expertery.vercel.app (user)
+- Supersedes the 12:10 "Expertry" entry. Name check by digital-marketer: "Expertery" free (.com/.ai/.io unregistered);
+  "Expertry" is a German HR-software company.
+- verified (96ee6fa): site text, tests (app/tests 109 passed), README, diagram (re-captured) say Expertery.
+- verified: Vercel domain expertery.vercel.app added via `vercel domains add`, old homegrown-factory.vercel.app removed
+  via `vercel api DELETE /v9/projects/<id>/domains/<domain>` (user: don't keep the old one; it now returns 404).
+  Engine homegrown-web redeployed with the same baked settings (read from `modal app logs homegrown-web`, line
+  "homegrown-web config") + ALLOWED_ORIGINS=https://expertery.vercel.app; OPTIONS preflight new origin 200, old 400.
+- lesson (how learned): `vercel domains rm` only knows custom domains; project *.vercel.app domains need the API.
+  Check: `vercel api "/v9/projects/<id>/domains?teamId=<team>"` lists them.
+- open: page source still shows the engine URL with the Modal workspace name (meta hg-api).
+
+## [2026-11-03 afternoon] video draft v2 | ~/Videos/expertery/submission (HyperFrames, outside the repo)
+- decision (user): the video must explain why it fits Push the Frontier and why it matters (I trained the weights):
+  why, how, evidence, people. Done as a new 20 s "frontier" part (prompting = skill outside in a 5,700-word manual;
+  training = skill inside the weights, 1,742 proven lessons) + a "who it's for" close (people who build in CAD, 8M
+  SOLIDWORKS/3DEXPERIENCE users from the brief; next: tools with a checkable answer). Total 2:48.
+- decision (user, demo-findings page): on-screen step labels say the benefit, not the step name (≤18 words).
+- verified: `npx hyperframes check` 0 errors / 0 warnings; snapshots reviewed (method: `snapshot --at <t>` per scene,
+  read the contact sheet, fix overlaps the layout audit misses inside the caption zone).
+- open: screen recording, Expertery's own M12 render (paid cloud build), one real self-fix trace, voice-over, music.
+
+## [2026-11-03 13:45] update | public duplicate renamed ~/projects/expertery (user)
+- verified: make_public_copy.sh now builds ~/projects/expertery; in the copy, README clone line + app/web GitHub links
+  point to github.com/alyssaaa11/expertery (the private repo stays meta-hackathon). 488 files, 357 commits, 475 tests passed.
+- verified (gitleaks full history, 13:28): no real secrets; 47k hits are SVG/number noise, fake test emails, fixture "SECRET-ABC-123".
+- open: the LIVE page (deployed from this repo's app/web) still links to the private meta-hackathon repo → 404 for
+  judges. Fix after the public repo exists: point app/web links to github.com/alyssaaa11/expertery and redeploy Vercel.
+
+## [2026-11-03 14:00] publish | private GitHub repo https://github.com/alyssaaa11/expertery (user: "private for now")
+- verified: Muse Code (muse exec, --disable-sandbox, spec ~/projects/homegrown-publish/muse/PUSH_EXPERTERY_2026-11-03.md,
+  log push-expertery.jsonl there) created it PRIVATE + pushed main; origin/main == local HEAD a40adfe; 6 calls, 149k in
+  (99k cached) / 1.4k out tokens.
+- open: (1) switch to PUBLIC before submitting (user's yes); (2) a rebuild by make_public_copy.sh rewrites the last
+  commit → the next push to expertery needs --force (new repo, nobody depends on it; still ask); (3) live page GitHub
+  links still point to private meta-hackathon.
+
+## [2026-11-03 14:30] fix | no links to the private repo anywhere public (user: "dont link it to the private meta hackaton")
+- verified: live page GitHub links → github.com/alyssaaa11/expertery (2879cc7, Vercel redeployed, curl shows 3 links, 0 meta-hackathon).
+- verified: make_public_copy.sh also rewrites `alyssaaa11/expertery` → `alyssaaa11/expertery` in all history; rebuilt
+  copy 475 tests passed; Muse Code pushed it with --force-with-lease over a40adfe → GitHub main == 5d4e089, still PRIVATE.
+- lesson (how learned): filter-repo drops a commit that becomes empty after replace-text (2879cc7 vanished from the
+  copy; 357 = 357 commits). Check: compare `rev-list --count` and grep the content, not only the commit list.
+
+## 2026-11-03 competitor review
+- verified: evaluated MARKOV (Glimmer GRPO, BFCL 0.63→0.725); see wiki/findings/competitor-markov-2026-11-03.md
+- verified: read #push-the-frontier (121 msgs, read-only); see wiki/findings/competition-push-the-frontier-2026-11-03.md
+
+## [2026-11-04 00:30] ingest | bracket test, Expertery v0 installer + exam agent, positioning decisions
+- new: wiki/findings/bracket-workflow-test-2026-11-03.md, wiki/findings/expertery-installer-2026-11-03.md,
+  wiki/decisions/positioning-and-pitch-2026-11-03.md; 4 lessons appended (zsh modifiers, shared model app, real
+  install, reader separates wording from model errors); index updated.
+
+
+## [2026-11-04 09:45] review | pre-submission deep review
+- new: wiki/findings/pre-submission-review-2026-11-04.md (repo PRIVATE + 14 commits behind, no video render, dead
+  #video link, README cites missing folders, stale form draft, 9 live tries left; all spot-checked numbers match).

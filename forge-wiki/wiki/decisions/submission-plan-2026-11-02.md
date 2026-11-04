@@ -29,7 +29,7 @@ rubric Impact 30 / Meta tooling 25 / Depth 20 / Demo 25 (kickoff slide, see proj
 | 1 | **Live product page** "describe a part → build, check, fix → checked part + picture + STEP" | spec Claude, build Muse Code, test Claude, verifier | **LIVE 2026-11-02: https://homegrown-factory.vercel.app** ([[live-demo-2026-11-02]]). |
 | 2 | README section **"Run the trained model"** (page link + one command) | Claude | **done**: README "Try it live" + "Live demo" section |
 | 3 | **Model access** during judging: Modal endpoint up Nov 5-9 (sleeps, pays per use, cap) and/or LoRA on Hugging Face with the Muse licence notice | user decides | user asked "why?" → explained (live check, Open Weights check, "a company can own it"). Undecided. HF needs the user's login (no HF token in envsave); publishing is public + permanent. |
-| 4 | **3-minute video**, link at the top of the README | together | after item 1 so it can show the product. NotebookLM version is 7:19 and says "Forge"; a short version must say "92% *with the loop*". |
+| 4 | **3-minute video**, link at the top of the README | together | **Script + live deck drafted 2026-11-03: docs/video/pitch-expertry-2026-11-03.md (name Expertry, user).** After item 1 so it can show the product. NotebookLM version is 7:19 and says "Forge"; a short version must say "92% *with the loop*". |
 | 5 | **Most Viral** ($20k): X post with the demo; link in the form | Claude drafts, user approves | after video; `x-post-queue --account alyssa`; engagement counts to Nov 8 |
 | 6 | **Open Weights** ($10k): a partner checks the model really runs | — | depends on item 3 (endpoint up during judging) |
 | 7 | **Best Agentic** ($5k): the self-check loop described as the agent | Claude | **done** (README "The Homegrown agent") |

@@ -9,6 +9,10 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [status](wiki/status.md): **START HERE each day**: goal, what is proven, money, open questions, next step
 
 ## findings
+- [expertery-installer-2026-11-03](wiki/findings/expertery-installer-2026-11-03.md): Expertery v0 CLI installed with one command into your own Modal account; exam agent (Spark Open readers) 18 READY / 2 FLAGGED, $1.72
+- [bracket-workflow-test-2026-11-03](wiki/findings/bracket-workflow-test-2026-11-03.md): one-workflow impact test: trained model 57% on employee-worded brackets; card arm not run (user), no training-vs-card claim
+- [competition-push-the-frontier-2026-11-03](wiki/findings/competition-push-the-frontier-2026-11-03.md): ~25 rival entries in our channel; strongest Burotu, WellPilot, robot QC, lobot, MARKOV
+- [competitor-markov-2026-11-03](wiki/findings/competitor-markov-2026-11-03.md): rival entry, Glimmer GRPO for tool calling, BFCL +9.5 pts (p≈0.001), weak demo video
 - [live-demo-2026-11-02](wiki/findings/live-demo-2026-11-02.md): the live product at expertery.vercel.app: settings ($15 total, 1 try), first real build (PASS, 120 s, 3 rounds), 14-min cold start, money, page decisions
 - [r5-own-answers-training-2026-11-01](wiki/findings/r5-own-answers-training-2026-11-01.md): R5: card v2 (74.5% → 94%), 2,000 own answers, self-fix, training without the card (loss 0.63 → 0.32), held-out baselines 62% / 96%
 - [[r5-final-spark-guided-2026-11-01]] — r5 dev 94/100, Spark hints 52/54, tutoring lessons, r5f
@@ -35,6 +39,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [final-pick-research-2026-10-28](wiki/findings/final-pick-research-2026-10-28.md): why Forge was picked: claude.ai 90 + GPT-6 92 merged, prior art, risk paper 2607.08938
 
 ## decisions
+- [positioning-and-pitch-2026-11-03](wiki/decisions/positioning-and-pitch-2026-11-03.md): unique = learns only from proven answers (not privacy); name Expertery; private-factory business model; deadline; prize and video decisions
 - [r5-decisions-2026-10-31](wiki/decisions/r5-decisions-2026-10-31.md): every user decision of the R5 round, in order (option B, card v2, plan B, Spark must guide)
 - [morning-brief-2026-10-30](wiki/decisions/morning-brief-2026-10-30.md): read first Oct 30: overnight work, direction review 6/10, 3 yes/no questions
 - [submission-draft-2026-10-30](wiki/decisions/submission-draft-2026-10-30.md): submission story, verified numbers, blanks, 3-min demo outline, must-dos (public repo)
@@ -46,6 +51,7 @@ Project folder: `~/projects/forge` (README routes to code, results and everythin
 - [glimmer-dashboard-2026-10-29](wiki/findings/glimmer-dashboard-2026-10-29.md): live Chrome dashboard of the baseline run (how Glimmer is doing)
 - [bmax-baseline-2026-10-29](wiki/findings/bmax-baseline-2026-10-29.md): step-2 baseline: plain 87%, hint 1-try 88%, all fixes 95%; bar for the trained Glimmer
 - [training-smoke-2026-10-29](wiki/findings/training-smoke-2026-10-29.md): training smoke test: LoRA trains, 8k OOM, vLLM LoRA crash, merge fallback works, PASS
+- [pre-submission-review-2026-11-04](wiki/findings/pre-submission-review-2026-11-04.md): deep review before submitting: what is missing (video, public repo, form, links) and the order to fix it
 - [where-things-run-2026-10-29](wiki/decisions/where-things-run-2026-10-29.md): rule + map: Mac = office, cloud = workshop (no AI code on the Mac)
 - [factory-plan-2026-10-29](wiki/decisions/factory-plan-2026-10-29.md): next stage: B2 → recipe research → generator → teacher run → training → final exam; rules; ~$13–16
 - [forge-plan-2026-10-28](wiki/decisions/forge-plan-2026-10-28.md): history of Oct 28 decisions: $30 budget, CadQuery, Spark Open on Baseten, own folder/app, spend log
