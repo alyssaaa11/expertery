@@ -53,7 +53,7 @@ def test_copy_fixes():
     assert "a few minutes" in html
     assert "Illustration" in html
     assert "https://github.com/alyssaaa11/expertery" in html
-    assert 'href="#video"' in html
+    assert 'youtube.com/watch?v=po2wfzZXjtE' in html
     css = (WEB / "styles.css").read_text()
     assert "prefers-reduced-motion" in css
     assert "@media" in css

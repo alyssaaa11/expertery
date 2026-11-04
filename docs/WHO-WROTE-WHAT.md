@@ -46,4 +46,4 @@ version to keep it short; they are in its git history, with their dates.
 - **Review:** a separate Claude verifier agent reviewed every step before money was spent.
 - **Published by Alyssa** (all commits are hers; most carry a "Co-Authored-By: Claude" line).
 - **Small fixes by Claude on Nov 4 (disclosed):** README numbers and wording; live page wording in `app/web/index.html`
-  (manual size, the factory's teacher step, the video link) and its static test.
+  (manual size, the factory's teacher step, the YouTube video link) and its static test.

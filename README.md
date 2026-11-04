@@ -10,6 +10,8 @@ best setup (94%), which needs a 3,240-word (≈ 5,700-token) manual in every pro
 For scale: plain Glimmer with a short prompt scored 53% on the same 30 parts (Oct 28, one try per part).
 Built with Muse Spark Open.
 
+**▶ Watch the 3-minute video: https://www.youtube.com/watch?v=po2wfzZXjtE**
+
 **▶ Try it live: https://expertery.com** (one free live try per visitor; the
 recorded demo is always there)
 
