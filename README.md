@@ -13,7 +13,7 @@ Built with Muse Spark Open.
 **▶ Try it live: https://expertery.com** (one free live try per visitor; the
 recorded demo is always there)
 
-Meta Global AI Developer Hackathon 2026 · Indie track, Push the Frontier · build period Oct 27 - Nov 4.
+Meta Global AI Developer Hackathon 2026 · Indie track, Push the Frontier · build period Oct 26 (kickoff, 12:00 ET) - Nov 4.
 
 ![Expertery factory](docs/video/expertery-factory-diagram.png)
 
