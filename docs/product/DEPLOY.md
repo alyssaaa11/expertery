@@ -34,3 +34,7 @@ To stop everything: modal app stop homegrown-web && modal app stop forge-trained
 - Vercel project is still named `homegrown-factory` (internal); domain `expertery.vercel.app` added, the old
   `homegrown-factory.vercel.app` domain removed (user: don't keep the old one). Engine redeployed with the same baked
   settings and `ALLOWED_ORIGINS=https://expertery.vercel.app` (preflight: new origin 200, old origin 400).
+
+## Own domain 2026-11-04: https://expertery.com
+- `expertery.com` + `www.expertery.com` added to Vercel project `homegrown-factory` (`vercel domains add expertery.com homegrown-factory`), DNS set by the user; `vercel domains verify expertery.com` → ok.
+- Engine redeployed with `ALLOWED_ORIGINS=https://expertery.com,https://www.expertery.com,https://expertery.vercel.app` and `TOTAL_CAP_USD=20` (user); preflight: the three origins 200, others 400.

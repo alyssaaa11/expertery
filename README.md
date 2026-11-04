@@ -10,7 +10,7 @@ best setup (94%), which needs a 3,240-word (≈ 5,700-token) manual in every pro
 For scale: plain Glimmer with a short prompt scored 53% on the same 30 parts (Oct 28, one try per part).
 Built with Muse Spark Open.
 
-**▶ Try it live: https://expertery.vercel.app** (one free live try per visitor; the
+**▶ Try it live: https://expertery.com** (one free live try per visitor; the
 recorded demo is always there)
 
 Meta Global AI Developer Hackathon 2026 · Indie track, Push the Frontier · build period Oct 27 - Nov 4.
@@ -26,12 +26,12 @@ You get a 3D view, the measurements, the code and STEP/STL files.
 - **The badge is a self-check, not the exam referee:** a visitor's part has no reference answer, so "Self-check PASS"
   means it built as one solid and its overall size matches the numbers you typed (±0.5%). Otherwise it says "Built
   (size not checked)" or "Checks failed".
-- **Limits:** $15 total for the whole demo, one free live try per visitor, 600 characters per job. When the money is
+- **Limits:** $20 total for the whole demo, one free live try per visitor, 600 characters per job. When the money is
   used up the page pauses and plays a recorded real run. A cold model takes several minutes to wake up (14 min on the
   first start), so the page plays the recorded run meanwhile.
 - **First real live run (2026-11-02):** L-bracket 80 × 30 × 45 mm with two 6 mm holes → Self-check PASS in 120 s,
   volume 27,717 mm³ (exactly base + wall − holes). It is the page's recorded run (`app/web/recorded_run.json`).
-- Hosting: the page is on Vercel (`expertery.vercel.app`) and calls the Modal backend directly from the
+- Hosting: the page is on Vercel (`expertery.com`; the old `expertery.vercel.app` address still works) and calls the Modal backend directly from the
   visitor's browser (CORS), so the one-try limit sees each visitor's own address.
 - Code: page `app/web/`, backend `app/backend/`, Modal app `deploy/modal_web.py`, 109 tests in `app/tests/`. Specs:
   `specs/MUSE_PRODUCT_*.md`. Steps: `docs/product/DEPLOY.md`.
