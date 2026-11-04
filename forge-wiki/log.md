@@ -230,7 +230,7 @@ index.md.
 - new: wiki/findings/pre-submission-review-2026-11-04.md (repo PRIVATE + 14 commits behind, no video render, dead
   #video link, README cites missing folders, stale form draft, 9 live tries left; all spot-checked numbers match).
 
-## [2026-11-04 ~11:00] fix + publish | README/page numbers, public copy trimmed, Muse push, form draft (user)
+## [2026-11-04 ~09:45] fix + publish | README/page numbers, public copy trimmed, Muse push, form draft (user)
 - verified: README fixes (cea0b1d): manual = 3,240 words (≈ 5,700 tokens), not "5,700-word"; 83% (official) and 92%
   (second look, loop) labelled, 53% moved to a "for scale" line; lessons chain 1,882 + 42 → −228 card-quoting = 1,696
   → +46 tutoring = 1,742 → −20 too long = 1,722 trained; 109 app tests; money to Nov 4 (Modal ≈ $81, Baseten ≈ $16);
@@ -246,11 +246,15 @@ index.md.
   video voice + fixes; page "3-min video" link still #video until the video URL exists.
 - verified: 2026-11-04 re-read both channels (read-only); update in competition-push-the-frontier-2026-11-03.md
 
-## [2026-11-04 11:05] check | "new demo rule" (live product, no slides) NOT verified; official start Oct 26
-- verified: cerebralvalley.ai/e/meta-ai-developer-hackathon.md (curl, 11:05): "When: Oct 26, 12:00 PM – Nov 4, 9:00 PM
+## [2026-11-04 ~10:15] check | "new demo rule" (live product, no slides) NOT verified; official start Oct 26
+- verified: cerebralvalley.ai/e/meta-ai-developer-hackathon.md (curl, ~10:15): "When: Oct 26, 12:00 PM – Nov 4, 9:00 PM
   (EST)"; "Oct 26: Hackathon begins with kickoff livestream"; "Oct 27 – Nov 4: Live workshops". No video-format rule
   on the public page. details/submit pages need login (curl returns the same 68,860-byte shell).
 - open: #announcements not read (surfagent Chrome is not logged into Discord). User to check before the video is final.
 - open: README says "build period Oct 27 - Nov 4" (user, 2026-11-04 morning); the official start is Oct 26 → asked user.
 - lesson (how learned): `tr` is a shell function here (`mv "$@" ~/.Trash`; `type tr`); a `| tr -d '/'` in a pipe ran
   `mv -d / ~/.Trash`, which failed only because mv has no -d. Check: `type tr` before any pipe; use sed/python instead.
+
+## [2026-11-04 ~10:55] video | v4 re-voiced and re-cut (user): ~/Videos/expertery/Expertery-submission-v4.mp4 (2:54)
+- Peppy Stella (HeyGen orca, speed 1.1), music m1, impact-first story, "8 million users" removed (unverified source),
+  frozen stretches 16 → 1 (voice over it). Details + checks: ~/Videos/expertery/submission-v4/REVIEW.md. Not uploaded.
