@@ -276,3 +276,11 @@ index.md.
   set); v0 builds only the exam from past work. Backup of the previous text in the job tmp.
 - verified: video v15 (~/Videos/expertery/Expertery-submission-v15.mp4, 2:27, −14.1 LUFS after mastering).
 - open (user yes needed): repo public; live demo cap / warm-up (spends money, code via Muse Code).
+
+## [2026-11-04 ~13:00] publish + demo cap (user yes to both)
+- verified: Muse Code (homegrown-publish/muse/PUBLISH_EXPERTERY_2026-11-04.md) pushed 76fcae5 over 5c542b4 and set
+  alyssaaa11/expertery PUBLIC; `gh repo view` → PUBLIC; logged-out curl → 200; raw README has "Next (not built yet)".
+- verified: live demo engine homegrown-web redeployed with TOTAL_CAP_USD=20 (other baked settings unchanged, read
+  from `modal app logs homegrown-web`); /api/status → tries_left 14 (was ~8); new container logs TOTAL_CAP_USD '20'.
+  That status call fired one warm-up (WAKE_USD 0.45).
+- open: video upload (YouTube unlisted) → link in README, page (#video still dead), form; X post; submit.
