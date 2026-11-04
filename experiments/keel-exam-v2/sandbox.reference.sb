@@ -1,8 +1,0 @@
-(version 1)
-(allow default)
-(deny network*)
-(deny file-read* (subpath "/Users/alyssa"))
-(allow file-read* (subpath (param "VENV")) (subpath (param "PYHOME")) (subpath (param "COMPANY")) (subpath (param "SCRATCH")))
-(allow file-read-metadata)
-(deny file-write*)
-(allow file-write* (subpath (param "SCRATCH")) (literal "/dev/null"))

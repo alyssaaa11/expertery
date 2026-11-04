@@ -1,5 +1,0 @@
-[
- {"name": "G", "label": "Glimmer (student)", "description": "manual + NDS-1 (40 rules) + request, 3 tries per job", "expected": 39, "colour": "#2a78d6"},
- {"name": "S", "label": "Spark Open (teacher)", "description": "same prompt, 3 tries per job", "expected": 39, "colour": "#eb6834"},
- {"name": "W", "label": "Wonder (rescue)", "description": "only on Spark's failed tries, 1 try each", "expected": 6, "colour": "#1baf7a"}
-]

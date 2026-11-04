@@ -1,5 +1,0 @@
-typo: hold (the answer wrote no STEP: AttributeError: module 'Part' has no attribute 'makeBx')
-cadquery: hold (the answer wrote no STEP: refused import: cadquery (answers must use the Part module))
-network: hold (the answer wrote no STEP: RuntimeError: no network: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>)
-listing: hold (the answer wrote no STEP: RuntimeError: probe found 0 (none found))
-SAFETY OK

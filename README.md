@@ -127,8 +127,7 @@ expertery status         # config, Modal apps, latest exam folders
   The hand-made exam is the harder and more reliable test.
 
 Readings: [`results/exam-2026-11-02/`](results/exam-2026-11-02/) (`compare_bars.json`, `compare_ft_acard.json`) and
-[`results/exam2-ftx-2026-11-02/compare_ftx.json`](results/exam2-ftx-2026-11-02/compare_ftx.json). Every claim with its
-source: [`forge-wiki/wiki/status.md`](forge-wiki/wiki/status.md).
+[`results/exam2-ftx-2026-11-02/compare_ftx.json`](results/exam2-ftx-2026-11-02/compare_ftx.json).
 
 ## What we learned (each from a measured failure)
 - **Study the student before teaching it.** We first ran the untrained Glimmer to see where it fails: in the first
@@ -196,7 +195,7 @@ our earlier hackathon project HerdShot (written Oct 26, after the 12:00 ET kicko
 | Nov 3 | Expertery v0 installer and `expertery` CLI; exam agent (Spark Open readers); name Expertery |
 | Nov 4 | README and page fixes, public repository |
 
-The full day-by-day log is in [`forge-wiki/log.md`](forge-wiki/log.md).
+Every commit in this repository is dated; `git log --reverse` shows the build day by day.
 
 Note on the git history: early market notes (Oct 28) listed defence and medical companies as example customers. We
 removed them on Oct 30 to follow the hackathon rules; the project was never built for those uses. The history is kept
@@ -227,7 +226,7 @@ Linux and Python 3.12; cloud steps need a Modal account (and Baseten for the tea
 git clone https://github.com/alyssaaa11/expertery.git expertery && cd expertery
 python3.12 -m venv .venv && .venv/bin/pip install cadquery==2.8.0 cadquery-ocp==7.9.3.1 modal==1.6.3 pytest
 .venv/bin/python -I scripts/check_cadquery.py          # expect: size mm 20.0 20.0 20.0, volume 7607.3
-.venv/bin/python -m pytest -q experiments/final experiments/factory experiments/freecad experiments/train experiments/common
+.venv/bin/python -m pytest -q experiments/final experiments/factory experiments/train experiments/common
 .venv/bin/python experiments/factory/make_jobs.py      # 200 jobs + the self-check table, offline
 .venv/bin/python experiments/factory/gallery.py --out results/factory-gallery   # pictures of 10 parts
 ```
@@ -244,15 +243,21 @@ Every paid script refuses to run past its money cap.
 | `experiments/r5/` | the final factory round: 2,000 practice jobs, self-fix, Spark hints, lesson mix, PLAN |
 | `experiments/final/` | cloud box + referee (`cloud_cq.py`), the final plan and Muse specs |
 | `experiments/first-test/` | the frozen 30-job exam and its referee (`checks.py`) |
-| `experiments/bmax/`, `b2-hint/`, `freecad/`, `thinking/`, `keel-exam-v2/` | earlier tests, each with its frozen PLAN |
+| `experiments/bmax/`, `b2-hint/` | the manual and rule-card baselines used in the exam, each with its frozen PLAN |
+| `experiments/smoke/` | the training smoke test data |
 | `experiments/train/` | training pipeline (LoRA on Modal) with exam guard and money cap |
 | `deploy/` | Glimmer on Modal |
 | `app/` | the live demo: page (`web/`), backend, tests |
 | `expertery/`, `install.sh`, `examples/` | Expertery v0: the installer, the `expertery` CLI, the exam agent, 20 example past jobs |
-| `company/` | the fictional company tool Keel (earlier direction) |
 | `results/` | run results, Muse Code logs and diaries |
-| `forge-wiki/` | the project's knowledge base (Obsidian vault): status, findings, decisions, lessons |
-| `docs/diagrams/`, `docs/video/` | diagrams (open the `.html` files in a browser), the factory diagram |
+| `docs/video/` | the factory diagram (open the `.html` file in a browser) |
+| `docs/INSTALL.md`, `docs/WHO-WROTE-WHAT.md` | installing Expertery v0; every file by author |
+| `docs/herdshot/`, `docs/product/` | HerdShot reports; live demo deploy steps and page mockup |
+
+This public copy leaves out the earlier experiments that did not shape the final result (the Keel company tool,
+the FreeCAD and thinking tests, the Option A drafts, an unfinished bracket workflow test whose control arm was
+never run), the planning diagrams and the project's working notes, to keep it short. The git history still
+contains all of them, with their dates.
 
 Training rule: never `modal run forge_train.py::train` directly; it bypasses the exam guard and the money cap.
 
@@ -266,5 +271,3 @@ licence and Usage Policy, and the notice "Built with Muse Spark Open". No weight
 **Third-party documentation included:**
 - `experiments/first-test/manual.md` (and the copies used as prompts): excerpts of the CadQuery 2.8 documentation,
   Apache-2.0 (https://github.com/CadQuery/cadquery).
-- `experiments/freecad/manual.md`: excerpts of the FreeCAD documentation (FreeCAD wiki), CC-BY-3.0
-  (https://wiki.freecad.org), attributed to the FreeCAD documentation authors.
