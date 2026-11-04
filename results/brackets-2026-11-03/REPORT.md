@@ -17,8 +17,8 @@ Plan: experiments/brackets/PLAN.md (pre-registered, frozen at eadaf89 / 6a10c79)
 
 ## Why FTX scored lower than the exam (92%): Claude's reading of the 26 failed answers (hypothesis, by code reading)
 1. Employee wording misread (~10-12): "40 tall overall" built as 40 above the base (B18), "stands on the back edge,
-   flush" built behind the base (B1), "arm 80 long" measured from the wall's inside face (B2; Claude's wording is
-   ambiguous here, found after seeing results).
+   flush" built behind the base (B1), "arm 80 long" measured from the wall's inside face (B2: NOT ambiguous after all,
+   Muse Spark Open read it right 2/2 in the exam-agent run c; a model error).
 2. CadQuery trap (~6-8): Workplane("XZ").extrude(t) grows toward -Y (verified: Y from -4 to 0 for extrude(4), forge
    .venv cadquery 2.8.0), so triangular gussets/webs land off-centre (B12 3/3, B10, B2).
 3. Pieces only touching / small details (~8): B16 sides start on top of the feet → 3 solids (start Z not stated in
