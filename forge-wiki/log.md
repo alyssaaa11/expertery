@@ -229,3 +229,18 @@ index.md.
 ## [2026-11-04 09:45] review | pre-submission deep review
 - new: wiki/findings/pre-submission-review-2026-11-04.md (repo PRIVATE + 14 commits behind, no video render, dead
   #video link, README cites missing folders, stale form draft, 9 live tries left; all spot-checked numbers match).
+
+## [2026-11-04 ~11:00] fix + publish | README/page numbers, public copy trimmed, Muse push, form draft (user)
+- verified: README fixes (cea0b1d): manual = 3,240 words (≈ 5,700 tokens), not "5,700-word"; 83% (official) and 92%
+  (second look, loop) labelled, 53% moved to a "for scale" line; lessons chain 1,882 + 42 → −228 card-quoting = 1,696
+  → +46 tutoring = 1,742 → −20 too long = 1,722 trained; 109 app tests; money to Nov 4 (Modal ≈ $81, Baseten ≈ $16);
+  installer section; HerdShot + "who wrote what" shortened (full list docs/WHO-WROTE-WHAT.md). Build period Oct 27 (user).
+- verified: page wording (manual size, factory step 02 = "Glimmer tries / Spark hints", 92% labelled with the loop),
+  app tests 109 passed, Vercel redeployed, curl shows the 3 new strings.
+- verified: remove.txt + fix_readme.py extended (Muse logs of removed experiments, unfinished bracket test, v0
+  exam-agent run); rebuilt copy 527 files, 373 commits, 475 + 39 tests passed, 0 private strings, README links OK.
+- verified: Muse Code force-pushed (--force-with-lease over 5d4e089) → GitHub main = 5c542b4, still PRIVATE
+  (spec homegrown-publish/muse/REPUSH_EXPERTERY_2026-11-04.md; 8 calls, 215k in / 161k cached).
+- new: wiki/decisions/submission-form-2026-11-04.md (form text; blanks = video URL, X post URL).
+- open: switch repo PUBLIC (user's yes); HerdShot's first commit is Oct 26 while the README build period says Oct 27;
+  video voice + fixes; page "3-min video" link still #video until the video URL exists.
