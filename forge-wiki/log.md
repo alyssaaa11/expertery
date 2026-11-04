@@ -284,3 +284,13 @@ index.md.
   from `modal app logs homegrown-web`); /api/status → tries_left 14 (was ~8); new container logs TOTAL_CAP_USD '20'.
   That status call fired one warm-up (WAKE_USD 0.45).
 - open: video upload (YouTube unlisted) → link in README, page (#video still dead), form; X post; submit.
+
+## [2026-11-04 afternoon] domain, sources checked, video v18 (user)
+- verified: https://expertery.com live (200, page title Expertery), `vercel domains verify expertery.com` ok; engine
+  ALLOWED_ORIGINS = expertery.com, www.expertery.com, expertery.vercel.app (preflight 200, other origins 400).
+- verified (primary sources): 8 million users = Dassault Systèmes PR Jan 29 2026 (Manish Kumar quote);
+  BenchCAD 2.0 Core 0.59 = benchcad.com/leaderboard, GPT-6 Astra (max), 100 cases, 6 tasks, graded 0–1.
+  How learned: opened the PDF and the leaderboard page themselves, not the search summary.
+- verified: video v18 (2:44.7) adds both numbers back + a Push the Frontier beat.
+- verified: README live link https://expertery.com, cap $20 (452fa5b); Muse pushed dfa2d65 to the public repo and set
+  its website to https://expertery.com.
