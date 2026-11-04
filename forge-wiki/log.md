@@ -258,3 +258,11 @@ index.md.
 ## [2026-11-04 ~10:55] video | v4 re-voiced and re-cut (user): ~/Videos/expertery/Expertery-submission-v4.mp4 (2:54)
 - Peppy Stella (HeyGen orca, speed 1.1), music m1, impact-first story, "8 million users" removed (unverified source),
   frozen stretches 16 → 1 (voice over it). Details + checks: ~/Videos/expertery/submission-v4/REVIEW.md. Not uploaded.
+
+## [2026-11-04 ~12:25] video v9 + README "Next (not built yet)" (user)
+- verified: ~/Videos/expertery/Expertery-submission-v9.mp4 (2:58.6): how a company uses it, "Live demo: the CAD expert
+  we trained", hard part H1 (plain ✗ vs Expertery 3/3), "Why it matters", "Next · not built yet". Cut for length +
+  unverified source: BenchCAD 0.59. Selfie slot ready (prep_selfie.py), waiting for the user's clip.
+- verified: README "Next (not built yet)" (13ecb2e); public copy rebuilt (76fcae5, 475 + 39 tests passed).
+- open: push NOT done: envsave vault asks for the master password again, and `ssh -T git@github.com` → Permission
+  denied (publickey) (worked at ~09:45). User must unlock both; then rerun muse/REPUSH_EXPERTERY_2026-11-04b.md.
