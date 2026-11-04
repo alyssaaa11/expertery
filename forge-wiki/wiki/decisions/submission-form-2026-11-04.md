@@ -4,7 +4,7 @@
 Wonder as teacher, blanks). Every number is checked against the result files (pre-submission-review-2026-11-04).
 Nothing here is submitted; the user submits.
 
-**Status**: decision (user, 2026-11-04): deliver the project first, then enter the bonus prizes. Blanks: [VIDEO URL],
+**Status**: decision (user, 2026-11-04): deliver the project first, then enter the bonus prizes. Rewritten 2026-11-04 ~12:40 after agents-17 review (lead with the tie, label 53%, one-try 83% = rule card, Spark-answers finding, v0 builds only the exam). Blanks: [VIDEO URL],
 [X POST URL] (after the video).
 
 ---
@@ -21,14 +21,20 @@ Nothing here is submitted; the user submits.
 - Video (3 min): [VIDEO URL]
 
 **Description (short):**
-General AI invents functions your tool doesn't have. In our own runs, untrained Muse Glimmer 30B crashed 64 times on
-CadQuery functions that don't exist. Expertery is a factory that turns Meta's open Glimmer into an expert on one
-tool. Glimmer practises 2,000 jobs, a locked cloud box really builds every answer, and a strict referee keeps only the
-correct ones. When Glimmer is stuck, Muse Spark Open gives one hint, never the code. Only proven answers become
-lessons, so wrong answers never teach. After LoRA training, Glimmer needs no manual. On a hand-made 30-part CAD exam it
-never saw, it scored 83% in one try (plain Glimmer: 53%) and 92% with its self-check loop. That ties the best setup
-(94%, which needs a 3,240-word manual in every prompt) with 2.7× fewer tokens. Companies install it in their own cloud
-account with one command, and an exam agent turns their past work into a locked test before they trust the model.
+Expertery turns Meta's open Muse Glimmer 30B into a proven expert on one company tool. On a hand-made 30-part CAD exam
+it never saw, the trained Glimmer **ties the best setup with no manual and 2.7× fewer tokens** (92% with its self-check loop vs 94%,
+a statistical tie: −2.2 points, 95% CI −11 to +6); the best setup needs a 3,240-word manual in every prompt. In one try with no manual it scores 83%, which ties
+plain Glimmer + a one-page rule card (85.6%); for scale, plain Glimmer with a short prompt scored 53% (one try, Oct 28).
+
+How: Glimmer practises 2,000 CAD jobs, a locked cloud box really builds every answer, and a strict referee keeps only
+the correct ones. When Glimmer is stuck, Muse Spark Open gives one hint, never the code. Only proven answers become
+lessons, so wrong answers never teach. The unexpected finding: training Glimmer on Spark Open's answers made it worse
+(38% and 48% vs 52% untrained, on our 60-job dev set); training on its own referee-checked answers worked.
+
+The product: a company installs Expertery in its own cloud account with one command. In v0, an exam agent turns the
+company's past work into a locked exam that a person reviews, and the model is tested on it before anyone trusts it.
+Practice jobs still come from our CAD job generator; making practice jobs from a company's own past work is not built
+yet.
 
 **How it uses Meta AI:**
 - **Muse Glimmer 30B (open weights)** is the student: LoRA-trained on 1,722 referee-checked lessons and served with

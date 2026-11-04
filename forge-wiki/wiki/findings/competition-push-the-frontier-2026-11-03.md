@@ -22,3 +22,17 @@ Gauge the rival entries in our track/theme (Indie, Push the Frontier) the day be
 ## Next step
 For the video and README: put the headline number (53% → 83%, no manual, fewer tokens) in the first 20 s and explain
 in plain words why it matters to someone who isn't a CAD user, because Impact is worth 30 points.
+
+## Update 2026-11-04 morning (read-only, both channels)
+- verified: #push-the-frontier had ~45 new project posts between Nov 3 13:46Z and Nov 4 08:12Z. #build-for-your-world had ~80 posts between
+  Nov 3 17:14Z and Nov 4 08:47Z (older history would not load). (source: Chrome, channel ids ...947 and ...946)
+- verified: other Glimmer fine-tunes: Burotu (DNA adapter, video "We taught Meta's LLM to read DNA in one week"), MARKOV,
+  SarafuPay (fine-tuned Glimmer routes Kiswahili WhatsApp messages, "56% fewer tokens"), spanguard (fine-tuned span model).
+  So "a trained Glimmer is cheaper" is not unique. What makes Expertery different is the one-shot exam with a strong baseline and CIs.
+- verified: closest in domain: Mechanism AI (idea → engineered physical product), Print3DFlow, Just Bricks (LEGO robot
+  joints), GroundTruth (building design + checking).
+- verified: notable new Push entries: athlete2humanoid (phone video → Unitree G1 RL policy), Show Don't Code (video →
+  Opentrons robot protocol), Isochron AI (phone video → measurement with error bar), CoreSight, Rehearsal, Nia.
+- hypothesis: SarafuPay wrote "updated demo to follow the new rule: real product running live, no slides". There may be
+  a new official rule about demo videos. Check #announcements before the video is final.
+- verified: Baltor.AI said "double the number of projects in the past 24 hours", citing the unofficial directory artifacts.watt-mind.com/meta-hackathon-2026.

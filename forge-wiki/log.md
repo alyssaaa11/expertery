@@ -266,3 +266,13 @@ index.md.
 - verified: README "Next (not built yet)" (13ecb2e); public copy rebuilt (76fcae5, 475 + 39 tests passed).
 - open: push NOT done: envsave vault asks for the master password again, and `ssh -T git@github.com` → Permission
   denied (publickey) (worked at ~09:45). User must unlock both; then rerun muse/REPUSH_EXPERTERY_2026-11-04b.md.
+
+## [2026-11-04 ~12:50] agents-17 review applied (user)
+- verified: gitleaks dir + full history (--all --reflog) on ~/projects/expertery: no real secrets; 47k hits = number
+  noise in html/json/brep, fake test emails, test fixture "SECRET-ABC-123"; extra grep for sk-/AKIA/ghp_/Bearer/Api-Key
+  in all history: 0.
+- verified: form rewritten (decisions/submission-form-2026-11-04.md): leads with the tie at 2.7× fewer tokens, 53% =
+  short prompt, one try, Oct 28; one-try 83% ties plain + rule card 85.6%; Spark-answers finding (38/48 vs 52, dev
+  set); v0 builds only the exam from past work. Backup of the previous text in the job tmp.
+- verified: video v15 (~/Videos/expertery/Expertery-submission-v15.mp4, 2:27, −14.1 LUFS after mastering).
+- open (user yes needed): repo public; live demo cap / warm-up (spends money, code via Muse Code).
