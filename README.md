@@ -147,6 +147,14 @@ right or wrong automatically. The rest (Glimmer, Spark tutor, self-fix, lessons,
 same. Best exam for a company: 30-100 of its own past jobs with known correct results, never shown to the factory.
 Status: proven on CAD only.
 
+## Next (not built yet)
+- **Any tool with a checkable answer:** PLC code for factory machines, chip design, SQL. Each needs only a job
+  generator, a sandbox and a referee; everything else stays the same.
+- **Practice jobs made from a company's own past work** (v0 uses the factory's job generator).
+- **Updates that prove themselves:** when the factory improves, `expertery update` would retrain the company's model in
+  its own cloud and switch only if the new model beats the old one on the company's locked exam. Today an update is
+  `git pull` + `sh install.sh`, and nothing tells a company a new version exists.
+
 ## Before Expertery: HerdShot (Oct 26 - 28)
 The first two days went to an earlier idea, **HerdShot**: stop false facts from spreading inside teams of AI agents.
 Our own pre-registered tests showed today's agents already read the project files and reject false facts, so there was
